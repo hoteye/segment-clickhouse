@@ -1,7 +1,7 @@
 # Segment Clickhouse Integration
 
 ## 项目简介
-Segment Clickhouse Integration 是一个高效的数据处理服务，旨在从 Kafka 消息队列中消费数据，动态管理 Clickhouse 数据库表结构，并将解析后的数据批量插入到 Clickhouse 中。
+Segment Clickhouse Integration 是一个高效的数据处理服务，旨在从 Kafka 消息队列中消费 Skywalking agent 上报的segment消息，根据span中的tag、log信息动态管理 Clickhouse 数据库表结构，并将解析后的数据批量插入到 Clickhouse 中。
 
 ## 功能特性
 - **Kafka 消息消费**：通过 `KafkaService` 消费 Kafka 消息队列中的数据。
