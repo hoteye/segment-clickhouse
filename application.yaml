@@ -1,0 +1,18 @@
+kafka:
+  bootstrap_servers: "192.168.100.6:9092"
+  group_id: "skywalking-segments-consumer-group-myself"
+  topic: "topic-dics-long-skywalking-segments"
+  auto_offset_reset: "earliest"
+
+clickhouse:
+  schema_name: default       # 数据库模式名称
+  table_name: events         # 表名称
+  url: jdbc:clickhouse://192.168.100.6:8123/default?use_time_zone=UTC+8&use_server_time_zone=UTC+8
+  username: root
+  password: "123456"
+
+batch:
+  size: 40          # 批量插入的 spans 数量
+  interval: 3000    # 批量插入的时间间隔（毫秒）
+
+add_columns_interval: 80000  # 每 add_columns_interval 秒执行一次 addColumns 方法
