@@ -1,18 +1,17 @@
-mappings:
-  segment:
-    trace_id: {path: "traceId", type: "String"}
-    trace_segment_id: {path: "traceSegmentId", type: "String"}
-    service: {path: "service", type: "String"}
-    service_instance: {path: "serviceInstance", type: "String"}
-    is_size_limited: {path: "isSizeLimited", type: "Boolean"}
-    spans:
-      span_id: {path: "spanId", type: "Integer"}
-      parent_span_id: {path: "parentSpanId", type: "Integer"}
-      start_time: {path: "startTime", type: "Long"}
-      end_time: {path: "endTime", type: "Long"}
-      operation_name: {path: "operationName", type: "String"}
-      peer: {path: "peer", type: "String"}
-      span_type: {path: "spanType", type: "String"}
-      span_layer: {path: "spanLayer", type: "String"}
-      component_id: {path: "componentId", type: "Integer"}
-      is_error: {path: "isError", type: "Boolean"}
+segment:
+  trace_id: {path: "traceId", type: "String"}
+  trace_segment_id: {path: "traceSegmentId", type: "String"}
+  service: {path: "service", type: "String"}
+  service_instance: {path: "serviceInstance", type: "String"}
+  is_size_limited: {path: "isSizeLimited", type: "Boolean"}
+  spans:
+    span_id: {path: "spanId", type: "Integer"}
+    parent_span_id: {path: "parentSpanId", type: "Integer"}
+    start_time: {path: "startTime", type: "Long"}
+    end_time: {path: "endTime", type: "Long"}
+    operation_name: {path: "operationName", type: "String"}
+    peer: {path: "peer", type: "String"}
+    span_type: {path: "spanType", type: "String"}
+    span_layer: {path: "spanLayer", type: "String"}
+    component_id: {path: "componentId", type: "Integer"}
+    is_error: {path: "isError", type: "Boolean"}

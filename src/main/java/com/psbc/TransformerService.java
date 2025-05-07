@@ -22,6 +22,7 @@ public class TransformerService {
     private int spanCounter = 0;
     private long lastInsertTime = System.currentTimeMillis(); // 初始化上次插入时间
     public static Boolean tableStructureChanged = true;
+    private Map<String, Map<String, String>> segmentOnEventMappings;
 
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
             Map<String, Integer> batchConfig) {
@@ -29,6 +30,8 @@ public class TransformerService {
         this.kafkaService = kafkaService;
         this.batchSize = batchConfig.get("size");
         this.batchInterval = batchConfig.get("interval");
+        this.segmentOnEventMappings = (Map<String, Map<String, String>>) (Map<?, ?>) ConfigLoader
+                .loadConfig("segmentOnEvent.yaml");
     }
 
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
@@ -85,7 +88,8 @@ public class TransformerService {
     public void insertToDb(byte[] data) throws Exception {
         // 解析 SegmentObject 并插入到数据库
         SegmentObject segment = SegmentObject.parseFrom(data);
-        TransformerUtils.insertSegmentObjectToEvents(databaseService, segment, invalidFields, missingFields); // 插入数据
+        TransformerUtils.insertSegmentObjectToEvents(databaseService, segment, invalidFields, missingFields,
+                segmentOnEventMappings); // 插入数据
         spanCounter += segment.getSpansCount(); // 增加计数器
 
         // 检查是否需要执行批量插入

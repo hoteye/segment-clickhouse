@@ -13,6 +13,7 @@ import segment.v3.Segment.SpanObject;
 
 import java.sql.PreparedStatement;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.lang.reflect.Field;
 
@@ -59,6 +60,100 @@ public class TransformerUtils {
                     stmt.setObject(columnIndex, value); // Other types
                 }
             }
+        }
+    }
+
+    static void insertSegmentObjectToEvents(DatabaseService databaseService, SegmentObject segment,
+            ConcurrentSkipListSet<String> invalidFields, ConcurrentSkipListSet<String> missingFields,
+            Map<String, Map<String, String>> mappings) throws Exception {
+
+        PreparedStatement stmt = databaseService.getStatement();
+
+        // 遍历 spans 列表
+        for (SpanObject span : segment.getSpansList()) {
+            int index = 1;
+
+            // 遍历 segment 的映射关系
+            Map<String, String> segmentMappings = mappings.get("segment");
+            for (Map.Entry<String, String> entry : segmentMappings.entrySet()) {
+                String fieldName = entry.getKey();
+                String fieldType = entry.getValue();
+
+                Object value = getFieldValue(segment, fieldName);
+                setPreparedStatementValue(stmt, index++, value, fieldType);
+            }
+
+            // 遍历 span 的映射关系
+            Map<String, String> spanMappings = mappings.get("spans");
+            for (Map.Entry<String, String> entry : spanMappings.entrySet()) {
+                String fieldName = entry.getKey();
+                String fieldType = entry.getValue();
+
+                Object value = getFieldValue(span, fieldName);
+                setPreparedStatementValue(stmt, index++, value, fieldType);
+            }
+
+            // 处理 refs 映射关系（取第一个 ref）
+            if (!span.getRefsList().isEmpty()) {
+                SegmentReference ref = span.getRefsList().get(0);
+                Map<String, String> refsMappings = mappings.get("refs");
+                for (Map.Entry<String, String> entry : refsMappings.entrySet()) {
+                    String fieldName = entry.getKey();
+                    String fieldType = entry.getValue();
+
+                    Object value = getFieldValue(ref, fieldName);
+                    setPreparedStatementValue(stmt, index++, value, fieldType);
+                }
+            }
+
+            // 处理 tags 映射关系
+            setTagOrLog(stmt, span.getTagsList(), "tag_", databaseService.getColumns(), invalidFields, missingFields);
+
+            // 处理 logs 映射关系
+            for (Log log : span.getLogsList()) {
+                setTagOrLog(stmt, log.getDataList(), "log_", databaseService.getColumns(), invalidFields,
+                        missingFields);
+            }
+
+            stmt.addBatch();
+        }
+    }
+
+    /**
+     * 根据字段名称获取对象的值
+     */
+    private static Object getFieldValue(Object obj, String fieldName) throws Exception {
+        Field field = obj.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(obj);
+    }
+
+    /**
+     * 根据字段类型设置 PreparedStatement 的值
+     */
+    private static void setPreparedStatementValue(PreparedStatement stmt, int index, Object value, String fieldType)
+            throws Exception {
+        if (value == null) {
+            stmt.setNull(index, java.sql.Types.NULL);
+            return;
+        }
+
+        switch (fieldType.toLowerCase()) {
+            case "string":
+                stmt.setString(index, (String) value);
+                break;
+            case "integer":
+                stmt.setInt(index, (Integer) value);
+                break;
+            case "long":
+                stmt.setLong(index, (Long) value);
+                break;
+            case "boolean":
+                stmt.setInt(index, (Boolean) value ? 1 : 0);
+                break;
+            default:
+                stmt.setObject(index, value);
+                break;
         }
     }
 
