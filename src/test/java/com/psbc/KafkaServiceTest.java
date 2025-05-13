@@ -6,11 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-class KafkaServiceTest {
+public class KafkaServiceTest {
     private KafkaService kafkaService;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         Map<String, String> kafkaConfig = Map.of(
                 "bootstrap_servers", "localhost:9092",
                 "group_id", "test-group",
@@ -20,10 +20,11 @@ class KafkaServiceTest {
     }
 
     @Test
-    void testConsumeMessages() throws Exception {
+    public void testConsumeMessages() throws Exception {
         ConsumerRecords<String, byte[]> records = kafkaService.consumeMessages();
 
         // 验证是否正确消费消息
         assert records != null;
+
     }
 }

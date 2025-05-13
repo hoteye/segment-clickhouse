@@ -12,7 +12,6 @@ import segment.v3.Segment.KeyStringValuePair;
 import segment.v3.Segment.Log;
 import segment.v3.Segment.RefType;
 
-import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.TimeZone;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TransformerTest {
         private DatabaseService databaseService;
         private TransformerService transformerService;
-        private PreparedStatement preparedStatement;
 
         @BeforeEach
         void setUp() throws Exception {
@@ -35,6 +33,9 @@ class TransformerTest {
                 transformerService = new TransformerService(databaseService, null, 1, 1000);
 
                 try (Statement stmt = databaseService.getConnection().createStatement()) {
+                        // 删除表（如果存在）
+                        stmt.execute("DROP TABLE IF EXISTS events_test");
+
                         stmt.execute("CREATE TABLE IF NOT EXISTS  events_test (\r\n" + //
                                         "    trace_id String,               -- Globally unique Trace ID\r\n" + //
                                         "    trace_segment_id String,       -- Current Segment ID\r\n" + //
@@ -83,7 +84,9 @@ class TransformerTest {
                                         "    log_event Nullable(String),\r\n" + //
                                         "    log_message Nullable(String),\r\n" + //
                                         "    tag_url Nullable(String),\r\n" + //
-                                        "    log_error_kind Nullable(String)\r\n" + //
+                                        "    log_error_kind Nullable(String),\r\n" + //
+                                        "    tag_thread_current_user_time_type_Int64 Nullable(Int64),\r\n" + //
+                                        "    tag_error_test_type_Int64 Nullable(Int64),\r\n" + //
                                         ") ENGINE = MergeTree()\r\n" + //
                                         "ORDER BY (start_time, trace_id);\r\n" + //
                                         "");
@@ -120,6 +123,9 @@ class TransformerTest {
                 String randomRefParentServiceInstance = "ref-instance-" + Math.random();
                 String randomRefParentEndpoint = "ref-endpoint-" + Math.random();
                 String randomRefNetworkAddressUsedAtPeer = "ref-peer-address-" + Math.random();
+                // 新增字段的随机值
+                long randomThreadCurrentUserTime = (long) (Math.random() * 1_000_000);
+                long errorTest = (long) (Math.random() * 1_000_000);
 
                 SegmentObject segment = SegmentObject.newBuilder()
                                 .setTraceId(randomTraceId)
@@ -158,6 +164,14 @@ class TransformerTest {
                                                 .addTags(KeyStringValuePair.newBuilder()
                                                                 .setKey("http_method")
                                                                 .setValue("http_method-fixed-2")
+                                                                .build())
+                                                .addTags(KeyStringValuePair.newBuilder()
+                                                                .setKey("thread_current_user_time_type_Int64")
+                                                                .setValue(String.valueOf(randomThreadCurrentUserTime))
+                                                                .build())
+                                                .addTags(KeyStringValuePair.newBuilder()
+                                                                .setKey("error_test_type_Int64")
+                                                                .setValue(String.valueOf(errorTest) + "error")
                                                                 .build())
                                                 .addLogs(Log.newBuilder()
                                                                 .setTime(System.currentTimeMillis())
@@ -220,6 +234,10 @@ class TransformerTest {
                                 assertEquals("http_method-fixed-2", resultSet.getString("tag_http_method"));
                                 assertEquals("log-event-fixed-2", resultSet.getString("log_event"));
                                 assertEquals("forward_url-fixed-1", resultSet.getString("log_forward_url"));
+
+                                assertEquals(randomThreadCurrentUserTime,
+                                                resultSet.getLong("tag_thread_current_user_time_type_Int64"));
+                                assertEquals(0, resultSet.getLong("tag_error_test_type_Int64"));
                                 System.out.println("All values match successfully!");
                         } else {
                                 fail("No data found for trace_id: " + randomTraceId);

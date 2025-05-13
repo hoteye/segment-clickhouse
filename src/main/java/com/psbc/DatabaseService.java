@@ -148,22 +148,37 @@ public class DatabaseService {
     }
 
     /**
-     * 动态添加缺失字段
+     * 动态添加缺失字段，并确保所有字段类型为 Nullable
      */
     public void addColumns(ConcurrentSkipListSet<String> missingFields) throws Exception {
         synchronized (missingFields) {
             for (String field : new HashSet<>(missingFields)) { // 避免 ConcurrentModificationException
                 if (columns.contains(field)) {
                     logger.info("Column {} already exists, skipping.", field);
+                    missingFields.remove(field);
                     continue;
                 }
 
-                String alterSQL = String.format("ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS %s Nullable(String)",
-                        schemaName, tableName, field);
+                // 默认字段类型为 Nullable(String)
+                String columnType = "Nullable(String)";
+
+                // 检查字段是否以 _type.xxx 结尾
+                if (field.contains("_type_")) {
+                    String[] parts = field.split("_type_");
+                    if (parts.length == 2) {
+                        if (!TransformerUtils.CLICKHOUSE_NUMERIC_TYPES.contains(parts[1])) {
+                            continue; // Skip this field
+                        }
+                        columnType = "Nullable(" + parts[1] + ")"; // 包装字段类型为 Nullable
+                    }
+                }
+
+                String alterSQL = String.format("ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS %s %s",
+                        schemaName, tableName, field, columnType);
 
                 try (Statement stmt = connection.createStatement()) {
                     stmt.execute(alterSQL);
-                    logger.info("Added column: {}", field);
+                    logger.info("Added column: {} with type: {}", field, columnType);
                     columns.add(field); // 更新 columns 管理
                     missingFields.remove(field);
                     TransformerService.tableStructureChanged = true; // 标记表结构已变化
@@ -177,14 +192,8 @@ public class DatabaseService {
     /**
      * 获取当前表的列信息
      */
-    public List<String> getColumns() throws Exception {
-        if (columns.isEmpty()) {
-            ResultSet columnsResultSet = connection.getMetaData().getColumns(null, schemaName, tableName, null);
-            while (columnsResultSet.next()) {
-                columns.add(columnsResultSet.getString("COLUMN_NAME"));
-            }
-            columnsResultSet.close();
-        }
+    public List<String> getColumns() {
         return columns;
     }
+
 }

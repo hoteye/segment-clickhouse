@@ -6,6 +6,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "TransformerUtils",
+            "request": "launch",
+            "mainClass": "com.psbc.TransformerUtils",
+            "projectName": "protobuf-java"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "com.psbc.Main",
+            "projectName": "protobuf-java"
+        },
+        {
+            "type": "java",
             "name": "TransformerService",
             "request": "launch",
             "mainClass": "com.psbc.TransformerService",
