@@ -22,7 +22,6 @@ public class TransformerService {
     private int spanCounter = 0;
     private long lastInsertTime = System.currentTimeMillis(); // 初始化上次插入时间
     public static Boolean tableStructureChanged = true;
-    private Map<String, Object> segmentOnEventMappings;
 
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
             Map<String, Integer> batchConfig) {
@@ -32,7 +31,6 @@ public class TransformerService {
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
             Map<String, Integer> batchConfig, Map<String, Object> segmentOnEventMappings) {
         this(databaseService, kafkaService, batchConfig.get("size"), batchConfig.get("interval"));
-        this.segmentOnEventMappings = segmentOnEventMappings;
     }
 
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
@@ -54,13 +52,12 @@ public class TransformerService {
         TransformerService transformerService = new TransformerService(databaseService, kafkaService,
                 (Map<String, Integer>) config.get("batch"));
 
-        // 调用 run 方法处理 Kafka 消息
-        transformerService.run();
-
         // 启动新线程，每 addColumnsInterval 毫秒执行一次 addColumns 方法
         BackgroundTaskManager.startAddColumnsTask(databaseService, missingFields,
                 (int) config.get("add_columns_interval"));
 
+        // 调用 run 方法处理 Kafka 消息
+        transformerService.run();
     }
 
     /**

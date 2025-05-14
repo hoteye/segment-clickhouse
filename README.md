@@ -11,3 +11,28 @@ Segment Clickhouse Integration 是一个高效的数据处理服务，旨在从 
 - **错误处理与重试**：在数据库连接失败时自动重新初始化连接，确保服务稳定性。
 
 ## 项目结构
+segment-clickhouse/
+├── Dockerfile                     # Docker 构建文件
+├── README.md                      # 项目说明文档
+├── pom.xml                        # Maven 项目配置文件
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/
+│   │   │       └── psbc/
+│   │   │           ├── DatabaseService.java       # Clickhouse 数据库服务
+│   │   │           ├── KafkaService.java          # Kafka 消息消费服务
+│   │   │           ├── TransformerService.java    # 核心服务逻辑
+│   │   │           ├── TransformerUtils.java      # 工具类
+│   │   │           └── BackgroundTaskManager.java # 后台任务管理
+│   │   └── resources/
+│   │       ├── application.yaml                   # 应用程序配置文件
+│   │       └── segmentOnEvent.yaml                # 动态字段映射配置
+│   └── test/
+│       ├── java/
+│       │   └── com/
+│       │       └── psbc/
+│       │           └── TransformerTest.java       # 单元测试类
+│       └── resources/
+│           └── test-application.yaml              # 测试配置文件
+└── target/                         # Maven 构建输出目录（生成的 JAR 文件等）
