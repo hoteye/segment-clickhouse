@@ -13,7 +13,6 @@ import segment.v3.Segment.SpanObject;
 
 import java.sql.PreparedStatement;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -22,11 +21,33 @@ public class TransformerUtils {
     private static final Logger logger = LoggerFactory.getLogger(TransformerUtils.class);
 
     // 定义 ClickHouse 支持的数字类型为静态共享列表
-    public static final List<String> CLICKHOUSE_NUMERIC_TYPES = Arrays.asList(
+    private static final List<String> CLICKHOUSE_NUMERIC_TYPES = Arrays.asList(
             "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32",
             "Int64", "UInt64", "Int128", "UInt128", "Int256", "UInt256",
             "Float32", "Float64", "Decimal32", "Decimal64", "Decimal128", "Decimal256");
 
+    /**
+     * Check if the given type is a ClickHouse numeric type
+     *
+     * @param type The type to check
+     * @return true if the type is a ClickHouse numeric type, false otherwise
+     */
+    public static boolean isClickhouseNumericType(String type) {
+        if (type == null || type.isEmpty()) {
+            return false; // Return false for null or empty types
+        }
+        return CLICKHOUSE_NUMERIC_TYPES.contains(type.substring(0, 1).toUpperCase() + type.substring(1));
+    }
+
+    /**
+     * Map SegmentObject and its Spans to PreparedStatement
+     *
+     * @param segment        SegmentObject to be mapped
+     * @param stmt           PreparedStatement to set values
+     * @param columnIndexMap List of column names in the order they appear in the
+     *                       PreparedStatement
+     * @throws Exception If mapping fails
+     */
     public static void mapSegmentObjectToStatement(SegmentObject segment, PreparedStatement stmt,
             List<String> columnIndexMap) throws Exception {
         // Map fields of SegmentObject
@@ -153,8 +174,7 @@ public class TransformerUtils {
                 if (parts.length == 2) {
                     columnType = parts[1]; // Extract the field type
 
-                    // Validate if the type is in CLICKHOUSE_NUMERIC_TYPES
-                    if (!TransformerUtils.CLICKHOUSE_NUMERIC_TYPES.contains(columnType)) {
+                    if (!TransformerUtils.isClickhouseNumericType(columnType)) {
                         invalidFields.add(sanitizedKey + "_type_" + columnType); // Record invalid type
                         logger.warn("Invalid type '{}' for field '{}'. Skipping.", columnType, sanitizedKey);
                         continue; // Skip this field

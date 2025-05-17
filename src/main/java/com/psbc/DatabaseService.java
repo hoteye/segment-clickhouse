@@ -166,10 +166,13 @@ public class DatabaseService {
                 if (field.contains("_type_")) {
                     String[] parts = field.split("_type_");
                     if (parts.length == 2) {
-                        if (!TransformerUtils.CLICKHOUSE_NUMERIC_TYPES.contains(parts[1])) {
+                        String type = parts[1];
+                        // 首字母大写
+                        String typeCap = type.substring(0, 1).toUpperCase() + type.substring(1).toLowerCase();
+                        if (!TransformerUtils.isClickhouseNumericType(typeCap)) {
                             continue; // Skip this field
                         }
-                        columnType = "Nullable(" + parts[1] + ")"; // 包装字段类型为 Nullable
+                        columnType = "Nullable(" + typeCap + ")"; // 包装字段类型为 Nullable
                     }
                 }
 
