@@ -10,6 +10,13 @@ public class BackgroundTaskManager {
     static final Logger logger = LoggerFactory.getLogger(BackgroundTaskManager.class);
     static final int DEFAULT_INTERVAL = 12000;
 
+    /**
+     * Starts a background task to periodically add columns to the database.
+     * 
+     * @param databaseService The database service instance.
+     * @param missingFields   The set of missing fields.
+     * @param interval        The interval in milliseconds between checks.
+     */
     public static void startAddColumnsTask(DatabaseService databaseService, ConcurrentSkipListSet<String> missingFields,
             int interval) {
         new Thread(() -> {

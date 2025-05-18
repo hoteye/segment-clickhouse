@@ -26,10 +26,10 @@ public class TransformerUtils {
             "Float32", "Float64", "Decimal32", "Decimal64", "Decimal128", "Decimal256");
 
     /**
-     * Check if the given type is a ClickHouse numeric type
-     *
-     * @param type The type to check
-     * @return true if the type is a ClickHouse numeric type, false otherwise
+     * Check if the given type is a ClickHouse numeric type.
+     * 
+     * @param type The type to check.
+     * @return true if the type is a ClickHouse numeric type, false otherwise.
      */
     public static boolean isClickhouseNumericType(String type) {
         if (type == null || type.isEmpty()) {
@@ -39,7 +39,13 @@ public class TransformerUtils {
     }
 
     /**
-     * Insert SegmentObject into the events table
+     * Insert a SegmentObject into the events table.
+     * 
+     * @param databaseService The database service instance.
+     * @param segment         The segment object to insert.
+     * @param invalidFields   Set of invalid fields.
+     * @param missingFields   Set of missing fields.
+     * @throws Exception if insertion fails.
      */
     static void insertSegmentObjectToEvents(DatabaseService databaseService, SegmentObject segment,
             ConcurrentSkipListSet<String> invalidFields, ConcurrentSkipListSet<String> missingFields)

@@ -25,6 +25,13 @@ public class Tools {
         return fieldName.matches(regex);
     }
 
+    /**
+     * Loads a YAML configuration file from the given file path.
+     * 
+     * @param filePath The path to the configuration file.
+     * @return A map containing the configuration data.
+     * @throws RuntimeException if loading fails.
+     */
     public static Map<String, Object> loadConfig(String filePath) {
         try (InputStream input = new FileInputStream(filePath)) {
             Yaml yaml = new Yaml();
@@ -34,6 +41,11 @@ public class Tools {
         }
     }
 
+    /**
+     * Sleeps for the specified number of milliseconds.
+     * 
+     * @param milliseconds The number of milliseconds to sleep.
+     */
     public static void sleep(int milliseconds) {
         try {
             Thread.sleep(milliseconds);
@@ -42,6 +54,11 @@ public class Tools {
         }
     }
 
+    /**
+     * Main method for testing utility functions.
+     * 
+     * @param args Command line arguments.
+     */
     public static void main(String[] args) {
         // Test cases
         System.out.println(isValidFieldName("valid_Field_name")); // true

@@ -23,16 +23,40 @@ public class TransformerService {
     private long lastInsertTime = System.currentTimeMillis(); // Initialize last insert time
     public static Boolean tableStructureChanged = true;
 
+    /**
+     * Constructor for TransformerService using batchConfig map.
+     * 
+     * @param databaseService The database service instance.
+     * @param kafkaService    The Kafka service instance.
+     * @param batchConfig     The batch configuration map.
+     */
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
             Map<String, Integer> batchConfig) {
         this(databaseService, kafkaService, batchConfig.get("size"), batchConfig.get("interval"));
     }
 
+    /**
+     * Constructor for TransformerService using batchConfig and
+     * segmentOnEventMappings.
+     * 
+     * @param databaseService        The database service instance.
+     * @param kafkaService           The Kafka service instance.
+     * @param batchConfig            The batch configuration map.
+     * @param segmentOnEventMappings The segment on event mappings.
+     */
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
             Map<String, Integer> batchConfig, Map<String, Object> segmentOnEventMappings) {
         this(databaseService, kafkaService, batchConfig.get("size"), batchConfig.get("interval"));
     }
 
+    /**
+     * Constructor for TransformerService using explicit batch size and interval.
+     * 
+     * @param databaseService The database service instance.
+     * @param kafkaService    The Kafka service instance.
+     * @param batchSize       The batch size.
+     * @param batchInterval   The batch interval in milliseconds.
+     */
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
             int batchSize, int batchInterval) {
         this.databaseService = databaseService;
@@ -41,6 +65,12 @@ public class TransformerService {
         this.batchInterval = batchInterval;
     }
 
+    /**
+     * Main entry point for the TransformerService application.
+     * 
+     * @param args Command line arguments.
+     * @throws Exception if an error occurs during execution.
+     */
     public static void main(String[] args) throws Exception {
         // Load configuration file
         Map<String, Object> config = ConfigLoader.loadConfig("application.yaml");
@@ -63,13 +93,9 @@ public class TransformerService {
     }
 
     /**
-     * Main loop for processing Kafka messages
+     * Main loop for processing Kafka messages.
      * 
-     * @param databaseService DatabaseService instance
-     * @param kafkaService    KafkaService instance
-     * @param batchSize       Batch insert size
-     * @param batchInterval   Batch insert interval (milliseconds)
-     * @throws Exception if an error occurs while processing messages
+     * @throws Exception if an error occurs while processing messages.
      */
     public void run() throws Exception {
         while (true) {

@@ -30,9 +30,10 @@ public class DatabaseService {
     private final List<String> columns = new ArrayList<>(); // Manage table column info
 
     /**
-     * Constructor, receives ClickHouse config
-     *
-     * @throws Exception
+     * Constructor for DatabaseService using ClickHouse configuration map.
+     * 
+     * @param clickhouseConfig The ClickHouse configuration map.
+     * @throws Exception if initialization fails.
      */
     public DatabaseService(Map<String, String> clickhouseConfig) throws Exception {
         this.clickhouseUrl = clickhouseConfig.get("url");
@@ -42,6 +43,16 @@ public class DatabaseService {
         this.tableName = clickhouseConfig.get("table_name");
     }
 
+    /**
+     * Constructor for DatabaseService using explicit parameters.
+     * 
+     * @param dbUrl      The database URL.
+     * @param schemaName The schema name.
+     * @param tableName  The table name.
+     * @param username   The username.
+     * @param password   The password.
+     * @throws Exception if initialization fails.
+     */
     public DatabaseService(String dbUrl, String schemaName, String tableName, String username, String password)
             throws Exception {
         this.clickhouseUrl = dbUrl;

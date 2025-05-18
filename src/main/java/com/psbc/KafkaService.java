@@ -10,6 +10,11 @@ import java.util.Properties;
 public class KafkaService {
     private final KafkaConsumer<String, byte[]> consumer;
 
+    /**
+     * Constructs a KafkaService with the given configuration.
+     * 
+     * @param kafkaConfig The Kafka configuration map.
+     */
     public KafkaService(Map<String, String> kafkaConfig) {
         Properties props = new Properties();
         props.put("bootstrap.servers", kafkaConfig.get("bootstrap_servers"));
@@ -22,10 +27,19 @@ public class KafkaService {
         this.consumer.subscribe(Collections.singletonList(kafkaConfig.get("topic")));
     }
 
+    /**
+     * Consumes messages from the Kafka topic.
+     * 
+     * @return ConsumerRecords containing the polled messages.
+     * @throws Exception if polling fails.
+     */
     public ConsumerRecords<String, byte[]> consumeMessages() throws Exception {
         return consumer.poll(Duration.ofMillis(500));
     }
 
+    /**
+     * Closes the Kafka consumer.
+     */
     public void close() {
         consumer.close();
     }
