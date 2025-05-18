@@ -40,7 +40,6 @@ public class DatabaseService {
         this.password = clickhouseConfig.get("password");
         this.schemaName = clickhouseConfig.get("schema_name");
         this.tableName = clickhouseConfig.get("table_name");
-        initConnection();
     }
 
     public DatabaseService(String dbUrl, String schemaName, String tableName, String username, String password)
@@ -50,14 +49,15 @@ public class DatabaseService {
         this.tableName = tableName;
         this.username = username;
         this.password = password;
-        initConnection();
     }
 
     /**
-     * 初始化数据库连接
+     * 初始化数据库连接，重试10次不成功就退出
      */
-    public void initConnection() {
-        while (true) {
+    public DatabaseService initConnection() {
+        int retry = 0;
+        int maxRetry = 5;
+        while (retry < maxRetry) {
             try {
                 if (connection != null && !connection.isClosed()) {
                     connection.close(); // 关闭旧连接
@@ -68,10 +68,17 @@ public class DatabaseService {
                 logger.info("Database connection initialized successfully.");
                 break; // 连接成功后退出循环
             } catch (SQLException e) {
-                logger.error("Failed to connect to ClickHouse: {}. Retrying in 1000ms...", e.getMessage(), e);
+                retry++;
+                logger.error("Failed to connect to ClickHouse: {}. Retrying in 3s... (attempt {}/{})", e.getMessage(),
+                        retry, maxRetry, e);
                 Tools.sleep(3000);
             }
         }
+        if (retry >= maxRetry) {
+            logger.error("Failed to connect to ClickHouse after {} attempts. Giving up.", maxRetry);
+            throw new RuntimeException("Failed to connect to ClickHouse after " + maxRetry + " attempts.");
+        }
+        return this; // 返回当前实例以便链式调用
     }
 
     /**
