@@ -10,7 +10,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 将构建好的 JAR 文件复制到容器中
 ARG JAR_FILE
-RUN echo "JAR_FILE is $JAR_FILE"
 COPY target/${JAR_FILE} app.jar
 
 COPY application.yaml application.yaml
