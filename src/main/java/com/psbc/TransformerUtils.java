@@ -14,7 +14,6 @@ import segment.v3.Segment.SpanObject;
 import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 
 public class TransformerUtils {
@@ -37,58 +36,6 @@ public class TransformerUtils {
             return false; // Return false for null or empty types
         }
         return CLICKHOUSE_NUMERIC_TYPES.contains(type.substring(0, 1).toUpperCase() + type.substring(1));
-    }
-
-    /**
-     * Map SegmentObject and its Spans to PreparedStatement
-     *
-     * @param segment        SegmentObject to be mapped
-     * @param stmt           PreparedStatement to set values
-     * @param columnIndexMap List of column names in the order they appear in the
-     *                       PreparedStatement
-     * @throws Exception If mapping fails
-     */
-    public static void mapSegmentObjectToStatement(SegmentObject segment, PreparedStatement stmt,
-            List<String> columnIndexMap) throws Exception {
-        // Map fields of SegmentObject
-        mapObjectFieldsToStatement(segment, stmt, columnIndexMap);
-
-        // Map fields of SpanObject
-        for (SpanObject span : segment.getSpansList()) {
-            mapObjectFieldsToStatement(span, stmt, columnIndexMap);
-
-            // Process Refs information
-            if (!span.getRefsList().isEmpty()) {
-                mapObjectFieldsToStatement(span.getRefsList().get(0), stmt, columnIndexMap);
-            }
-        }
-    }
-
-    private static void mapObjectFieldsToStatement(Object obj, PreparedStatement stmt,
-            List<String> columnIndexMap) throws Exception {
-        Field[] fields = obj.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            field.setAccessible(true); // Allow access to private fields
-            String fieldName = field.getName();
-            Object value = field.get(obj);
-
-            // Check if the field is in the column mapping
-            if (columnIndexMap.contains(fieldName)) {
-                int columnIndex = columnIndexMap.indexOf(fieldName) + 1; // +1 because PreparedStatement index starts
-                                                                         // from 1
-                if (value instanceof String) {
-                    stmt.setString(columnIndex, (String) value);
-                } else if (value instanceof Integer) {
-                    stmt.setInt(columnIndex, (Integer) value);
-                } else if (value instanceof Long) {
-                    stmt.setLong(columnIndex, (Long) value);
-                } else if (value instanceof Boolean) {
-                    stmt.setInt(columnIndex, (Boolean) value ? 1 : 0);
-                } else {
-                    stmt.setObject(columnIndex, value); // Other types
-                }
-            }
-        }
     }
 
     /**
