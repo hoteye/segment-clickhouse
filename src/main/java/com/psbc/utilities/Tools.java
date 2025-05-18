@@ -9,17 +9,18 @@ import org.yaml.snakeyaml.Yaml;
 public class Tools {
 
     /**
-     * 检查字段名称是否符合数据库字段命名规范
+     * Check if the field name conforms to the database field naming convention
      *
-     * @param fieldName 字段名称
-     * @return 如果符合规范返回 true，否则返回 false
+     * @param fieldName Field name
+     * @return true if valid, false otherwise
      */
     public static boolean isValidFieldName(String fieldName) {
         if (fieldName == null || fieldName.isEmpty()) {
-            return false; // 字段名称不能为空
+            return false; // Field name cannot be empty
         }
 
-        // 正则表达式：以字母或下划线开头，后面可以跟字母、数字或下划线
+        // Regular expression: starts with a letter or underscore, followed by letters,
+        // numbers, or underscores
         String regex = "^[a-zA-Z_][a-zA-Z0-9_]*$";
         return fieldName.matches(regex);
     }
@@ -42,7 +43,7 @@ public class Tools {
     }
 
     public static void main(String[] args) {
-        // 测试用例
+        // Test cases
         System.out.println(isValidFieldName("valid_Field_name")); // true
         System.out.println(isValidFieldName("_validFieldName123")); // true
         System.out.println(isValidFieldName("123invalid")); // false

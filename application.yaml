@@ -5,14 +5,14 @@ kafka:
   auto_offset_reset: "earliest"
 
 clickhouse:
-  schema_name: default       # 数据库模式名称
-  table_name: events         # 表名称
+  schema_name: default       # Database schema name
+  table_name: events         # Table name
   url: jdbc:clickhouse://192.168.100.6:8123/default?use_time_zone=UTC+8&use_server_time_zone=UTC+8
   username: root
   password: "123456"
 
 batch:
-  size: 40          # 批量插入的 spans 数量
-  interval: 3000    # 批量插入的时间间隔（毫秒）
+  size: 40          # Number of spans per batch insert
+  interval: 3000    # Batch insert interval (milliseconds)
 
-add_columns_interval: 80000  # 每 add_columns_interval 秒执行一次 addColumns 方法
+add_columns_interval: 80000  # Execute addColumns method every add_columns_interval milliseconds

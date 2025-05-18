@@ -1,29 +1,29 @@
 CREATE TABLE events (
-    trace_id String,               -- 全局唯一的 Trace ID
-    trace_segment_id String,       -- 当前 Segment 的 ID
-    service Nullable(String),                -- 服务名称
-    service_instance Nullable(String),       -- 服务实例名称
-    is_size_limited Nullable(UInt8),         -- 是否大小受限 (0 或 1)
-    span_id Int32,                 -- Span 的 ID
-    parent_span_id Int32,          -- 父 Span 的 ID
-    start_time DateTime64(3),      -- Span 开始时间，精确到毫秒
-    end_time DateTime64(3),        -- Span 结束时间，精确到毫秒
-    operation_name Nullable(String),         -- 操作名称
-    peer Nullable(String),                   -- 远程地址
-    span_type Nullable(String),              -- Span 类型 (Entry, Exit, Local)
-    span_layer Nullable(String),             -- Span 层 (Http, Database, RPCFramework, etc.)
-    component_id Nullable(Int32),            -- 组件 ID
-    is_error Nullable(UInt8),                -- 是否为错误 Span (0 或 1)
-    skip_analysis Nullable(UInt8),           -- 是否跳过分析 (0 或 1)
-    refs_ref_type Nullable(String),          -- 引用类型 (CrossProcess, CrossThread)
-    refs_trace_id Nullable(String),          -- 引用的 Trace ID
-    refs_parent_trace_segment_id Nullable(String), -- 父 Segment ID
-    refs_parent_span_id Nullable(Int32),     -- 父 Span ID
-    refs_parent_service Nullable(String),    -- 父服务名称
-    refs_parent_service_instance Nullable(String), -- 父服务实例名称
-    refs_parent_endpoint Nullable(String),   -- 父端点名称
-    refs_network_address_used_at_peer Nullable(String), -- 网络地址
---以下是动态字段
+    trace_id String,               -- Globally unique Trace ID
+    trace_segment_id String,       -- Current Segment ID
+    service Nullable(String),                -- Service name
+    service_instance Nullable(String),       -- Service instance name
+    is_size_limited Nullable(UInt8),         -- Whether size is limited (0 or 1)
+    span_id Int32,                 -- Span ID
+    parent_span_id Int32,          -- Parent Span ID
+    start_time DateTime64(3),      -- Span start time, accurate to milliseconds
+    end_time DateTime64(3),        -- Span end time, accurate to milliseconds
+    operation_name Nullable(String),         -- Operation name
+    peer Nullable(String),                   -- Remote address
+    span_type Nullable(String),              -- Span type (Entry, Exit, Local)
+    span_layer Nullable(String),             -- Span layer (Http, Database, RPCFramework, etc.)
+    component_id Nullable(Int32),            -- Component ID
+    is_error Nullable(UInt8),                -- Whether it is an error Span (0 or 1)
+    skip_analysis Nullable(UInt8),           -- Whether to skip analysis (0 or 1)
+    refs_ref_type Nullable(String),          -- Reference type (CrossProcess, CrossThread)
+    refs_trace_id Nullable(String),          -- Referenced Trace ID
+    refs_parent_trace_segment_id Nullable(String), -- Parent Segment ID
+    refs_parent_span_id Nullable(Int32),     -- Parent Span ID
+    refs_parent_service Nullable(String),    -- Parent service name
+    refs_parent_service_instance Nullable(String), -- Parent service instance name
+    refs_parent_endpoint Nullable(String),   -- Parent endpoint name
+    refs_network_address_used_at_peer Nullable(String), -- Network address
+-- The following are dynamic fields
     tag_status_code Nullable(String),
     log_stack Nullable(String),
     tag_Available_Memory Nullable(String),

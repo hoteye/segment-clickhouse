@@ -23,15 +23,15 @@ public class DatabaseService {
     private final String clickhouseUrl;
     private final String username;
     private final String password;
-    private final String schemaName; // schemaName 成员变量
-    private final String tableName; // tableName 成员变量
-    private Connection connection; // 管理数据库连接
-    private PreparedStatement statement; // 新增 PreparedStatement 属性
-    private final List<String> columns = new ArrayList<>(); // 管理表的列信息
+    private final String schemaName; // schemaName field
+    private final String tableName; // tableName field
+    private Connection connection; // Manage database connection
+    private PreparedStatement statement; // New PreparedStatement property
+    private final List<String> columns = new ArrayList<>(); // Manage table column info
 
     /**
-     * 构造函数，接收 ClickHouse 配置
-     * 
+     * Constructor, receives ClickHouse config
+     *
      * @throws Exception
      */
     public DatabaseService(Map<String, String> clickhouseConfig) throws Exception {
@@ -52,7 +52,7 @@ public class DatabaseService {
     }
 
     /**
-     * 初始化数据库连接，重试10次不成功就退出
+     * Initialize database connection, retry several times then exit if failed
      */
     public DatabaseService initConnection() {
         int retry = 0;
@@ -60,13 +60,13 @@ public class DatabaseService {
         while (retry < maxRetry) {
             try {
                 if (connection != null && !connection.isClosed()) {
-                    connection.close(); // 关闭旧连接
+                    connection.close(); // Close old connection
                     logger.info("Closed existing database connection.");
                 }
                 connection = DriverManager.getConnection(clickhouseUrl, username, password);
-                closeStatement(); // 关闭旧的 PreparedStatement
+                closeStatement(); // Close old PreparedStatement
                 logger.info("Database connection initialized successfully.");
-                break; // 连接成功后退出循环
+                break; // Exit loop after successful connection
             } catch (SQLException e) {
                 retry++;
                 logger.error("Failed to connect to ClickHouse: {}. Retrying in 3s... (attempt {}/{})", e.getMessage(),
@@ -78,18 +78,18 @@ public class DatabaseService {
             logger.error("Failed to connect to ClickHouse after {} attempts. Giving up.", maxRetry);
             throw new RuntimeException("Failed to connect to ClickHouse after " + maxRetry + " attempts.");
         }
-        return this; // 返回当前实例以便链式调用
+        return this; // Return current instance for chain call
     }
 
     /**
-     * 获取数据库连接
+     * Get database connection
      */
     public Connection getConnection() throws Exception {
         return connection;
     }
 
     /**
-     * 初始化 PreparedStatement
+     * Initialize PreparedStatement
      */
     public void initStatement(String sql) throws Exception {
         if (statement != null) {
@@ -100,8 +100,8 @@ public class DatabaseService {
     }
 
     /**
-     * 获取 PreparedStatement
-     * 
+     * Get PreparedStatement
+     *
      * @throws Exception
      */
     public PreparedStatement getStatement() throws Exception {
@@ -112,13 +112,13 @@ public class DatabaseService {
     }
 
     /**
-     * 关闭 PreparedStatement
+     * Close PreparedStatement
      */
     public void closeStatement() {
         if (statement != null) {
             try {
                 statement.close();
-                statement = null; // 清空引用以便下次重新创建
+                statement = null; // Clear reference for next creation
                 logger.info("PreparedStatement closed.");
             } catch (Exception e) {
                 logger.error("Failed to close PreparedStatement: {}", e.getMessage(), e);
@@ -127,7 +127,7 @@ public class DatabaseService {
     }
 
     /**
-     * 构建 INSERT SQL 语句
+     * Build INSERT SQL statement
      */
     public String buildInsertSQL() throws Exception {
         ResultSet columnsResultSet = connection.getMetaData().getColumns(null, schemaName, tableName, null);
@@ -155,31 +155,31 @@ public class DatabaseService {
     }
 
     /**
-     * 动态添加缺失字段，并确保所有字段类型为 Nullable
+     * Dynamically add missing columns, ensure all columns are Nullable
      */
     public void addColumns(ConcurrentSkipListSet<String> missingFields) throws Exception {
         synchronized (missingFields) {
-            for (String field : new HashSet<>(missingFields)) { // 避免 ConcurrentModificationException
+            for (String field : new HashSet<>(missingFields)) { // Avoid ConcurrentModificationException
                 if (columns.contains(field)) {
                     logger.info("Column {} already exists, skipping.", field);
                     missingFields.remove(field);
                     continue;
                 }
 
-                // 默认字段类型为 Nullable(String)
+                // Default field type is Nullable(String)
                 String columnType = "Nullable(String)";
 
-                // 检查字段是否以 _type.xxx 结尾
+                // Check if the field ends with _type.xxx
                 if (field.contains("_type_")) {
                     String[] parts = field.split("_type_");
                     if (parts.length == 2) {
                         String type = parts[1];
-                        // 首字母大写
+                        // Capitalize the first letter
                         String typeCap = type.substring(0, 1).toUpperCase() + type.substring(1).toLowerCase();
                         if (!TransformerUtils.isClickhouseNumericType(typeCap)) {
                             continue; // Skip this field
                         }
-                        columnType = "Nullable(" + typeCap + ")"; // 包装字段类型为 Nullable
+                        columnType = "Nullable(" + typeCap + ")"; // Wrap the field type as Nullable
                     }
                 }
 
@@ -189,9 +189,9 @@ public class DatabaseService {
                 try (Statement stmt = connection.createStatement()) {
                     stmt.execute(alterSQL);
                     logger.info("Added column: {} with type: {}", field, columnType);
-                    columns.add(field); // 更新 columns 管理
+                    columns.add(field); // Update columns management
                     missingFields.remove(field);
-                    TransformerService.tableStructureChanged = true; // 标记表结构已变化
+                    TransformerService.tableStructureChanged = true; // Mark table structure as changed
                 } catch (Exception e) {
                     logger.error("Failed to add column {}: {}", field, e.getMessage(), e);
                 }
@@ -200,7 +200,7 @@ public class DatabaseService {
     }
 
     /**
-     * 获取当前表的列信息
+     * Get the column information of the current table
      */
     public List<String> getColumns() {
         return columns;

@@ -5,10 +5,10 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.psbc</groupId>
 	<artifactId>segment-clickhouse</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2</version>
 
 	<properties>
-		<java.version>17</java.version> <!-- 使用 Java 17 -->
+		<java.version>17</java.version> <!-- Use Java 17 -->
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
@@ -57,7 +57,7 @@
 			<version>1.7.36</version>
 		</dependency>
 
-		<!-- Logback 实现 -->
+		<!-- Logback implementation -->
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
@@ -124,7 +124,7 @@
 							<createDependencyReducedPom>true</createDependencyReducedPom>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>com.psbc.TransformerService</mainClass> <!-- 替换为你的主类全限定名 -->
+									<mainClass>com.psbc.TransformerService</mainClass> <!-- Replace with your main class fully qualified name -->
 								</transformer>
 							</transformers>
 						</configuration>
@@ -132,7 +132,7 @@
 				</executions>
 			</plugin>
 			
-            <!-- Docker Maven 插件 -->
+            <!-- Docker Maven Plugin -->
             <plugin>
                 <groupId>com.spotify</groupId>
                 <artifactId>dockerfile-maven-plugin</artifactId>
@@ -149,21 +149,21 @@
                 <configuration>
                     <repository>${project.artifactId}</repository>
                     <tag>${project.version}</tag>
-                    <dockerfile>${project.basedir}/Dockerfile</dockerfile> <!-- 指定 Dockerfile 路径 -->
-                    <contextDirectory>${project.basedir}</contextDirectory> <!-- 指定上下文目录 -->
+                    <dockerfile>${project.basedir}/Dockerfile</dockerfile> <!-- Specify Dockerfile path -->
+                    <contextDirectory>${project.basedir}</contextDirectory> <!-- Specify context directory -->
                     <buildArgs>
                         <JAR_FILE>${project.build.finalName}.jar</JAR_FILE>
                     </buildArgs>
                 </configuration>
             </plugin>
 
-            <!-- Exec Maven 插件 -->
+            <!-- Exec Maven Plugin -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <executions>
-                    <!-- 停止原有容器 -->
+                    <!-- Stop the original container -->
                     <execution>
                         <id>stop-docker-container</id>
                         <phase>install</phase>
@@ -175,12 +175,12 @@
                             <arguments>
                                 <argument>rm</argument>
                                 <argument>-f</argument>
-                                <argument>${project.artifactId}</argument> <!-- 容器名称 -->
+                                <argument>${project.artifactId}</argument> <!-- Container name -->
                             </arguments>
                         </configuration>
                     </execution>
 
-                    <!-- 启动新容器 -->
+                    <!-- Start new container -->
                     <execution>
                         <id>start-docker-container</id>
                         <phase>install</phase>

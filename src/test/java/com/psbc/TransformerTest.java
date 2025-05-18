@@ -33,7 +33,7 @@ class TransformerTest {
                 transformerService = new TransformerService(databaseService, null, 1, 1000);
 
                 try (Statement stmt = databaseService.getConnection().createStatement()) {
-                        // 删除表（如果存在）
+                        // Drop table if exists
                         stmt.execute("DROP TABLE IF EXISTS events_test");
 
                         stmt.execute("CREATE TABLE IF NOT EXISTS  events_test (\r\n" + //
@@ -123,7 +123,7 @@ class TransformerTest {
                 String randomRefParentServiceInstance = "ref-instance-" + Math.random();
                 String randomRefParentEndpoint = "ref-endpoint-" + Math.random();
                 String randomRefNetworkAddressUsedAtPeer = "ref-peer-address-" + Math.random();
-                // 新增字段的随机值
+                // New fields random values
                 long randomThreadCurrentUserTime = (long) (Math.random() * 1_000_000);
                 long errorTest = (long) (Math.random() * 1_000_000);
 

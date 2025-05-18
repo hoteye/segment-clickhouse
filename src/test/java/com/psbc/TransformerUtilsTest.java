@@ -23,9 +23,9 @@ class TransformerUtilsTest {
 
     @Test
     void testIsClickhouseNumericType_oneChar_valid() {
-        assertFalse(TransformerUtils.isClickhouseNumericType("i")); // "I" 不在列表，返回false
-        assertFalse(TransformerUtils.isClickhouseNumericType("I")); // "I" 不在列表，返回false
-        assertFalse(TransformerUtils.isClickhouseNumericType("8")); // "8" 不在列表，返回false
+        assertFalse(TransformerUtils.isClickhouseNumericType("i")); // "I" not in the list, returns false
+        assertFalse(TransformerUtils.isClickhouseNumericType("I")); // "I" not in the list, returns false
+        assertFalse(TransformerUtils.isClickhouseNumericType("8")); // "8" not in the list, returns false
     }
 
     @Test
@@ -112,7 +112,7 @@ class TransformerUtilsTest {
         ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
         ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
         TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
-        // 由于异常被捕获，stmt.setLong 不会被调用
+        // Because the exception is caught, stmt.setLong will not be called
         Mockito.verifyNoInteractions(stmt);
     }
 }

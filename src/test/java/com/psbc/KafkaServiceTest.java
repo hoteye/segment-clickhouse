@@ -23,7 +23,6 @@ public class KafkaServiceTest {
     public void testConsumeMessages() throws Exception {
         ConsumerRecords<String, byte[]> records = kafkaService.consumeMessages();
 
-        // 验证是否正确消费消息
         assert records != null;
 
     }

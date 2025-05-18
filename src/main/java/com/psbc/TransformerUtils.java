@@ -19,7 +19,7 @@ import java.util.Arrays;
 public class TransformerUtils {
     private static final Logger logger = LoggerFactory.getLogger(TransformerUtils.class);
 
-    // 定义 ClickHouse 支持的数字类型为静态共享列表
+    // Define ClickHouse supported numeric types as a static shared list
     private static final List<String> CLICKHOUSE_NUMERIC_TYPES = Arrays.asList(
             "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32",
             "Int64", "UInt64", "Int128", "UInt128", "Int256", "UInt256",

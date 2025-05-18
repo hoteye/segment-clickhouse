@@ -1,17 +1,17 @@
-# 使用官方 OpenJDK 运行时镜像作为基础镜像
+# Use official OpenJDK runtime image as base image
 FROM openjdk:17-jdk-slim AS base
 
-# 设置工作目录
+# Set working directory
 WORKDIR /app
 
-# 设置时区为 Asia/Shanghai
+# Set timezone to Asia/Shanghai
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# 将构建好的 JAR 文件复制到容器中
+# Copy built JAR file into container
 ARG JAR_FILE
 COPY target/${JAR_FILE} app.jar
 
 COPY application.yaml application.yaml
-# 设置容器启动时的命令
+# Set container startup command
 CMD ["java", "-jar", "app.jar"]
