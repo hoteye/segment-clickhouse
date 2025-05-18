@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 public class BackgroundTaskManager {
 
     static final Logger logger = LoggerFactory.getLogger(BackgroundTaskManager.class);
+    static final int DEFAULT_INTERVAL = 12000;
 
     public static void startAddColumnsTask(DatabaseService databaseService, ConcurrentSkipListSet<String> missingFields,
             int interval) {
@@ -15,8 +16,9 @@ public class BackgroundTaskManager {
             while (true) {
                 logger.info("missingFields: {}.", missingFields);
                 try {
+                    Thread.sleep(DEFAULT_INTERVAL);
                     databaseService.addColumns(missingFields);
-                    Thread.sleep(interval);
+                    Thread.sleep(Math.abs(interval - DEFAULT_INTERVAL));
                 } catch (Exception e) {
                     logger.error("Error in background task: {}", e.getMessage(), e); // Improved error logging
                 }
