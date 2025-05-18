@@ -28,7 +28,7 @@ class TransformerTest {
                 // Initialize real database connection
                 databaseService = new DatabaseService("jdbc:clickhouse://192.168.100.6:8123/default", "default",
                                 "events_test",
-                                "root", "123456");
+                                "root", "123456").initConnection();
 
                 transformerService = new TransformerService(databaseService, null, 1, 1000);
 

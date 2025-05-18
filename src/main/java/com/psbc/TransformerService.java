@@ -46,7 +46,8 @@ public class TransformerService {
         Map<String, Object> config = ConfigLoader.loadConfig("application.yaml");
 
         // 初始化服务
-        DatabaseService databaseService = new DatabaseService((Map<String, String>) config.get("clickhouse"));
+        DatabaseService databaseService = new DatabaseService((Map<String, String>) config.get("clickhouse"))
+                .initConnection();
         KafkaService kafkaService = new KafkaService((Map<String, String>) config.get("kafka"));
 
         TransformerService transformerService = new TransformerService(databaseService, kafkaService,

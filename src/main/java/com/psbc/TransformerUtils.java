@@ -169,16 +169,14 @@ public class TransformerUtils {
             String columnType = "String"; // Default type is String
 
             // Check if the field name ends with _type.xxx
-            if (sanitizedKey.contains("_type_")) {
-                String[] parts = sanitizedKey.split("_type_");
-                if (parts.length == 2) {
-                    columnType = parts[1]; // Extract the field type
+            String[] parts = sanitizedKey.split("_type_");
+            if (parts.length == 2) {
+                columnType = parts[1]; // Extract the field type
 
-                    if (!TransformerUtils.isClickhouseNumericType(columnType)) {
-                        invalidFields.add(sanitizedKey + "_type_" + columnType); // Record invalid type
-                        logger.warn("Invalid type '{}' for field '{}'. Skipping.", columnType, sanitizedKey);
-                        continue; // Skip this field
-                    }
+                if (!TransformerUtils.isClickhouseNumericType(columnType)) {
+                    invalidFields.add(sanitizedKey); // Record invalid type
+                    logger.warn("Invalid type '{}' for field '{}'. Skipping.", columnType, sanitizedKey);
+                    continue; // Skip this field
                 }
             }
 
