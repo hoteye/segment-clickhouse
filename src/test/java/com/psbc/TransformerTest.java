@@ -87,6 +87,7 @@ class TransformerTest {
                                         "    log_error_kind Nullable(String),\r\n" + //
                                         "    tag_thread_current_user_time_type_Int64 Nullable(Int64),\r\n" + //
                                         "    tag_error_test_type_Int64 Nullable(Int64),\r\n" + //
+                                        "    tag_test_Float_type_Float64 Nullable(Float64),\r\n" + //
                                         ") ENGINE = MergeTree()\r\n" + //
                                         "ORDER BY (start_time, trace_id);\r\n" + //
                                         "");
@@ -126,6 +127,7 @@ class TransformerTest {
                 // New fields random values
                 long randomThreadCurrentUserTime = (long) (Math.random() * 1_000_000);
                 long errorTest = (long) (Math.random() * 1_000_000);
+                Double randomTestFloat = Math.random() * 10444444000104444000.0;
 
                 SegmentObject segment = SegmentObject.newBuilder()
                                 .setTraceId(randomTraceId)
@@ -172,6 +174,10 @@ class TransformerTest {
                                                 .addTags(KeyStringValuePair.newBuilder()
                                                                 .setKey("error_test_type_Int64")
                                                                 .setValue(String.valueOf(errorTest) + "error")
+                                                                .build())
+                                                .addTags(KeyStringValuePair.newBuilder()
+                                                                .setKey("test_Float_type_Float64")
+                                                                .setValue(String.valueOf(randomTestFloat))
                                                                 .build())
                                                 .addLogs(Log.newBuilder()
                                                                 .setTime(System.currentTimeMillis())
@@ -238,6 +244,7 @@ class TransformerTest {
                                 assertEquals(randomThreadCurrentUserTime,
                                                 resultSet.getLong("tag_thread_current_user_time_type_Int64"));
                                 assertEquals(0, resultSet.getLong("tag_error_test_type_Int64"));
+                                assertEquals(randomTestFloat, resultSet.getDouble("tag_test_Float_type_Float64"));
                                 System.out.println("All values match successfully!");
                         } else {
                                 fail("No data found for trace_id: " + randomTraceId);
