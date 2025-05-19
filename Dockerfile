@@ -13,5 +13,5 @@ ARG JAR_FILE
 COPY target/${JAR_FILE} app.jar
 
 COPY application.yaml application.yaml
-# Set container startup command
-CMD ["java", "-jar", "app.jar"]
+# Set container startup command with JVM memory limits
+CMD ["java", "-Xms512m", "-Xmx512m", "-XX:MetaspaceSize=128m", "-XX:MaxMetaspaceSize=256m", "-jar", "app.jar"]
