@@ -15,7 +15,8 @@ public class KafkaServiceTest {
                 "bootstrap_servers", "localhost:9092",
                 "group_id", "test-group",
                 "topic", "test-topic",
-                "auto_offset_reset", "earliest");
+                "auto_offset_reset", "earliest",
+                "poll_interval_ms", 1000);
         kafkaService = new KafkaService(kafkaConfig);
     }
 
