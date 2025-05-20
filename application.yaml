@@ -3,6 +3,7 @@ kafka:
   group_id: "skywalking-segments-consumer-group-myself"
   topic: "topic-dics-long-skywalking-segments"
   auto_offset_reset: "earliest"
+  poll_interval_ms: 300   # Poll interval in milliseconds (added for dynamic control)
 
 clickhouse:
   schema_name: default       # Database schema name

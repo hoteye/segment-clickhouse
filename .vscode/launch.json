@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "FlinkKafkaToClickHouseJob",
+            "request": "launch",
+            "mainClass": "com.psbc.flink.FlinkKafkaToClickHouseJob",
+            "projectName": "protobuf-java"
+        },
+        {
+            "type": "java",
             "name": "TransformerUtils",
             "request": "launch",
             "mainClass": "com.psbc.TransformerUtils",

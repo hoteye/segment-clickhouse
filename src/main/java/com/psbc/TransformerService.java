@@ -78,7 +78,7 @@ public class TransformerService {
         // Initialize service
         DatabaseService databaseService = new DatabaseService((Map<String, String>) config.get("clickhouse"))
                 .initConnection();
-        KafkaService kafkaService = new KafkaService((Map<String, String>) config.get("kafka"));
+        KafkaService kafkaService = new KafkaService((Map<String, Object>) config.get("kafka"));
 
         TransformerService transformerService = new TransformerService(databaseService, kafkaService,
                 (Map<String, Integer>) config.get("batch"));

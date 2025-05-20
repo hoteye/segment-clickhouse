@@ -47,7 +47,7 @@ public class TransformerUtils {
      * @param missingFields   Set of missing fields.
      * @throws Exception if insertion fails.
      */
-    static void insertSegmentObjectToEvents(DatabaseService databaseService, SegmentObject segment,
+    public static void insertSegmentObjectToEvents(DatabaseService databaseService, SegmentObject segment,
             ConcurrentSkipListSet<String> invalidFields, ConcurrentSkipListSet<String> missingFields)
             throws Exception {
         PreparedStatement stmt = databaseService.getStatement();
@@ -113,7 +113,7 @@ public class TransformerUtils {
      * @param missingFields List to record fields not in columnNames
      * @throws Exception If setting field values fails
      */
-    static void setTagOrLog(PreparedStatement stmt, List<KeyStringValuePair> keyValuePairs,
+    protected static void setTagOrLog(PreparedStatement stmt, List<KeyStringValuePair> keyValuePairs,
             String prefix, List<String> columnNames,
             ConcurrentSkipListSet<String> invalidFields, ConcurrentSkipListSet<String> missingFields) throws Exception {
         for (KeyStringValuePair keyValue : keyValuePairs) {
