@@ -29,8 +29,11 @@ class DatabaseServiceTest {
 
         // Only register static mock once
         try (org.mockito.MockedStatic<TransformerUtils> mocked = Mockito.mockStatic(TransformerUtils.class)) {
-            mocked.when(() -> TransformerUtils.isClickhouseNumericType("Int64")).thenReturn(true);
-            mocked.when(() -> TransformerUtils.isClickhouseNumericType("ABC")).thenReturn(false);
+            mocked.when(() -> TransformerUtils.isClickhouseSupportedType("Int64")).thenReturn(true);
+            mocked.when(() -> TransformerUtils.isClickhouseSupportedType("ABC")).thenReturn(false);
+            // mock toClickHouseType 返回正确类型
+            mocked.when(() -> TransformerUtils.toClickHouseType("Int64")).thenReturn("Int64");
+            mocked.when(() -> TransformerUtils.toClickHouseType("ABC")).thenReturn(null);
 
             db.addColumns(missingFields);
 

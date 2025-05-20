@@ -69,9 +69,15 @@ class TransformerTest {
                                         "    refs_parent_service_instance Nullable(String), -- Parent service instance name\r\n"
                                         + //
                                         "    refs_parent_endpoint Nullable(String),   -- Parent endpoint name\r\n" + //
-                                        "    refs_network_address_used_at_peer Nullable(String) -- Network address\r\n"
-                                        + //
-                                        ",\r\n" + //
+                                        "    refs_network_address_used_at_peer Nullable(String), -- Network address\r\n"
+                                        // 新增日期类型字段
+                                        + "    tag_test_type_date Date,\r\n"
+                                        + "    tag_test_type_date32 Date32,\r\n"
+                                        + "    tag_test_type_datetime DateTime,\r\n"
+                                        + "    tag_test_type_datetime32 DateTime32,\r\n"
+                                        + "    tag_test_type_datetime64 DateTime64(3)\r\n"
+                                        // ...existing code...
+                                        + ",\r\n" + //
                                         "    tag_status_code Nullable(String),\r\n" + //
                                         "    log_stack Nullable(String),\r\n" + //
                                         "    tag_Available_Memory Nullable(String),\r\n" + //
@@ -124,10 +130,25 @@ class TransformerTest {
                 String randomRefParentServiceInstance = "ref-instance-" + Math.random();
                 String randomRefParentEndpoint = "ref-endpoint-" + Math.random();
                 String randomRefNetworkAddressUsedAtPeer = "ref-peer-address-" + Math.random();
-                // New fields random values
+                // 新增随机日期字段
+                java.time.LocalDate randomDate = java.time.LocalDate.now().minusDays((long) (Math.random() * 1000));
+                java.time.LocalDate randomDate32 = java.time.LocalDate.now().minusDays((long) (Math.random() * 2000));
+                java.time.LocalDateTime randomDateTime = java.time.LocalDateTime.now()
+                                .minusHours((long) (Math.random() * 1000));
+                java.time.LocalDateTime randomDateTime32 = java.time.LocalDateTime.now()
+                                .minusHours((long) (Math.random() * 2000));
+                java.time.LocalDateTime randomDateTime64 = java.time.LocalDateTime.now()
+                                .minusMinutes((long) (Math.random() * 3000));
+
                 long randomThreadCurrentUserTime = (long) (Math.random() * 1_000_000);
                 long errorTest = (long) (Math.random() * 1_000_000);
                 Double randomTestFloat = Math.random() * 10444444000104444000.0;
+
+                // 日期类型字段格式化
+                java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter
+                                .ofPattern("yyyy-MM-dd HH:mm:ss");
+                java.time.format.DateTimeFormatter dtfMs = java.time.format.DateTimeFormatter
+                                .ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
                 SegmentObject segment = SegmentObject.newBuilder()
                                 .setTraceId(randomTraceId)
@@ -178,6 +199,27 @@ class TransformerTest {
                                                 .addTags(KeyStringValuePair.newBuilder()
                                                                 .setKey("test_Float_type_Float64")
                                                                 .setValue(String.valueOf(randomTestFloat))
+                                                                .build())
+                                                // 新增日期类型 tag，全部格式化为 ClickHouse 可识别格式
+                                                .addTags(KeyStringValuePair.newBuilder()
+                                                                .setKey("test_type_date")
+                                                                .setValue(randomDate.toString())
+                                                                .build())
+                                                .addTags(KeyStringValuePair.newBuilder()
+                                                                .setKey("test_type_date32")
+                                                                .setValue(randomDate32.toString())
+                                                                .build())
+                                                .addTags(KeyStringValuePair.newBuilder()
+                                                                .setKey("test_type_datetime")
+                                                                .setValue(randomDateTime.format(dtf))
+                                                                .build())
+                                                .addTags(KeyStringValuePair.newBuilder()
+                                                                .setKey("test_type_datetime32")
+                                                                .setValue(randomDateTime32.format(dtf))
+                                                                .build())
+                                                .addTags(KeyStringValuePair.newBuilder()
+                                                                .setKey("test_type_datetime64")
+                                                                .setValue(randomDateTime64.format(dtfMs))
                                                                 .build())
                                                 .addLogs(Log.newBuilder()
                                                                 .setTime(System.currentTimeMillis())
@@ -241,6 +283,19 @@ class TransformerTest {
                                 assertEquals("log-event-fixed-2", resultSet.getString("log_event"));
                                 assertEquals("forward_url-fixed-1", resultSet.getString("log_forward_url"));
 
+                                // 校验日期类型字段
+                                assertEquals(randomDate.toString(), resultSet.getDate("tag_test_type_date").toString());
+                                assertEquals(randomDate32.toString(),
+                                                resultSet.getDate("tag_test_type_date32").toString());
+                                assertEquals(randomDateTime.toLocalDate().toString(),
+                                                resultSet.getTimestamp("tag_test_type_datetime").toLocalDateTime()
+                                                                .toLocalDate().toString());
+                                assertEquals(randomDateTime32.toLocalDate().toString(),
+                                                resultSet.getTimestamp("tag_test_type_datetime32").toLocalDateTime()
+                                                                .toLocalDate().toString());
+                                assertEquals(randomDateTime64.toLocalDate().toString(),
+                                                resultSet.getTimestamp("tag_test_type_datetime64").toLocalDateTime()
+                                                                .toLocalDate().toString());
                                 assertEquals(randomThreadCurrentUserTime,
                                                 resultSet.getLong("tag_thread_current_user_time_type_Int64"));
                                 assertEquals(0, resultSet.getLong("tag_error_test_type_Int64"));

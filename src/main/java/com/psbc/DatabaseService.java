@@ -185,12 +185,10 @@ public class DatabaseService {
                     String[] parts = field.split("_type_");
                     if (parts.length == 2) {
                         String type = parts[1];
-                        // Capitalize the first letter
-                        String typeCap = type.substring(0, 1).toUpperCase() + type.substring(1).toLowerCase();
-                        if (!TransformerUtils.isClickhouseNumericType(typeCap)) {
-                            continue; // Skip this field
+                        if (!TransformerUtils.isClickhouseSupportedType(type)) {
+                            continue;
                         }
-                        columnType = "Nullable(" + typeCap + ")"; // Wrap the field type as Nullable
+                        columnType = "Nullable(" + TransformerUtils.toClickHouseType(type) + ")";
                     }
                 }
 

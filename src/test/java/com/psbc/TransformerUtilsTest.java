@@ -13,34 +13,44 @@ class TransformerUtilsTest {
 
     @Test
     void testIsClickhouseNumericType_null() {
-        assertFalse(TransformerUtils.isClickhouseNumericType(null));
+        assertFalse(TransformerUtils.isClickhouseSupportedType(null));
     }
 
     @Test
     void testIsClickhouseNumericType_empty() {
-        assertFalse(TransformerUtils.isClickhouseNumericType(""));
+        assertFalse(TransformerUtils.isClickhouseSupportedType(""));
     }
 
     @Test
     void testIsClickhouseNumericType_oneChar_valid() {
-        assertFalse(TransformerUtils.isClickhouseNumericType("i")); // "I" not in the list, returns false
-        assertFalse(TransformerUtils.isClickhouseNumericType("I")); // "I" not in the list, returns false
-        assertFalse(TransformerUtils.isClickhouseNumericType("8")); // "8" not in the list, returns false
+        assertFalse(TransformerUtils.isClickhouseSupportedType("i")); // "I" not in the list, returns false
+        assertFalse(TransformerUtils.isClickhouseSupportedType("I")); // "I" not in the list, returns false
+        assertFalse(TransformerUtils.isClickhouseSupportedType("8")); // "8" not in the list, returns false
     }
 
     @Test
     void testIsClickhouseNumericType_validType() {
-        assertTrue(TransformerUtils.isClickhouseNumericType("Int8"));
-        assertTrue(TransformerUtils.isClickhouseNumericType("int8"));
-        assertTrue(TransformerUtils.isClickhouseNumericType("UInt64"));
-        assertTrue(TransformerUtils.isClickhouseNumericType("float64"));
+        assertTrue(TransformerUtils.isClickhouseSupportedType("Int8"));
+        assertTrue(TransformerUtils.isClickhouseSupportedType("int8"));
+        assertTrue(TransformerUtils.isClickhouseSupportedType("UInt64"));
+        assertTrue(TransformerUtils.isClickhouseSupportedType("float64"));
     }
 
     @Test
     void testIsClickhouseNumericType_invalidType() {
-        assertFalse(TransformerUtils.isClickhouseNumericType("String"));
-        assertFalse(TransformerUtils.isClickhouseNumericType("Boolean"));
-        assertFalse(TransformerUtils.isClickhouseNumericType("Decimal999"));
+        assertFalse(TransformerUtils.isClickhouseSupportedType("String"));
+        assertFalse(TransformerUtils.isClickhouseSupportedType("Boolean"));
+        assertFalse(TransformerUtils.isClickhouseSupportedType("Decimal999"));
+    }
+
+    @Test
+    void testIsClickhouseSupportedType_dateTypes() {
+        assertTrue(TransformerUtils.isClickhouseSupportedType("Date"));
+        assertTrue(TransformerUtils.isClickhouseSupportedType("date"));
+        assertTrue(TransformerUtils.isClickhouseSupportedType("Date32"));
+        assertTrue(TransformerUtils.isClickhouseSupportedType("datetime"));
+        assertTrue(TransformerUtils.isClickhouseSupportedType("DateTime64"));
+        assertFalse(TransformerUtils.isClickhouseSupportedType("Date999"));
     }
 
     @Test
@@ -114,5 +124,31 @@ class TransformerUtilsTest {
         TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
         // Because the exception is caught, stmt.setLong will not be called
         Mockito.verifyNoInteractions(stmt);
+    }
+
+    @Test
+    void testSetTagOrLog_dateTypes() throws Exception {
+        PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        List<String> columnNames = Arrays.asList(
+                "tag_date_type_Date",
+                "tag_date32_type_Date32",
+                "tag_datetime_type_DateTime",
+                "tag_datetime64_type_DateTime64");
+        List<Segment.KeyStringValuePair> pairs = Arrays.asList(
+                Segment.KeyStringValuePair.newBuilder().setKey("date_type_Date").setValue("2025-05-20").build(),
+                Segment.KeyStringValuePair.newBuilder().setKey("date32_type_Date32").setValue("2025-05-21").build(),
+                Segment.KeyStringValuePair.newBuilder().setKey("datetime_type_DateTime").setValue("2025-05-20 12:34:56")
+                        .build(),
+                Segment.KeyStringValuePair.newBuilder().setKey("datetime64_type_DateTime64")
+                        .setValue("2025-05-20 12:34:56.789").build());
+        ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
+        ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
+        TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
+        Mockito.verify(stmt).setDate(1, java.sql.Date.valueOf("2025-05-20"));
+        Mockito.verify(stmt).setDate(2, java.sql.Date.valueOf("2025-05-21"));
+        Mockito.verify(stmt).setTimestamp(3, java.sql.Timestamp.valueOf("2025-05-20 12:34:56"));
+        Mockito.verify(stmt).setTimestamp(4, java.sql.Timestamp.valueOf("2025-05-20 12:34:56.789"));
+        assertTrue(invalidFields.isEmpty());
+        assertTrue(missingFields.isEmpty());
     }
 }

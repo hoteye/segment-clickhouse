@@ -19,23 +19,45 @@ import java.util.Arrays;
 public class TransformerUtils {
     private static final Logger logger = LoggerFactory.getLogger(TransformerUtils.class);
 
-    // Define ClickHouse supported numeric types as a static shared list
-    private static final List<String> CLICKHOUSE_NUMERIC_TYPES = Arrays.asList(
+    // 合并 ClickHouse 支持的所有类型为一个集合
+    private static final List<String> CLICKHOUSE_SUPPORTED_TYPES = Arrays.asList(
+            // Numeric types
             "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32",
             "Int64", "UInt64", "Int128", "UInt128", "Int256", "UInt256",
-            "Float32", "Float64", "Decimal32", "Decimal64", "Decimal128", "Decimal256");
+            "Float32", "Float64", "Decimal32", "Decimal64", "Decimal128", "Decimal256",
+            // Date/Time types
+            "Date", "Date32", "DateTime", "DateTime32", "DateTime64");
 
     /**
-     * Check if the given type is a ClickHouse numeric type.
-     * 
+     * Check if the given type is a ClickHouse supported type (numeric or
+     * date/time).
+     *
      * @param type The type to check.
-     * @return true if the type is a ClickHouse numeric type, false otherwise.
+     * @return true if the type is supported by ClickHouse, false otherwise.
      */
-    public static boolean isClickhouseNumericType(String type) {
+    public static boolean isClickhouseSupportedType(String type) {
         if (type == null || type.isEmpty()) {
-            return false; // Return false for null or empty types
+            return false;
         }
-        return CLICKHOUSE_NUMERIC_TYPES.contains(type.substring(0, 1).toUpperCase() + type.substring(1));
+        String normalized = type.toLowerCase();
+        return CLICKHOUSE_SUPPORTED_TYPES.stream().anyMatch(t -> t.toLowerCase().equals(normalized));
+    }
+
+    /**
+     * Convert a type string to ClickHouse standard type name
+     * (首字母大写，其余小写，特殊处理如Float64等)
+     * 
+     * @param type 原始类型字符串
+     * @return ClickHouse 规范类型
+     */
+    public static String toClickHouseType(String type) {
+        if (type == null || type.isEmpty())
+            return "String";
+        String t = type.toLowerCase();
+        return CLICKHOUSE_SUPPORTED_TYPES.stream()
+                .filter(supportedType -> supportedType.toLowerCase().equals(t))
+                .findFirst()
+                .orElse("String");
     }
 
     /**
@@ -126,7 +148,7 @@ public class TransformerUtils {
             if (parts.length == 2) {
                 columnType = parts[1]; // Extract the field type
 
-                if (!TransformerUtils.isClickhouseNumericType(columnType)) {
+                if (!TransformerUtils.isClickhouseSupportedType(columnType)) {
                     invalidFields.add(sanitizedKey); // Record invalid type
                     logger.warn("Invalid type '{}' for field '{}'. Skipping.", columnType, sanitizedKey);
                     continue; // Skip this field
@@ -178,11 +200,23 @@ public class TransformerUtils {
                     case "decimal256":
                         stmt.setBigDecimal(columnIndex, new java.math.BigDecimal(value));
                         break;
+                    case "date":
+                    case "date32":
+                        stmt.setDate(columnIndex, java.sql.Date.valueOf(value)); // value: yyyy-MM-dd
+                        break;
+                    case "datetime":
+                    case "datetime32":
+                        stmt.setTimestamp(columnIndex, java.sql.Timestamp.valueOf(value)); // value: yyyy-MM-dd HH:mm:ss
+                        break;
+                    case "datetime64":
+                        stmt.setTimestamp(columnIndex, java.sql.Timestamp.valueOf(value)); // value: yyyy-MM-dd
+                                                                                           // HH:mm:ss[.fff]
+                        break;
                     default: // Default to String
                         stmt.setString(columnIndex, value);
                         break;
                 }
-            } catch (NumberFormatException e) {
+            } catch (IllegalArgumentException e) {
                 logger.error("Failed to set value for field {}: {}", sanitizedKey, e.getMessage(), e);
             }
         }
