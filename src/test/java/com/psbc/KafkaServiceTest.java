@@ -11,7 +11,7 @@ public class KafkaServiceTest {
 
     @BeforeEach
     public void setUp() {
-        Map<String, String> kafkaConfig = Map.of(
+        Map<String, Object> kafkaConfig = Map.of(
                 "bootstrap_servers", "localhost:9092",
                 "group_id", "test-group",
                 "topic", "test-topic",
