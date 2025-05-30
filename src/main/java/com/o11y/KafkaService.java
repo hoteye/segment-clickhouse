@@ -1,4 +1,4 @@
-package com.psbc;
+package com.o11y;
 
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;

@@ -1,4 +1,4 @@
-package com.psbc;
+package com.o11y;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -102,7 +102,7 @@ class TransformerTest {
 
         @Test
         void testInsertToDb() throws Exception {
-                // Initialize a SegmentObject with random values
+                // 固定测试用例中的日期，保证断言与插入一致
                 String randomTraceId = "trace-" + Math.random();
                 String randomTraceSegmentId = "segment-" + Math.random();
                 String randomService = "service-" + Math.random();
@@ -121,8 +121,7 @@ class TransformerTest {
                 boolean randomIsError = Math.random() > 0.5;
                 boolean randomSkipAnalysis = Math.random() > 0.5;
 
-                // Set random values for SegmentReference
-                RefType randomRefType = RefType.CrossThread; // Fixed value
+                RefType randomRefType = RefType.CrossThread;
                 String randomRefTraceId = "ref-trace-" + Math.random();
                 String randomRefParentSegmentId = "ref-segment-" + Math.random();
                 int randomRefParentSpanId = (int) (Math.random() * 1000);
@@ -130,21 +129,17 @@ class TransformerTest {
                 String randomRefParentServiceInstance = "ref-instance-" + Math.random();
                 String randomRefParentEndpoint = "ref-endpoint-" + Math.random();
                 String randomRefNetworkAddressUsedAtPeer = "ref-peer-address-" + Math.random();
-                // 新增随机日期字段
-                java.time.LocalDate randomDate = java.time.LocalDate.now().minusDays((long) (Math.random() * 1000));
-                java.time.LocalDate randomDate32 = java.time.LocalDate.now().minusDays((long) (Math.random() * 2000));
-                java.time.LocalDateTime randomDateTime = java.time.LocalDateTime.now()
-                                .minusHours((long) (Math.random() * 1000));
-                java.time.LocalDateTime randomDateTime32 = java.time.LocalDateTime.now()
-                                .minusHours((long) (Math.random() * 2000));
-                java.time.LocalDateTime randomDateTime64 = java.time.LocalDateTime.now()
-                                .minusMinutes((long) (Math.random() * 3000));
+                // 固定日期
+                java.time.LocalDate randomDate = java.time.LocalDate.of(2025, 5, 17);
+                java.time.LocalDate randomDate32 = java.time.LocalDate.of(2025, 5, 18);
+                java.time.LocalDateTime randomDateTime = java.time.LocalDateTime.of(2025, 5, 19, 12, 34, 56);
+                java.time.LocalDateTime randomDateTime32 = java.time.LocalDateTime.of(2025, 5, 20, 8, 0, 0);
+                java.time.LocalDateTime randomDateTime64 = java.time.LocalDateTime.of(2025, 5, 21, 12, 0, 0, 0);
 
                 long randomThreadCurrentUserTime = (long) (Math.random() * 1_000_000);
                 long errorTest = (long) (Math.random() * 1_000_000);
                 Double randomTestFloat = Math.random() * 10444444000104444000.0;
 
-                // 日期类型字段格式化
                 java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter
                                 .ofPattern("yyyy-MM-dd HH:mm:ss");
                 java.time.format.DateTimeFormatter dtfMs = java.time.format.DateTimeFormatter

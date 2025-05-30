@@ -39,3 +39,13 @@ CREATE TABLE events (
     log_error_kind Nullable(String)
 ) ENGINE = MergeTree()
 ORDER BY (start_time, trace_id);
+
+CREATE TABLE new_key
+(
+    keyName String,
+    keyType String,
+    isCreated Boolean,
+    createTime DateTime
+)
+ENGINE = MergeTree()
+ORDER BY keyName;

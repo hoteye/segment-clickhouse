@@ -1,5 +1,5 @@
 # Use official OpenJDK runtime image as base image
-FROM openjdk:17-jdk-slim AS base
+FROM openjdk:11-jdk-slim AS base
 
 # Set working directory
 WORKDIR /app
@@ -14,4 +14,4 @@ COPY target/${JAR_FILE} app.jar
 
 COPY application.yaml application.yaml
 # Set container startup command with JVM memory limits
-CMD ["java", "-Xms512m", "-Xmx512m", "-XX:MetaspaceSize=128m", "-XX:MaxMetaspaceSize=256m", "-jar", "app.jar"]
+CMD ["java", "-Xms1024m", "-Xmx1024m", "-XX:MetaspaceSize=128m", "-XX:MaxMetaspaceSize=256m", "-jar", "app.jar"]

@@ -3,14 +3,15 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.psbc</groupId>
-	<artifactId>segment-clickhouse</artifactId>
+	<groupId>com.o11y</groupId>
+	<artifactId>segment-alarm-clickhouse</artifactId>
 	<version>1.0.5</version>
 
 	<properties>
-		<java.version>17</java.version> <!-- Use Java 17 -->
+		<java.version>11</java.version> <!-- Use Java 11 -->
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<flink.version>1.17.2</flink.version> <!-- Specify Flink version -->
 	</properties>
 
 	<dependencies>
@@ -98,20 +99,29 @@
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-java</artifactId>
-			<version>1.17.2</version>
-			<scope>provided</scope>
+			<version>${flink.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-streaming-java</artifactId>
-			<version>1.17.2</version>
-			<scope>provided</scope>
+			<version>${flink.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-connector-kafka</artifactId>
-			<version>1.17.2</version>
-			<scope>provided</scope>
+			<version>${flink.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-clients</artifactId>
+			<version>${flink.version}</version>
+		</dependency>
+
+		<!-- chill-protobuf for Flink Protobuf Kryo序列化 -->
+		<dependency>
+			<groupId>com.twitter</groupId>
+			<artifactId>chill-protobuf</artifactId>
+			<version>0.10.0</version>
 		</dependency>
 	</dependencies>
 
@@ -143,7 +153,7 @@
 							<createDependencyReducedPom>true</createDependencyReducedPom>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>com.psbc.TransformerService</mainClass> <!-- Replace with your main class fully qualified name -->
+									<mainClass>com.o11y.flink.FlinkKafkaToClickHouseJob</mainClass>
 								</transformer>
 							</transformers>
 						</configuration>
@@ -159,7 +169,7 @@
                 <executions>
                     <execution>
                         <id>build-image</id>
-                        <phase>package</phase>
+                        <phase>install</phase> <!-- 修改为 install 阶段，避免 package 时执行 -->
                         <goals>
                             <goal>build</goal>
                         </goals>

@@ -20,7 +20,7 @@ segment-clickhouse/
 │   ├── main/
 │   │   ├── java/
 │   │   │   └── com/
-│   │   │       └── psbc/
+│   │   │       └── o11y/
 │   │   │           ├── DatabaseService.java       # Clickhouse database service
 │   │   │           ├── KafkaService.java          # Kafka message consumer service
 │   │   │           ├── TransformerService.java    # Core service logic
@@ -32,7 +32,7 @@ segment-clickhouse/
 │   └── test/
 │       ├── java/
 │       │   └── com/
-│       │       └── psbc/
+│       │       └── o11y/
 │       │           └── TransformerTest.java       # Unit test class
 │       └── resources/
 │           └── test-application.yaml              # Test config file

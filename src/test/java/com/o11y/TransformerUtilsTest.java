@@ -1,4 +1,4 @@
-package com.psbc;
+package com.o11y;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

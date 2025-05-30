@@ -8,63 +8,16 @@
             "type": "java",
             "name": "FlinkKafkaToClickHouseJob",
             "request": "launch",
-            "mainClass": "com.psbc.flink.FlinkKafkaToClickHouseJob",
-            "projectName": "protobuf-java"
+            "mainClass": "com.o11y.flink.FlinkKafkaToClickHouseJob",
+            "projectName": "segment-clickhouse"
         },
         {
             "type": "java",
-            "name": "TransformerUtils",
+            "name": "FlinkKafkaToClickHouseJob",
             "request": "launch",
-            "mainClass": "com.psbc.TransformerUtils",
-            "projectName": "protobuf-java"
-        },
-        {
-            "type": "java",
-            "name": "Main",
-            "request": "launch",
-            "mainClass": "com.psbc.Main",
-            "projectName": "protobuf-java"
-        },
-        {
-            "type": "java",
-            "name": "TransformerService",
-            "request": "launch",
-            "mainClass": "com.psbc.TransformerService",
-            "projectName": "protobuf-java"
-        },
-        {
-            "type": "java",
-            "name": "Copy",
-            "request": "launch",
-            "mainClass": "Copy",
-            "projectName": "protobuf-java"
-        },
-        {
-            "type": "java",
-            "name": "BuildTable",
-            "request": "launch",
-            "mainClass": "BuildTable",
-            "projectName": "protobuf-java"
-        },
-        {
-            "type": "java",
-            "name": "Current File",
-            "request": "launch",
-            "mainClass": "${file}"
-        },
-        {
-            "type": "java",
-            "name": "KafkaToClickHouse",
-            "request": "launch",
-            "mainClass": "KafkaToClickHouse",
-            "projectName": "protobuf-java"
-        },
-        {
-            "type": "java",
-            "name": "Main",
-            "request": "launch",
-            "mainClass": "Main",
-            "projectName": "protobuf-java"
+            "mainClass": "com.o11y.flink.FlinkKafkaToClickHouseJob",
+            "projectName": "segment-alarm-clickhouse",
+            "vmArgs": "-Dflink.executor.factory.class=org.apache.flink.streaming.api.environment.LocalStreamEnvironment"
         }
     ]
 }

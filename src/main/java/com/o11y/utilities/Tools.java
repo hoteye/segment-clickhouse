@@ -1,4 +1,4 @@
-package com.psbc.utilities;
+package com.o11y.utilities;
 
 import java.io.FileInputStream;
 import java.io.InputStream;

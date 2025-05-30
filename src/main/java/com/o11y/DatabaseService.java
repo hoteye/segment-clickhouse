@@ -1,9 +1,9 @@
-package com.psbc;
+package com.o11y;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.psbc.utilities.Tools;
+import com.o11y.utilities.Tools;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -215,4 +215,28 @@ public class DatabaseService {
         return columns;
     }
 
+    /**
+     * Close database connection
+     */
+    public void close() {
+        try {
+            if (statement != null) {
+                statement.close();
+            }
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+            logger.info("Database connection closed.");
+        } catch (SQLException e) {
+            logger.error("Failed to close database connection: {}", e.getMessage(), e);
+        }
+    }
+
+    public String getSchemaName() {
+        return schemaName;
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
 }
