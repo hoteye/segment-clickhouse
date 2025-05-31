@@ -55,8 +55,7 @@ public class FlinkKafkaToClickHouseJob {
                                 WatermarkStrategy.noWatermarks(),
                                 "KafkaSource-SegmentObject");
                 LOG.warn("DataStream created, preparing to add Sink");
-
-                // 自动注册所有算子（不再注册 SimpleClickHouseSinkOperator）
+                // 注册所有算子
                 OperatorRegistry.register(new AvgSpanDurationAggregateFunctionOperator());
                 OperatorRegistry.register(new MaxSpanDurationAggregateFunctionOperator());
                 OperatorRegistry.register(new DubboEntryAvgDurationAggregateFunctionOperator());

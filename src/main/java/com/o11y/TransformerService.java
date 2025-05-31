@@ -109,7 +109,7 @@ public class TransformerService {
                     insertToDb(record.value()); // Process each message
                 }
             } catch (java.sql.SQLException e) {
-                databaseService.initConnection();
+                databaseService.buildInsertSQL();
             }
         }
     }

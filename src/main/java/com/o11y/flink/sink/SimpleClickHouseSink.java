@@ -66,6 +66,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             if (!missingFields.isEmpty() && (now - lastNewKeyInsertTime >= NEW_KEY_INSERT_INTERVAL_MS)) {
                 for (String key : missingFields) {
                     if (insertNewKeyToClickHouse(key)) {
+                        // 如果 key 已经写入 new_key 并且 isCreated 为 true，表示字段已经建立，则重建sql语句
                         databaseService.initConnection();
                     }
                 }
