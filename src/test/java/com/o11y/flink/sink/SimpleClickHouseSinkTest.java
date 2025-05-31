@@ -7,7 +7,6 @@ import org.mockito.Mockito;
 
 import com.o11y.DatabaseService;
 
-import segment.v3.Segment.SegmentObject;
 import java.sql.PreparedStatement;
 import java.util.HashMap;
 import java.util.Map;

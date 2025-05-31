@@ -9,10 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
-import segment.v3.Segment.KeyStringValuePair;
 
 /**
  * 支持批量写入 ClickHouse 的 Sink
