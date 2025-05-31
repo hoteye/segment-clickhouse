@@ -39,7 +39,7 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
         avgDuration.addSink(new RichSinkFunction<Double>() {
             @Override
             public void invoke(Double value, Context context) {
-                LOG.info("7s window dubboEntryAvgDuration: {} ms", value);
+                LOG.debug("7s window dubboEntryAvgDuration: {} ms", value);
             }
         }).name(NAME);
         return avgDuration;

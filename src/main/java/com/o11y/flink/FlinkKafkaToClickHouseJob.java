@@ -76,17 +76,14 @@ public class FlinkKafkaToClickHouseJob {
                                 clickhouseConfig.get("password")).initConnection();
 
                 // 启动定时任务同步 new_key 表到 events 表
-                // long addColumnsInterval = config.containsKey("add_columns_interval")
-                // ? ((Number) config.get("add_columns_interval")).longValue()
-                // : 60000L;
-                // new NewKeyTableSyncTask(dbService, addColumnsInterval).start();
+                long addColumnsInterval = ((Number) config.get("add_columns_interval")).longValue();
+                new NewKeyTableSyncTask(dbService, addColumnsInterval).start();
 
                 for (FlinkOperator op : OperatorRegistry.getOperators()) {
                         Map<String, List<String>> params = OperatorParamLoader.loadParamList(dbService,
                                         op.getClass().getSimpleName());
                         op.apply(stream, params);
                 }
-                dbService.close();
                 env.execute("FlinkKafkaToClickHouseJob");
         }
 }

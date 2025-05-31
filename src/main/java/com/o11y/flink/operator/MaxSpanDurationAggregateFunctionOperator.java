@@ -26,7 +26,7 @@ public class MaxSpanDurationAggregateFunctionOperator implements FlinkOperator {
         maxSpanDurationStream.addSink(new RichSinkFunction<Long>() {
             @Override
             public void invoke(Long value, Context context) {
-                LOG.info("7s window max span duration: {} ms", value);
+                LOG.debug("7s window max span duration: {} ms", value);
             }
         }).name(NAME);
         return maxSpanDurationStream;

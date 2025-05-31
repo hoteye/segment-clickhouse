@@ -28,7 +28,10 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     private long lastInsertTime = System.currentTimeMillis();
     private Integer batchSize;
     private Integer batchInterval;
-    private final static String DEFAULT_KEY_TYPE = "String"; // 可根据实际类型推断
+    private final static String DEFAULT_KEY_TYPE = "String";
+    // 新增：记录上次写入 new_key 的时间，避免高频访问
+    private long lastNewKeyInsertTime = 0L;
+    private static final long NEW_KEY_INSERT_INTERVAL_MS = 10_000L;
 
     public SimpleClickHouseSink(Map<String, String> clickhouseConfig, Map<String, Integer> batchConfig) {
         this.batchConfig = batchConfig;
@@ -51,47 +54,70 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
 
     @Override
     public void invoke(SegmentObject segment, Context context) throws Exception {
-        // 1. 检查新 tag key
-        HashSet<String> newTagKeys = new HashSet<>();
-        for (var span : segment.getSpansList()) {
-            for (KeyStringValuePair tag : span.getTagsList()) {
-                String key = tag.getKey();
-                // 这里假设 events 表字段已全部缓存到 invalidFields + missingFields
-                if (!invalidFields.contains(key) && !missingFields.contains(key)) {
-                    newTagKeys.add(key);
+        try {
+            // 1. 正常数据写入（会自动填充 missingFields）
+            TransformerUtils.insertSegmentObjectToEvents(
+                    databaseService, segment,
+                    invalidFields,
+                    missingFields);
+            LOG.debug("Successfully inserted data into ClickHouse: {}", segment.getTraceId());
+            LOG.debug("Invalid fields: {}", invalidFields);
+            LOG.debug("Missing fields: {}", missingFields);
+            // 2. 将 missingFields 中的新 key 写入 new_key 表（限流）
+            long now = System.currentTimeMillis();
+            if (!missingFields.isEmpty() && (now - lastNewKeyInsertTime >= NEW_KEY_INSERT_INTERVAL_MS)) {
+                for (String key : missingFields) {
+                    if (insertNewKeyToClickHouse(key)) {
+                        databaseService.initConnection();
+                    }
                 }
+                LOG.info("Cached new tag keys to new_key table: {}", missingFields);
+                missingFields.clear(); // 避免重复写入
+                lastNewKeyInsertTime = now;
             }
-        }
-        // 2. 新 key 写入 new_key 表
-        if (!newTagKeys.isEmpty()) {
-            for (String key : newTagKeys) {
-                insertNewKeyToClickHouse(key, DEFAULT_KEY_TYPE);
+            spanCounter += segment.getSpansCount();
+            long currentTime = System.currentTimeMillis();
+            if (spanCounter >= batchSize || (currentTime - lastInsertTime >= batchInterval)) {
+                databaseService.getStatement().executeBatch();
+                LOG.debug("Inserted {} spans into events table.", spanCounter);
+                spanCounter = 0;
+                lastInsertTime = currentTime;
             }
-            LOG.info("Cached new tag keys to new_key table: {}", newTagKeys);
-        }
-        // 3. 正常数据写入
-        TransformerUtils.insertSegmentObjectToEvents(
-                databaseService, segment,
-                invalidFields,
-                missingFields);
-        LOG.debug("Successfully inserted data into ClickHouse: {}", segment.getTraceId());
-        LOG.debug("Invalid fields: {}", invalidFields);
-        LOG.debug("Missing fields: {}", missingFields);
-        spanCounter += segment.getSpansCount();
-        long currentTime = System.currentTimeMillis();
-        if (spanCounter >= batchSize || (currentTime - lastInsertTime >= batchInterval)) {
-            databaseService.getStatement().executeBatch();
-            LOG.debug("Inserted {} spans into events table.", spanCounter);
-            spanCounter = 0;
-            lastInsertTime = currentTime;
+        } catch (java.sql.SQLException e) {
+            LOG.error("SQLException in invoke, try to re-init database connection");
+            databaseService.initConnection();
         }
     }
 
     /**
-     * 写入 new_key 表（keyName, keyType, isCreated, createTime）
+     * 写入 new_key 表（keyName, keyType, isCreated, createTime），根据 keyName 自动推断类型
      */
-    private void insertNewKeyToClickHouse(String keyName, String keyType) {
+    private Boolean insertNewKeyToClickHouse(String keyName) {
+        String keyType = DEFAULT_KEY_TYPE;
+        if (keyName.contains("_type_")) {
+            String[] parts = keyName.split("_type_");
+            if (parts.length == 2) {
+                String type = parts[1];
+                if (TransformerUtils.isClickhouseSupportedType(type)) {
+                    keyType = type;
+                }
+            }
+        }
         try {
+            // 先检查 keyName 是否已存在，若存在则返回 isCreated 的值
+            String checkSql = "SELECT isCreated FROM new_key WHERE keyName = ?";
+            PreparedStatement checkPs = databaseService.getConnection().prepareStatement(checkSql);
+            checkPs.setString(1, keyName);
+            java.sql.ResultSet rs = checkPs.executeQuery();
+            if (rs.next()) {
+                boolean isCreated = rs.getBoolean(1);
+                rs.close();
+                checkPs.close();
+                LOG.debug("Key '{}' already exists in new_key table, isCreated={}", keyName, isCreated);
+                return isCreated;
+            }
+            rs.close();
+            checkPs.close();
             String sql = "INSERT INTO new_key (keyName, keyType, isCreated, createTime) VALUES (?, ?, ?, ?)";
             PreparedStatement ps = databaseService.getConnection().prepareStatement(sql);
             ps.setString(1, keyName);
@@ -100,8 +126,10 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             ps.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
             ps.executeUpdate();
             ps.close();
+            return false;
         } catch (Exception e) {
             LOG.error("Failed to insert new key to new_key table: {}", keyName, e);
+            return null;
         }
     }
 

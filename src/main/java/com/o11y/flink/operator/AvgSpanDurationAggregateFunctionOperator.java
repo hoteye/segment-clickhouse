@@ -26,7 +26,7 @@ public class AvgSpanDurationAggregateFunctionOperator implements FlinkOperator {
         avgSpanDurationStream.addSink(new RichSinkFunction<Double>() {
             @Override
             public void invoke(Double value, Context context) {
-                LOG.info("7s window avg span duration: {} ms", value);
+                LOG.debug("7s window avg span duration: {} ms", value);
             }
         }).name(NAME);
         return avgSpanDurationStream;

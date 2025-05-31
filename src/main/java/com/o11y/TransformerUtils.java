@@ -164,7 +164,7 @@ public class TransformerUtils {
             // Check if the field exists in columnNames
             if (!columnNames.contains(sanitizedKey)) {
                 missingFields.add(sanitizedKey); // Record fields not in columnNames
-                logger.info("Field {} needs to be added.", sanitizedKey);
+                logger.debug("Field {} needs to be added.", sanitizedKey);
                 continue;
             }
 
