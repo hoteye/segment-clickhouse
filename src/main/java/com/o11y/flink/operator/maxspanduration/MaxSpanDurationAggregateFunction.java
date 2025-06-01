@@ -1,4 +1,4 @@
-package com.o11y.flink.operator;
+package com.o11y.flink.operator.maxspanduration;
 
 import org.apache.flink.api.common.functions.AggregateFunction;
 import segment.v3.Segment.SegmentObject;

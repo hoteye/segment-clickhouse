@@ -1,4 +1,4 @@
-package com.o11y.flink.operator;
+package com.o11y.flink.operator.dubboentryavgduration;
 
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.java.tuple.Tuple2;

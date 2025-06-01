@@ -1,4 +1,4 @@
-package com.o11y.flink.operator;
+package com.o11y.flink.operator.avgspanduration;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
@@ -6,6 +6,8 @@ import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.o11y.flink.operator.FlinkOperator;
 
 import java.util.List;
 import java.util.Map;

@@ -4,6 +4,8 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import com.o11y.flink.operator.dubboentryavgduration.DubboEntryAvgDurationAggregateFunction;
+
 public class DubboEntryAvgDurationAggregateFunctionTest {
     static class Agg extends DubboEntryAvgDurationAggregateFunction {
     }

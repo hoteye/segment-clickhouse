@@ -18,10 +18,10 @@ import com.o11y.flink.serde.SegmentDeserializationSchema;
 import com.o11y.flink.util.OperatorParamLoader;
 import com.o11y.flink.registry.OperatorRegistry;
 import com.o11y.DatabaseService;
-import com.o11y.flink.operator.AvgSpanDurationAggregateFunctionOperator;
-import com.o11y.flink.operator.DubboEntryAvgDurationAggregateFunctionOperator;
 import com.o11y.flink.operator.FlinkOperator;
-import com.o11y.flink.operator.MaxSpanDurationAggregateFunctionOperator;
+import com.o11y.flink.operator.avgspanduration.AvgSpanDurationAggregateFunctionOperator;
+import com.o11y.flink.operator.dubboentryavgduration.DubboEntryAvgDurationAggregateFunctionOperator;
+import com.o11y.flink.operator.maxspanduration.MaxSpanDurationAggregateFunctionOperator;
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
 

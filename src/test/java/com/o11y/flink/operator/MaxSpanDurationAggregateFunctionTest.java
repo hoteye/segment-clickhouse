@@ -2,6 +2,9 @@ package com.o11y.flink.operator;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import com.o11y.flink.operator.maxspanduration.MaxSpanDurationAggregateFunction;
+
 import segment.v3.Segment.SegmentObject;
 import segment.v3.Segment.SpanObject;
 
