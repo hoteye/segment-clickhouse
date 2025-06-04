@@ -78,7 +78,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             long currentTime = System.currentTimeMillis();
             if (spanCounter >= batchSize || (currentTime - lastInsertTime >= batchInterval)) {
                 databaseService.getStatement().executeBatch();
-                LOG.info("Inserted {} spans into events table.", spanCounter);
+                LOG.debug("Inserted {} spans into events table.", spanCounter);
                 spanCounter = 0;
                 lastInsertTime = currentTime;
             }

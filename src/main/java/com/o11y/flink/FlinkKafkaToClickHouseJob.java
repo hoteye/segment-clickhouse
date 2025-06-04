@@ -38,7 +38,7 @@ public class FlinkKafkaToClickHouseJob {
                 LOG.warn("FlinkKafkaToClickHouseJob starting, preparing to initialize environment");
                 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
                 // 设置并行度
-                env.setParallelism(3);
+                env.setParallelism(5);
                 env.getConfig().addDefaultKryoSerializer(SegmentObject.class, ProtobufSerializer.class);
                 Map<String, Object> config = com.o11y.ConfigLoader.loadConfig("application.yaml");
                 Map<String, String> kafkaConfig = (Map<String, String>) config.get("kafka");

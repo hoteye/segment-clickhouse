@@ -26,6 +26,7 @@ import org.apache.flink.api.common.typeinfo.Types;
 public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOperator {
     private static final Logger LOG = LoggerFactory.getLogger(DubboEntryAvgDurationAggregateFunctionOperator.class);
     private final String NAME = this.getClass().getSimpleName();
+    private static final int WINDOW_SECONDS = 7;
 
     @Override
     public DataStream<?> apply(DataStream<?> input, Map<String, List<String>> params) {
@@ -51,21 +52,22 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
                         WatermarkStrategy
                                 .<Tuple3<String, Long, Long>>forBoundedOutOfOrderness(Duration.ofSeconds(2))
                                 .withTimestampAssigner((tuple, ts) -> tuple.f2));
-        // 第一步：先按 traceId 分组做 7 秒窗口聚合，输出每个 traceId 的窗口平均和最大
+        // 第一步：先按 traceId 分组做窗口聚合，输出每个 traceId 的窗口平均和最大
         DataStream<Tuple2<Double, Long>> perTraceAgg = durationStream
                 .keyBy(t -> t.f0)
-                .window(TumblingEventTimeWindows.of(Time.seconds(7)))
+                .window(TumblingEventTimeWindows.of(Time.seconds(WINDOW_SECONDS)))
                 .aggregate(new AvgMaxAggregateFunction2());
-        // 第二步：全局再做一次 7 秒窗口聚合，输出全局唯一的平均和最大
+        // 第二步：全局再做一次窗口聚合，输出全局唯一的平均和最大
         DataStream<Tuple2<Double, Long>> globalAgg = perTraceAgg
-                .windowAll(TumblingEventTimeWindows.of(Time.seconds(7)))
+                .windowAll(TumblingEventTimeWindows.of(Time.seconds(WINDOW_SECONDS)))
                 .aggregate(new GlobalAvgMaxAggregateFunction());
         globalAgg.addSink(new RichSinkFunction<Tuple2<Double, Long>>() {
             @Override
             public void invoke(Tuple2<Double, Long> value, Context context) {
-                LOG.info("7s window dubboEntryAvgDuration (global): avg={} ms, max={} ms", value.f0, value.f1);
+                LOG.info("{}s window dubboEntryAvgDuration (global): avg={} ms, max={} ms", WINDOW_SECONDS, value.f0,
+                        value.f1);
             }
-        }).name(NAME);
+        }).name(NAME).setParallelism(1);
         return globalAgg;
     }
 
