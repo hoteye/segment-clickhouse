@@ -1,6 +1,7 @@
 package com.o11y.flink.task;
 
 import com.o11y.DatabaseService;
+import com.o11y.TransformerUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.sql.Connection;
@@ -40,7 +41,8 @@ public class NewKeyTableSyncTask {
         LOG.info("NewKeyTableSyncTask started, interval: {} ms", intervalMs);
     }
 
-    private void syncNewKeys() throws Exception {
+    // 将 syncNewKeys 方法从 private 改为 package-private，便于集成测试反射调用
+    void syncNewKeys() throws Exception {
         Connection conn = databaseService.getConnection();
         // 1. 查询所有 isCreated=false 的新 key
         String selectSql = "SELECT keyName, keyType FROM new_key WHERE isCreated = 0";
@@ -50,13 +52,15 @@ public class NewKeyTableSyncTask {
             while (rs.next()) {
                 String keyName = rs.getString("keyName");
                 String keyType = rs.getString("keyType");
+                // 类型映射
+                String chType = TransformerUtils.toClickHouseType(keyType);
                 // 2. 执行 ALTER TABLE 新增字段
                 String alterSql = String.format(
                         "ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS %s Nullable(%s)",
                         databaseService.getSchemaName(),
                         databaseService.getTableName(),
                         keyName,
-                        keyType);
+                        chType);
                 try (PreparedStatement alterPs = conn.prepareStatement(alterSql)) {
                     alterPs.execute();
                     LOG.info("Added column '{}' to events table.", keyName);

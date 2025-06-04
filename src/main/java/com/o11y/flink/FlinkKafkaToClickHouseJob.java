@@ -11,6 +11,9 @@ import java.util.Map;
 import com.twitter.chill.protobuf.ProtobufSerializer;
 
 import segment.v3.Segment.SegmentObject;
+import segment.v3.Segment.SpanObject;
+import segment.v3.Segment.SpanType;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,20 +28,27 @@ import com.o11y.flink.operator.maxspanduration.MaxSpanDurationAggregateFunctionO
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
 
+import java.sql.Statement;
+import java.time.Duration;
+
 public class FlinkKafkaToClickHouseJob {
         private static final Logger LOG = LoggerFactory.getLogger(FlinkKafkaToClickHouseJob.class);
 
         public static void main(String[] args) throws Exception {
                 LOG.warn("FlinkKafkaToClickHouseJob starting, preparing to initialize environment");
                 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+                // 设置并行度
+                env.setParallelism(3);
                 env.getConfig().addDefaultKryoSerializer(SegmentObject.class, ProtobufSerializer.class);
                 Map<String, Object> config = com.o11y.ConfigLoader.loadConfig("application.yaml");
-                @SuppressWarnings("unchecked")
                 Map<String, String> kafkaConfig = (Map<String, String>) config.get("kafka");
-                @SuppressWarnings("unchecked")
                 Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
-                @SuppressWarnings("unchecked")
                 Map<String, Integer> batchConfig = (Map<String, Integer>) config.get("batch");
+
+                // 启用 checkpoint，每60秒一次
+                env.enableCheckpointing(60000);
+                // 可选：设置 checkpoint 超时时间为30秒
+                env.getCheckpointConfig().setCheckpointTimeout(30000);
 
                 LOG.warn("Kafka configuration: {}", kafkaConfig);
                 LOG.warn("ClickHouse configuration: {}", clickhouseConfig);
@@ -52,7 +62,15 @@ public class FlinkKafkaToClickHouseJob {
                 LOG.warn("KafkaSource built, preparing to create DataStream");
                 DataStream<SegmentObject> stream = env.fromSource(
                                 kafkaSource,
-                                WatermarkStrategy.noWatermarks(),
+                                WatermarkStrategy.<SegmentObject>forBoundedOutOfOrderness(Duration.ofSeconds(2))
+                                                .withTimestampAssigner((segment, ts) -> {
+                                                        for (SpanObject span : segment.getSpansList()) {
+                                                                if (span.getSpanType() == SpanType.Entry) {
+                                                                        return span.getEndTime();
+                                                                }
+                                                        }
+                                                        return System.currentTimeMillis();
+                                                }),
                                 "KafkaSource-SegmentObject");
                 LOG.warn("DataStream created, preparing to add Sink");
                 // 注册所有算子
@@ -71,6 +89,14 @@ public class FlinkKafkaToClickHouseJob {
                                 clickhouseConfig.get("table_name"),
                                 clickhouseConfig.get("username"),
                                 clickhouseConfig.get("password")).initConnection();
+
+                // 启动Flink前清理new_key表中不存在于 events 表的字段
+                String sql = "DELETE FROM new_key WHERE keyName NOT IN (SELECT name FROM system.columns WHERE table='"
+                                + clickhouseConfig.get("table_name") + "')";
+                try (Statement stmt = dbService.getConnection().createStatement()) {
+                        stmt.execute(sql);
+                        LOG.info("Cleaned up new_key table for non-existing columns in events table");
+                }
 
                 // 启动定时任务同步 new_key 表到 events 表
                 long addColumnsInterval = ((Number) config.get("add_columns_interval")).longValue();

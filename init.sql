@@ -44,7 +44,7 @@ CREATE TABLE new_key
 (
     keyName String,
     keyType String,
-    isCreated Boolean,
+    isCreated UInt8,
     createTime DateTime
 )
 ENGINE = MergeTree()

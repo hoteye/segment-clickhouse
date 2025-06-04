@@ -125,7 +125,7 @@ public class TransformerService {
         long currentTime = System.currentTimeMillis();
         if (spanCounter >= batchSize || (currentTime - lastInsertTime >= batchInterval)) {
             databaseService.getStatement().executeBatch();
-            logger.info("Inserted {} spans into events table.", spanCounter);
+            logger.debug("Inserted {} spans into events table.", spanCounter);
             spanCounter = 0; // Reset the counter
             lastInsertTime = currentTime; // Update last insert time
         }

@@ -24,7 +24,11 @@ public class TransformerUtils {
             // Numeric types
             "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32",
             "Int64", "UInt64", "Int128", "UInt128", "Int256", "UInt256",
-            "Float32", "Float64", "Decimal32", "Decimal64", "Decimal128", "Decimal256",
+            "Float32", "Float64",
+            "Decimal32(4)",
+            "Decimal64(8)",
+            "Decimal128(18)",
+            "Decimal256(18)",
             // Date/Time types
             "Date", "Date32", "DateTime", "DateTime32", "DateTime64");
 
@@ -220,6 +224,10 @@ public class TransformerUtils {
                 logger.error("Failed to set value for field {}: {}", sanitizedKey, e.getMessage(), e);
             }
         }
+    }
+
+    public static List<String> getClickhouseSupportedTypes() {
+        return CLICKHOUSE_SUPPORTED_TYPES;
     }
 
 }
