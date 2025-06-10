@@ -53,7 +53,7 @@ public class FlinkKafkaToClickHouseJob {
                 // Kryo序列化配置
                 env.getConfig().addDefaultKryoSerializer(
                                 segment.v3.Segment.SegmentObject.class,
-                                com.twitter.chill.protobuf.ProtobufSerializer.class);
+                                ProtobufSerializer.class);
 
                 LOG.warn("Kafka configuration: {}", kafkaConfig);
                 LOG.warn("ClickHouse configuration: {}", clickhouseConfig);

@@ -67,9 +67,12 @@ CREATE TABLE IF NOT EXISTS flink_operator_agg_result (
     method        Nullable(String),         -- 方法名
     avg_duration  Nullable(Float64),        -- 平均耗时
     max_duration  Nullable(Int64),          -- 最大耗时
-    error_rate    Nullable(Float64),        -- 错误率（如无可填0或NULL）
+    error_rate    Nullable(Float64),        -- 错误率
+    data_center    Nullable(String),         -- 数据中心
+    region        Nullable(String),         -- 区域
+    env           Nullable(String),         -- 环境
+    total_count  Nullable(Int64),          -- 总调用次数
+    error_count  Nullable(Int64),          -- 错误调用次数
+    success_count Nullable(Int64),          -- 成功调用次数
 ) ENGINE = MergeTree()
-ORDER BY (window_start );ime
-)
-ENGINE = MergeTree()
-ORDER BY keyName;
+ORDER BY (window_start);

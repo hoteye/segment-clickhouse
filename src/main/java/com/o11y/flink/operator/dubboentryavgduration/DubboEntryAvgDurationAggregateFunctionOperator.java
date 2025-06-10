@@ -86,8 +86,8 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
                             long endTime = span.getEndTime();
                             out.collect(Tuple3.of(traceSegmentId, duration, endTime));
                         }
-                        LOG.debug("segmentId={} spansCount={} ", traceSegmentId, totalSpans);
                     }
+                    LOG.info("segmentId={}", traceSegmentId);
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.LONG, Types.LONG))
                 .assignTimestampsAndWatermarks(
@@ -117,18 +117,17 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
     // 步骤4：全局窗口聚合
     protected DataStream<Tuple3<Double, Long, Long>> aggregateGlobal(
             DataStream<Tuple3<Double, Long, Long>> perTraceAgg) {
-        return perTraceAgg
-                .windowAll(TumblingEventTimeWindows.of(Time.seconds(windowSeconds)))
-                .aggregate(new GlobalAvgMaxAggregateFunctionWithWindowStart(),
-                        new AllWindowFunction<Tuple3<Double, Long, Long>, Tuple3<Double, Long, Long>, TimeWindow>() {
-                            @Override
-                            public void apply(TimeWindow window, Iterable<Tuple3<Double, Long, Long>> elements,
-                                    Collector<Tuple3<Double, Long, Long>> out) {
-                                for (Tuple3<Double, Long, Long> e : elements) {
-                                    out.collect(e);
-                                }
-                            }
-                        });
+        return perTraceAgg.windowAll(TumblingEventTimeWindows.of(Time.seconds(windowSeconds))).aggregate(
+                new GlobalAvgMaxAggregateFunctionWithWindowStart(),
+                new AllWindowFunction<Tuple3<Double, Long, Long>, Tuple3<Double, Long, Long>, TimeWindow>() {
+                    @Override
+                    public void apply(TimeWindow window, Iterable<Tuple3<Double, Long, Long>> elements,
+                            Collector<Tuple3<Double, Long, Long>> out) {
+                        for (Tuple3<Double, Long, Long> e : elements) {
+                            out.collect(e);
+                        }
+                    }
+                });
     }
 
     // traceId 分组窗口聚合函数，输入 Tuple3<traceId, duration, endTime>，输出 Tuple2<avg, max>
