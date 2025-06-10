@@ -36,19 +36,24 @@ public class FlinkKafkaToClickHouseJob {
 
         public static void main(String[] args) throws Exception {
                 LOG.warn("FlinkKafkaToClickHouseJob starting, preparing to initialize environment");
-                StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-                // 设置并行度（建议生产环境通过命令行 -p 或 flink-conf.yaml 配置，不在代码中写死）
-                env.setParallelism(2);
-                env.getConfig().addDefaultKryoSerializer(SegmentObject.class, ProtobufSerializer.class);
                 Map<String, Object> config = com.o11y.ConfigLoader.loadConfig("application.yaml");
                 Map<String, String> kafkaConfig = (Map<String, String>) config.get("kafka");
                 Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
                 Map<String, Integer> batchConfig = (Map<String, Integer>) config.get("batch");
+                Map<String, Object> flinkConfig = (Map<String, Object>) config.get("flink");
 
-                // 启用 checkpoint，每60秒一次
-                env.enableCheckpointing(60000);
-                // 可选：设置 checkpoint 超时时间为30秒
-                env.getCheckpointConfig().setCheckpointTimeout(30000);
+                StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+                // 设置并行度
+                env.setParallelism((Integer) flinkConfig.get("parallelism"));
+                // 启用 checkpoint
+                env.enableCheckpointing(((Number) flinkConfig.get("checkpoint_interval")).longValue());
+                // 设置 checkpoint 超时时间
+                env.getCheckpointConfig().setCheckpointTimeout(
+                                ((Number) flinkConfig.get("checkpoint_timeout")).longValue());
+                // Kryo序列化配置
+                env.getConfig().addDefaultKryoSerializer(
+                                segment.v3.Segment.SegmentObject.class,
+                                com.twitter.chill.protobuf.ProtobufSerializer.class);
 
                 LOG.warn("Kafka configuration: {}", kafkaConfig);
                 LOG.warn("ClickHouse configuration: {}", clickhouseConfig);

@@ -57,3 +57,19 @@ CREATE TABLE IF NOT EXISTS param_config (
     paramValue String
 ) ENGINE = MergeTree()
 ORDER BY (namespace, operatorClass, paramKey);
+
+CREATE TABLE IF NOT EXISTS flink_operator_agg_result (
+    window_start  Int64,          -- 窗口起始时间
+    window_end    Int64,          -- 窗口结束时间
+    operator_name Nullable(String),         -- 算子类名
+    service       Nullable(String),         -- 服务名
+    instance      Nullable(String),         -- 实例名
+    method        Nullable(String),         -- 方法名
+    avg_duration  Nullable(Float64),        -- 平均耗时
+    max_duration  Nullable(Int64),          -- 最大耗时
+    error_rate    Nullable(Float64),        -- 错误率（如无可填0或NULL）
+) ENGINE = MergeTree()
+ORDER BY (window_start );ime
+)
+ENGINE = MergeTree()
+ORDER BY keyName;

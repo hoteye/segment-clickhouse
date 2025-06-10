@@ -18,3 +18,8 @@ batch:
   interval: 200    # Batch insert interval (milliseconds)
 
 add_columns_interval: 80000  # Execute addColumns method every add_columns_interval milliseconds
+
+flink:
+  parallelism: 2
+  checkpoint_interval: 60000      # 单位：毫秒
+  checkpoint_timeout: 30000       # 单位：毫秒
