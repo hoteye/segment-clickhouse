@@ -45,10 +45,10 @@ public class FlinkKafkaToClickHouseJob {
                 Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
                 Map<String, Integer> batchConfig = (Map<String, Integer>) config.get("batch");
 
-                // // 启用 checkpoint，每60秒一次
-                // env.enableCheckpointing(60000);
-                // // 可选：设置 checkpoint 超时时间为30秒
-                // env.getCheckpointConfig().setCheckpointTimeout(30000);
+                // 启用 checkpoint，每60秒一次
+                env.enableCheckpointing(60000);
+                // 可选：设置 checkpoint 超时时间为30秒
+                env.getCheckpointConfig().setCheckpointTimeout(30000);
 
                 LOG.warn("Kafka configuration: {}", kafkaConfig);
                 LOG.warn("ClickHouse configuration: {}", clickhouseConfig);
@@ -56,7 +56,7 @@ public class FlinkKafkaToClickHouseJob {
                                 .setBootstrapServers(kafkaConfig.get("bootstrap_servers"))
                                 .setTopics(kafkaConfig.get("topic"))
                                 .setGroupId(kafkaConfig.get("group_id"))
-                                .setStartingOffsets(OffsetsInitializer.earliest())
+                                .setStartingOffsets(OffsetsInitializer.committedOffsets())
                                 .setValueOnlyDeserializer(new SegmentDeserializationSchema())
                                 .build();
                 LOG.warn("KafkaSource built, preparing to create DataStream");

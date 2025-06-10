@@ -5,9 +5,6 @@ import com.o11y.TransformerUtils;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import segment.v3.Segment.SegmentObject;
-import segment.v3.Segment.SpanObject;
-import segment.v3.Segment.SpanType;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.sql.PreparedStatement;
@@ -82,7 +79,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             long currentTime = System.currentTimeMillis();
             if (spanCounter >= batchSize || (currentTime - lastInsertTime >= batchInterval)) {
                 databaseService.getStatement().executeBatch();
-                LOG.info("Inserted {} spans into events table.", spanCounter);
+                LOG.debug("Inserted {} spans into events table.", spanCounter);
                 spanCounter = 0;
                 lastInsertTime = currentTime;
             }

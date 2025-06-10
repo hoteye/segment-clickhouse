@@ -1,8 +1,8 @@
 kafka:
   bootstrap_servers: "192.168.100.6:9092"
   group_id: "skywalking-segments-consumer-group-myself"
-  #topic: "topic-dics-long-skywalking-segments"
-  topic: "test_flink_task"
+  topic: "topic-dics-long-skywalking-segments"
+  #topic: "test_flink_task"
   auto_offset_reset: "earliest"
   poll_interval_ms: 200   # Poll interval in milliseconds (added for dynamic control)
 
@@ -14,7 +14,7 @@ clickhouse:
   password: "123456"
 
 batch:
-  size: 2         # Number of spans per batch insert
+  size: 60         # Number of spans per batch insert
   interval: 200    # Batch insert interval (milliseconds)
 
 add_columns_interval: 80000  # Execute addColumns method every add_columns_interval milliseconds

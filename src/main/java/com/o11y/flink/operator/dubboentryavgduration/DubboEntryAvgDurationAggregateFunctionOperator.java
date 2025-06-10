@@ -87,12 +87,12 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
                             long duration = span.getEndTime() - span.getStartTime();
                             long endTime = span.getEndTime();
                             // 新增详细日志：打印每个 Entry span 的 traceId、duration、endTime
-                            LOG.info("[ExtractEntrySpan] traceSegmentId={} duration={} endTime={}", traceSegmentId,
+                            LOG.debug("[ExtractEntrySpan] traceSegmentId={} duration={} endTime={}", traceSegmentId,
                                     duration, endTime);
                             out.collect(Tuple3.of(traceSegmentId, duration, endTime));
                         }
                     }
-                    LOG.info("segmentId={} spansCount={} entryEntryCount={}", traceSegmentId, totalSpans, entryCount);
+                    LOG.debug("segmentId={} spansCount={} entryEntryCount={}", traceSegmentId, totalSpans, entryCount);
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.LONG, Types.LONG))
                 .assignTimestampsAndWatermarks(
@@ -114,7 +114,7 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
                                     Collector<Tuple3<Double, Long, Long>> out) {
                                 Tuple2<Double, Long> result = elements.iterator().next();
                                 // 新增：打印当前窗口内所有元素
-                                LOG.info("[ByTrace] traceSegmentId={} windowStart={} windowEnd={} 元素:", key,
+                                LOG.debug("[ByTrace] traceSegmentId={} windowStart={} windowEnd={} 元素:", key,
                                         context.window().getStart(), context.window().getEnd());
                                 // 由于 elements 只包含聚合结果，需额外打印原始窗口内容
                                 // 这里可通过 context.window() 获取窗口信息，但无法直接访问窗口内所有原始元素
@@ -141,7 +141,7 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
                                     sb.append(String.format("[traceAvg=%.2f, traceMax=%d, windowStart=%d] ", e.f0, e.f1,
                                             e.f2));
                                 }
-                                LOG.info("[GlobalAgg-Window] windowStart={} windowEnd={} perTraceAggs: {}",
+                                LOG.debug("[GlobalAgg-Window] windowStart={} windowEnd={} perTraceAggs: {}",
                                         window.getStart(), window.getEnd(), sb.toString());
                                 for (Tuple3<Double, Long, Long> e : elements) {
                                     out.collect(e);
@@ -171,7 +171,7 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
             long windowEnd = windowStart + windowSeconds * 1000L;
             double avg = tuple.f0;
             long max = tuple.f1;
-            LOG.info("[GlobalAgg] windowStart={} windowEnd={} avg=" + String.format("%.2f", avg) + " ms, max={} ms",
+            LOG.debug("[GlobalAgg] windowStart={} windowEnd={} avg=" + String.format("%.2f", avg) + " ms, max={} ms",
                     windowStart, windowEnd, max);
             return tuple;
         }
@@ -192,7 +192,7 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
             long sum = acc.f0 + value.f1;
             long count = acc.f1 + 1;
             long max = Math.max(acc.f2, value.f1);
-            LOG.info("[AvgMaxAgg] traceSegmentId={} duration={} endTime={} sum={} count={} max={}",
+            LOG.debug("[AvgMaxAgg] traceSegmentId={} duration={} endTime={} sum={} count={} max={}",
                     value.f0, value.f1, value.f2, sum, count, max);
             return Tuple3.of(sum, count, max);
         }
