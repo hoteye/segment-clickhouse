@@ -1,6 +1,4 @@
-package com.o11y.flink.operator.avgspanduration;
-
-// 此类已迁移至 aggregatefunction 包，请使用 com.o11y.flink.operator.aggregatefunction.AvgSpanDurationAggregateFunction
+package com.o11y.flink.operator.aggregatefunction;
 
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.java.tuple.Tuple2;

@@ -1,12 +1,10 @@
-package com.o11y.flink.operator.maxspanduration;
+package com.o11y.flink.operator.aggregatefunction;
 
 import org.apache.flink.api.common.functions.AggregateFunction;
 import segment.v3.Segment.SegmentObject;
 
 /**
  * 7秒窗口内统计所有span最大时长的聚合算子
- * 此类已迁移至 aggregatefunction 包，请使用
- * com.o11y.flink.operator.aggregatefunction.MaxSpanDurationAggregateFunction
  */
 public class MaxSpanDurationAggregateFunction implements AggregateFunction<SegmentObject, Long, Long> {
     @Override

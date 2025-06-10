@@ -49,3 +49,11 @@ CREATE TABLE new_key
 )
 ENGINE = MergeTree()
 ORDER BY keyName;
+
+CREATE TABLE IF NOT EXISTS param_config (
+    namespace String,
+    operatorClass String,
+    paramKey String,
+    paramValue String
+) ENGINE = MergeTree()
+ORDER BY (namespace, operatorClass, paramKey);

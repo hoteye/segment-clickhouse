@@ -95,6 +95,14 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Awaitility for async test waiting -->
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<version>4.2.0</version>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- Flink dependencies for Flink task support -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -228,6 +236,16 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- Maven Surefire Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <argLine>--add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED</argLine>
+                </configuration>
             </plugin>
 		</plugins>
 	</build>

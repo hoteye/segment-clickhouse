@@ -37,18 +37,18 @@ public class FlinkKafkaToClickHouseJob {
         public static void main(String[] args) throws Exception {
                 LOG.warn("FlinkKafkaToClickHouseJob starting, preparing to initialize environment");
                 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-                // 设置并行度
-                env.setParallelism(5);
+                // 设置并行度（建议生产环境通过命令行 -p 或 flink-conf.yaml 配置，不在代码中写死）
+                env.setParallelism(2);
                 env.getConfig().addDefaultKryoSerializer(SegmentObject.class, ProtobufSerializer.class);
                 Map<String, Object> config = com.o11y.ConfigLoader.loadConfig("application.yaml");
                 Map<String, String> kafkaConfig = (Map<String, String>) config.get("kafka");
                 Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
                 Map<String, Integer> batchConfig = (Map<String, Integer>) config.get("batch");
 
-                // 启用 checkpoint，每60秒一次
-                env.enableCheckpointing(60000);
-                // 可选：设置 checkpoint 超时时间为30秒
-                env.getCheckpointConfig().setCheckpointTimeout(30000);
+                // // 启用 checkpoint，每60秒一次
+                // env.enableCheckpointing(60000);
+                // // 可选：设置 checkpoint 超时时间为30秒
+                // env.getCheckpointConfig().setCheckpointTimeout(30000);
 
                 LOG.warn("Kafka configuration: {}", kafkaConfig);
                 LOG.warn("ClickHouse configuration: {}", clickhouseConfig);
@@ -56,7 +56,7 @@ public class FlinkKafkaToClickHouseJob {
                                 .setBootstrapServers(kafkaConfig.get("bootstrap_servers"))
                                 .setTopics(kafkaConfig.get("topic"))
                                 .setGroupId(kafkaConfig.get("group_id"))
-                                .setStartingOffsets(OffsetsInitializer.committedOffsets())
+                                .setStartingOffsets(OffsetsInitializer.earliest())
                                 .setValueOnlyDeserializer(new SegmentDeserializationSchema())
                                 .build();
                 LOG.warn("KafkaSource built, preparing to create DataStream");

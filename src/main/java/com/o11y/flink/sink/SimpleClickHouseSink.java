@@ -5,6 +5,9 @@ import com.o11y.TransformerUtils;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import segment.v3.Segment.SegmentObject;
+import segment.v3.Segment.SpanObject;
+import segment.v3.Segment.SpanType;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.sql.PreparedStatement;
@@ -29,7 +32,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     private final static String DEFAULT_KEY_TYPE = "String";
     // 新增：记录上次写入 new_key 的时间，避免高频访问
     private long lastNewKeyInsertTime = 0L;
-    private static final long NEW_KEY_INSERT_INTERVAL_MS = 10_000L;
+    private static final long NEW_KEY_INSERT_INTERVAL_MS = 60_000L;
 
     public SimpleClickHouseSink(Map<String, String> clickhouseConfig, Map<String, Integer> batchConfig) {
         this.batchConfig = batchConfig;
@@ -51,14 +54,14 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     }
 
     @Override
-    public void invoke(SegmentObject segment, Context context) throws Exception {
+    public void invoke(SegmentObject segmentObject, Context context) throws Exception {
         try {
             // 1. 正常数据写入（会自动填充 missingFields）
             TransformerUtils.insertSegmentObjectToEvents(
-                    databaseService, segment,
+                    databaseService, segmentObject,
                     invalidFields,
                     missingFields);
-            LOG.debug("Successfully inserted data into ClickHouse: {}", segment.getTraceId());
+            LOG.debug("Successfully inserted data into ClickHouse: {}", segmentObject.getTraceId());
             LOG.debug("Invalid fields: {}", invalidFields);
             LOG.debug("Missing fields: {}", missingFields);
             // 2. 将 missingFields 中的新 key 写入 new_key 表（限流）
@@ -68,17 +71,18 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
                     if (insertNewKeyToClickHouse(key)) {
                         // 如果 key 已经写入 new_key 并且 isCreated 为 true，表示字段已经建立，则重建sql语句
                         databaseService.initConnection();
+                        LOG.info("Key '{}' already exists in new_key table, re-initializing database connection.", key);
                     }
                 }
                 LOG.info("Cached new tag keys to new_key table: {}", missingFields);
                 missingFields.clear(); // 避免重复写入
                 lastNewKeyInsertTime = now;
             }
-            spanCounter += segment.getSpansCount();
+            spanCounter += segmentObject.getSpansCount();
             long currentTime = System.currentTimeMillis();
             if (spanCounter >= batchSize || (currentTime - lastInsertTime >= batchInterval)) {
                 databaseService.getStatement().executeBatch();
-                LOG.debug("Inserted {} spans into events table.", spanCounter);
+                LOG.info("Inserted {} spans into events table.", spanCounter);
                 spanCounter = 0;
                 lastInsertTime = currentTime;
             }
