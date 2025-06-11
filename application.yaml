@@ -2,6 +2,7 @@ kafka:
   bootstrap_servers: "192.168.100.6:9092"
   group_id: "skywalking-segments-consumer-group-myself"
   topic: "topic-dics-long-skywalking-segments"
+  param_update_topic: "flink-operator-param-update"
   #topic: "test_flink_task"
   auto_offset_reset: "earliest"
   poll_interval_ms: 200   # Poll interval in milliseconds (added for dynamic control)

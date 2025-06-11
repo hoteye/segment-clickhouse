@@ -22,13 +22,25 @@ import segment.v3.Segment.SegmentObject;
 /**
  * 按 service 分组，统计每 7 秒内各 service 的平均耗时和最大耗时
  */
-public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperator {
+public class ServiceAvgDurationAggregateFunctionOperator
+        extends AbstractParamUpdatableOperator<SegmentObject, Tuple4<String, Double, Long, Long>> {
     private static final Logger LOG = LoggerFactory.getLogger(ServiceAvgDurationAggregateFunctionOperator.class);
     private final String NAME = this.getClass().getSimpleName();
     private int windowSeconds = 7;
+    private transient com.o11y.DatabaseService dbService;
+
+    public ServiceAvgDurationAggregateFunctionOperator(com.o11y.DatabaseService dbService) {
+        this.dbService = dbService;
+    }
+
+    @Override
+    protected com.o11y.DatabaseService getDbService() {
+        return dbService;
+    }
 
     @Override
     public DataStream<?> apply(DataStream<?> input, Map<String, List<String>> params) {
+        this.params = params; // 初始参数
         String spanType = params.get("spanType").get(0);
         windowSeconds = Integer.parseInt(params.get("windowSeconds").get(0));
         DataStream<SegmentObject> segmentStream = (DataStream<SegmentObject>) input;
@@ -54,7 +66,7 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
                             out.collect(Tuple4.of(service, duration, endTime, endTime));
                         }
                     }
-                    LOG.info("segmentId={}", traceSegmentId);
+                    LOG.info("segmentId={} in ServiceAvgDurationAggregateFunctionOperator", traceSegmentId);
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.LONG, Types.LONG, Types.LONG))
                 .assignTimestampsAndWatermarks(
@@ -114,5 +126,18 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
     @Override
     public String getName() {
         return NAME;
+    }
+
+    @Override
+    public void onParamUpdate(Map<String, List<String>> newParams) {
+        this.params = newParams;
+        LOG.info("参数热更新: {}", newParams);
+    }
+
+    @Override
+    public void flatMap(SegmentObject value, org.apache.flink.util.Collector<Tuple4<String, Double, Long, Long>> out)
+            throws Exception {
+        // 这里可以不做任何处理，或抛出异常，或写日志，具体实现由子类业务决定
+        // 通常实际业务逻辑在 apply/窗口聚合等方法中实现
     }
 }

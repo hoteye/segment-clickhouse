@@ -22,4 +22,13 @@ public interface FlinkOperator {
      * 算子名称（唯一标识）
      */
     String getName();
+
+    /**
+     * 算子参数热更新回调，收到参数变更通知时调用
+     * 
+     * @param newParams 最新参数
+     */
+    default void onParamUpdate(Map<String, List<String>> newParams) {
+        // 默认空实现，具体算子可覆盖
+    }
 }

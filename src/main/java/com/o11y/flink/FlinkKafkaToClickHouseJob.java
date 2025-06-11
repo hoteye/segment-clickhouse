@@ -79,7 +79,12 @@ public class FlinkKafkaToClickHouseJob {
                 LOG.warn("DataStream created, preparing to add Sink");
                 // 注册所有算子
                 OperatorRegistry.register(new DubboEntryAvgDurationAggregateFunctionOperator());
-                OperatorRegistry.register(new ServiceAvgDurationAggregateFunctionOperator());
+                OperatorRegistry.register(new ServiceAvgDurationAggregateFunctionOperator(new DatabaseService(
+                                clickhouseConfig.get("url"),
+                                clickhouseConfig.get("schema_name"),
+                                clickhouseConfig.get("table_name"),
+                                clickhouseConfig.get("username"),
+                                clickhouseConfig.get("password"))));
 
                 // 独立添加 SimpleClickHouseSink
                 stream.addSink(new SimpleClickHouseSink(clickhouseConfig, batchConfig))
