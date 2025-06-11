@@ -21,10 +21,9 @@ import com.o11y.flink.serde.SegmentDeserializationSchema;
 import com.o11y.flink.util.OperatorParamLoader;
 import com.o11y.flink.registry.OperatorRegistry;
 import com.o11y.DatabaseService;
+import com.o11y.flink.operator.DubboEntryAvgDurationAggregateFunctionOperator;
 import com.o11y.flink.operator.FlinkOperator;
-import com.o11y.flink.operator.avgspanduration.AvgSpanDurationAggregateFunctionOperator;
-import com.o11y.flink.operator.dubboentryavgduration.DubboEntryAvgDurationAggregateFunctionOperator;
-import com.o11y.flink.operator.maxspanduration.MaxSpanDurationAggregateFunctionOperator;
+import com.o11y.flink.operator.ServiceAvgDurationAggregateFunctionOperator;
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
 
@@ -79,9 +78,8 @@ public class FlinkKafkaToClickHouseJob {
                                 "KafkaSource-SegmentObject");
                 LOG.warn("DataStream created, preparing to add Sink");
                 // 注册所有算子
-                OperatorRegistry.register(new AvgSpanDurationAggregateFunctionOperator());
-                OperatorRegistry.register(new MaxSpanDurationAggregateFunctionOperator());
                 OperatorRegistry.register(new DubboEntryAvgDurationAggregateFunctionOperator());
+                OperatorRegistry.register(new ServiceAvgDurationAggregateFunctionOperator());
 
                 // 独立添加 SimpleClickHouseSink
                 stream.addSink(new SimpleClickHouseSink(clickhouseConfig, batchConfig))

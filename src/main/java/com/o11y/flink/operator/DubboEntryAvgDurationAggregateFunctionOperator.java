@@ -1,4 +1,4 @@
-package com.o11y.flink.operator.dubboentryavgduration;
+package com.o11y.flink.operator;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -9,15 +9,12 @@ import org.apache.flink.streaming.api.functions.windowing.AllWindowFunction;
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.api.common.functions.AggregateFunction;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.o11y.flink.operator.FlinkOperator;
 
 import java.util.Map;
 import java.time.Duration;
