@@ -38,7 +38,7 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
         DataStream<Tuple3<Double, Long, Long>> perTraceAgg = aggregateByTrace(durationStream);
         DataStream<Tuple3<Double, Long, Long>> globalAgg = aggregateGlobal(perTraceAgg);
         // 兼容接口，返回主聚合流（类型擦除），告警流为 null
-        return new ServiceAggAndAlarm((DataStream) globalAgg, null);
+        return new ServiceAggAndAlarm(globalAgg, null);
     }
 
     // 步骤1：服务名过滤
