@@ -22,26 +22,15 @@ import segment.v3.Segment.SegmentObject;
 /**
  * 按 service 分组，统计每 7 秒内各 service 的平均耗时和最大耗时
  */
-public class ServiceAvgDurationAggregateFunctionOperator
-        extends AbstractParamUpdatableOperator<SegmentObject, Tuple4<String, Double, Long, Long>> {
+public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperator {
     private static final Logger LOG = LoggerFactory.getLogger(ServiceAvgDurationAggregateFunctionOperator.class);
     private final String NAME = this.getClass().getSimpleName();
     private int windowSeconds = 7;
-    private transient com.o11y.DatabaseService dbService;
-
-    public ServiceAvgDurationAggregateFunctionOperator(com.o11y.DatabaseService dbService) {
-        this.dbService = dbService;
-    }
-
-    @Override
-    protected com.o11y.DatabaseService getDbService() {
-        return dbService;
-    }
+    String spanType = "Entry";
 
     @Override
     public DataStream<?> apply(DataStream<?> input, Map<String, List<String>> params) {
-        this.params = params; // 初始参数
-        String spanType = params.get("spanType").get(0);
+        spanType = params.get("spanType").get(0);
         windowSeconds = Integer.parseInt(params.get("windowSeconds").get(0));
         DataStream<SegmentObject> segmentStream = (DataStream<SegmentObject>) input;
         DataStream<Tuple4<String, Long, Long, Long>> durationStream = extractEntrySpan(segmentStream, spanType);
@@ -66,7 +55,7 @@ public class ServiceAvgDurationAggregateFunctionOperator
                             out.collect(Tuple4.of(service, duration, endTime, endTime));
                         }
                     }
-                    LOG.info("segmentId={} in ServiceAvgDurationAggregateFunctionOperator", traceSegmentId);
+                    LOG.info("segmentId={}", traceSegmentId);
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.LONG, Types.LONG, Types.LONG))
                 .assignTimestampsAndWatermarks(
@@ -113,31 +102,21 @@ public class ServiceAvgDurationAggregateFunctionOperator
 
         @Override
         public Tuple2<Double, Long> getResult(Tuple3<Long, Long, Long> acc) {
-            double avg = acc.f1 == 0 ? 0.0 : ((double) acc.f0) / acc.f1;
+            double avg = acc.f1 == 0 ? 0 : (double) acc.f0 / acc.f1;
             return Tuple2.of(avg, acc.f2);
         }
 
         @Override
         public Tuple3<Long, Long, Long> merge(Tuple3<Long, Long, Long> a, Tuple3<Long, Long, Long> b) {
-            return Tuple3.of(a.f0 + b.f0, a.f1 + b.f1, Math.max(a.f2, b.f2));
+            long sum = a.f0 + b.f0;
+            long count = a.f1 + b.f1;
+            long max = Math.max(a.f2, b.f2);
+            return Tuple3.of(sum, count, max);
         }
     }
 
     @Override
     public String getName() {
         return NAME;
-    }
-
-    @Override
-    public void onParamUpdate(Map<String, List<String>> newParams) {
-        this.params = newParams;
-        LOG.info("参数热更新: {}", newParams);
-    }
-
-    @Override
-    public void flatMap(SegmentObject value, org.apache.flink.util.Collector<Tuple4<String, Double, Long, Long>> out)
-            throws Exception {
-        // 这里可以不做任何处理，或抛出异常，或写日志，具体实现由子类业务决定
-        // 通常实际业务逻辑在 apply/窗口聚合等方法中实现
     }
 }

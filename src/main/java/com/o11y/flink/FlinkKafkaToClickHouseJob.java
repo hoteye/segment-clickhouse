@@ -79,12 +79,7 @@ public class FlinkKafkaToClickHouseJob {
                 LOG.warn("DataStream created, preparing to add Sink");
                 // 注册所有算子
                 OperatorRegistry.register(new DubboEntryAvgDurationAggregateFunctionOperator());
-                OperatorRegistry.register(new ServiceAvgDurationAggregateFunctionOperator(new DatabaseService(
-                                clickhouseConfig.get("url"),
-                                clickhouseConfig.get("schema_name"),
-                                clickhouseConfig.get("table_name"),
-                                clickhouseConfig.get("username"),
-                                clickhouseConfig.get("password"))));
+                OperatorRegistry.register(new ServiceAvgDurationAggregateFunctionOperator());
 
                 // 独立添加 SimpleClickHouseSink
                 stream.addSink(new SimpleClickHouseSink(clickhouseConfig, batchConfig))
@@ -113,7 +108,17 @@ public class FlinkKafkaToClickHouseJob {
                 for (FlinkOperator op : OperatorRegistry.getOperators()) {
                         Map<String, List<String>> params = OperatorParamLoader.loadParamList(dbService,
                                         op.getClass().getSimpleName());
-                        op.apply(stream, params);
+                        DataStream<?> resultStream = op.apply(stream, params);
+                        // 新增：如果是 Tuple4<String, Double, Long, Long> 类型，sink 到 flink_operator_agg_result
+                        if (resultStream != null && resultStream.getType().toString()
+                                        .contains("Tuple4<String, Double, Long, Long>")) {
+                                @SuppressWarnings("unchecked")
+                                DataStream<org.apache.flink.api.java.tuple.Tuple4<String, Double, Long, Long>> castedStream = (DataStream<org.apache.flink.api.java.tuple.Tuple4<String, Double, Long, Long>>) resultStream;
+                                castedStream.addSink(
+                                                new com.o11y.flink.sink.OperatorAggResultClickHouseSink(
+                                                                clickhouseConfig))
+                                                .name("OperatorAggResultClickHouseSink");
+                        }
                 }
                 env.execute("FlinkKafkaToClickHouseJob");
         }

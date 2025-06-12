@@ -58,7 +58,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
                     databaseService, segmentObject,
                     invalidFields,
                     missingFields);
-            LOG.info("segmentId={}", segmentObject.getTraceSegmentId());
+            LOG.debug("segmentId={}", segmentObject.getTraceSegmentId());
             LOG.debug("Successfully inserted data into ClickHouse: {}", segmentObject.getTraceId());
             LOG.debug("Invalid fields: {}", invalidFields);
             LOG.debug("Missing fields: {}", missingFields);
