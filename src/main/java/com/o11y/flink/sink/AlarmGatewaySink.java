@@ -1,4 +1,4 @@
-package com.o11y.flink.operator;
+package com.o11y.flink.sink;
 
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 

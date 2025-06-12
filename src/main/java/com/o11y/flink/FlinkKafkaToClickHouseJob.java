@@ -29,7 +29,7 @@ import com.o11y.flink.sink.OperatorAggResultClickHouseSink;
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
 import com.o11y.flink.sink.OperatorAggResultTuple5ClickHouseSink;
-import com.o11y.flink.operator.AlarmGatewaySink;
+import com.o11y.flink.sink.AlarmGatewaySink;
 
 import java.sql.Statement;
 import java.time.Duration;
