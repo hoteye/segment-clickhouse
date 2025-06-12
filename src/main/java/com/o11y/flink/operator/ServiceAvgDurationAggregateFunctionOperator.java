@@ -29,14 +29,26 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
     private int windowSeconds = 7;
     String spanType = "Entry";
 
-    @Override
-    public DataStream<?> apply(DataStream<?> input, Map<String, List<String>> params) {
+    /**
+     * 返回聚合结果流和告警流，由主流程决定 sink
+     */
+    public ServiceAggAndAlarm applyWithAlarm(DataStream<?> input, Map<String, List<String>> params) {
         spanType = params.get("spanType").get(0);
         windowSeconds = Integer.parseInt(params.get("windowSeconds").get(0));
+        double avgThreshold = params.containsKey("avgThreshold") ? Double.parseDouble(params.get("avgThreshold").get(0))
+                : 100.0;
+        long maxThreshold = params.containsKey("maxThreshold") ? Long.parseLong(params.get("maxThreshold").get(0))
+                : 250L;
         DataStream<SegmentObject> segmentStream = (DataStream<SegmentObject>) input;
         DataStream<Tuple3<String, String, Long>> durationStream = extractEntrySpan(segmentStream, spanType);
-        DataStream<Tuple5<String, String, Double, Long, Long>> serviceAgg = aggregateByService(durationStream);
-        return serviceAgg;
+        DataStream<Tuple5<String, String, Double, Long, Long>> aggStream = aggregateByService(durationStream);
+        DataStream<String> alarmStream = alarmOnThreshold(aggStream, avgThreshold, maxThreshold);
+        return new ServiceAggAndAlarm(aggStream, alarmStream);
+    }
+
+    @Override
+    public ServiceAggAndAlarm apply(DataStream<?> input, Map<String, List<String>> params) {
+        return applyWithAlarm(input, params);
     }
 
     /**
@@ -62,7 +74,7 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
                             out.collect(Tuple3.of(service, operatorName, duration));
                         }
                     }
-                    LOG.info("segmentId={}", segment.getTraceSegmentId());
+                    LOG.debug("segmentId={}", segment.getTraceSegmentId());
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.STRING, Types.LONG))
                 .assignTimestampsAndWatermarks(WatermarkStrategy
@@ -135,6 +147,43 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
             long max = Math.max(a.f2, b.f2);
             return Tuple3.of(sum, count, max);
         }
+    }
+
+    /**
+     * 根据聚合结果输出告警信息
+     * 
+     * @param aggStream    聚合后的 Tuple5<service, operatorName, avg, max, windowStart>
+     *                     数据流
+     * @param avgThreshold 平均耗时阈值
+     * @param maxThreshold 最大耗时阈值
+     * @return DataStream<String> 中文自然语言告警内容
+     */
+    public DataStream<String> alarmOnThreshold(
+            DataStream<Tuple5<String, String, Double, Long, Long>> aggStream,
+            double avgThreshold,
+            long maxThreshold) {
+        return aggStream.flatMap((Tuple5<String, String, Double, Long, Long> value, Collector<String> out) -> {
+            String service = value.f0;
+            String operatorName = value.f1;
+            double avg = value.f2;
+            long max = value.f3;
+            long windowStart = value.f4;
+            if (avg > avgThreshold) {
+                out.collect(
+                        String.format("【告警】服务[%s]的[%s]方法在窗口时间[%s]的平均耗时为%.2fms，已超过阈值%.2fms。", service, operatorName,
+                                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                                        .withZone(java.time.ZoneId.systemDefault())
+                                        .format(java.time.Instant.ofEpochMilli(windowStart)),
+                                avg, avgThreshold));
+            }
+            if (max > maxThreshold) {
+                out.collect(String.format("【告警】服务[%s]的[%s]方法在窗口时间[%s]的最大耗时为%dms，已超过阈值%dms。", service, operatorName,
+                        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                                .withZone(java.time.ZoneId.systemDefault())
+                                .format(java.time.Instant.ofEpochMilli(windowStart)),
+                        max, maxThreshold));
+            }
+        }).returns(String.class);
     }
 
     @Override

@@ -23,13 +23,18 @@ import com.o11y.flink.registry.OperatorRegistry;
 import com.o11y.DatabaseService;
 import com.o11y.flink.operator.DubboEntryAvgDurationAggregateFunctionOperator;
 import com.o11y.flink.operator.FlinkOperator;
+import com.o11y.flink.operator.ServiceAggAndAlarm;
 import com.o11y.flink.operator.ServiceAvgDurationAggregateFunctionOperator;
 import com.o11y.flink.sink.OperatorAggResultClickHouseSink;
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
+import com.o11y.flink.sink.OperatorAggResultTuple5ClickHouseSink;
+import com.o11y.flink.operator.AlarmGatewaySink;
 
 import java.sql.Statement;
 import java.time.Duration;
+import org.apache.flink.api.java.tuple.Tuple4;
+import org.apache.flink.api.java.tuple.Tuple5;
 
 public class FlinkKafkaToClickHouseJob {
         private static final Logger LOG = LoggerFactory.getLogger(FlinkKafkaToClickHouseJob.class);
@@ -109,24 +114,31 @@ public class FlinkKafkaToClickHouseJob {
                 for (FlinkOperator op : OperatorRegistry.getOperators()) {
                         Map<String, List<String>> params = OperatorParamLoader.loadParamList(dbService,
                                         op.getClass().getSimpleName());
-                        DataStream<?> resultStream = op.apply(stream, params);
-                        // 新增：如果是 Tuple4<String, Double, Long, Long> 类型，sink 到 flink_operator_agg_result
-                        if (resultStream != null && resultStream.getType().toString()
-                                        .contains("Tuple4<String, Double, Long, Long>")) {
-                                @SuppressWarnings("unchecked")
-                                DataStream<org.apache.flink.api.java.tuple.Tuple4<String, Double, Long, Long>> castedStream = (DataStream<org.apache.flink.api.java.tuple.Tuple4<String, Double, Long, Long>>) resultStream;
-                                castedStream.addSink(new OperatorAggResultClickHouseSink(clickhouseConfig))
-                                                .name("OperatorAggResultClickHouseSink");
-                        }
-                        // 新增：如果是 Tuple5<String, String, Double, Long, Long> 类型，sink 到
-                        // flink_operator_agg_result
-                        else if (resultStream != null && resultStream.getType().toString()
-                                        .contains("Tuple5<String, String, Double, Long, Long>")) {
-                                @SuppressWarnings("unchecked")
-                                DataStream<org.apache.flink.api.java.tuple.Tuple5<String, String, Double, Long, Long>> castedStream = (DataStream<org.apache.flink.api.java.tuple.Tuple5<String, String, Double, Long, Long>>) resultStream;
-                                castedStream.addSink(new com.o11y.flink.sink.OperatorAggResultTuple5ClickHouseSink(
-                                                clickhouseConfig))
-                                                .name("OperatorAggResultTuple5ClickHouseSink");
+                        ServiceAggAndAlarm result = op.apply(stream, params);
+                        if (result != null) {
+                                if (result.aggStream != null) {
+                                        String typeStr = result.aggStream.getType().toString();
+                                        if (typeStr.contains("Tuple4<String, Double, Long, Long>")) {
+                                                @SuppressWarnings("unchecked")
+                                                DataStream<Tuple4<String, Double, Long, Long>> castedStream = (DataStream<Tuple4<String, Double, Long, Long>>) result.aggStream;
+                                                castedStream.addSink(
+                                                                new OperatorAggResultClickHouseSink(
+                                                                                clickhouseConfig))
+                                                                .name("OperatorAggResultClickHouseSink");
+                                        } else if (typeStr.contains("Tuple5<String, String, Double, Long, Long>")) {
+                                                @SuppressWarnings("unchecked")
+                                                DataStream<Tuple5<String, String, Double, Long, Long>> castedStream = (DataStream<Tuple5<String, String, Double, Long, Long>>) result.aggStream;
+                                                castedStream.addSink(
+                                                                new OperatorAggResultTuple5ClickHouseSink(
+                                                                                clickhouseConfig))
+                                                                .name("OperatorAggResultTuple5ClickHouseSink");
+                                        }
+                                        // 可扩展更多 Tuple 类型 sink
+                                }
+                                if (result.alarmStream != null) {
+                                        result.alarmStream.addSink(new AlarmGatewaySink())
+                                                        .name("AlarmGatewaySink");
+                                }
                         }
                 }
                 env.execute("FlinkKafkaToClickHouseJob");

@@ -29,7 +29,7 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
     private int windowSeconds = 7;
 
     @Override
-    public DataStream<?> apply(DataStream<?> input, Map<String, List<String>> params) {
+    public ServiceAggAndAlarm apply(DataStream<?> input, Map<String, List<String>> params) {
         List<String> serviceNames = params.get("service");
         String spanType = params.get("spanType").get(0);
         windowSeconds = Integer.parseInt(params.get("windowSeconds").get(0));
@@ -37,7 +37,8 @@ public class DubboEntryAvgDurationAggregateFunctionOperator implements FlinkOper
         DataStream<Tuple3<String, Long, Long>> durationStream = extractEntrySpan(filtered, spanType);
         DataStream<Tuple3<Double, Long, Long>> perTraceAgg = aggregateByTrace(durationStream);
         DataStream<Tuple3<Double, Long, Long>> globalAgg = aggregateGlobal(perTraceAgg);
-        return globalAgg;
+        // 兼容接口，返回主聚合流（类型擦除），告警流为 null
+        return new ServiceAggAndAlarm((DataStream) globalAgg, null);
     }
 
     // 步骤1：服务名过滤
