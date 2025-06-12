@@ -39,15 +39,22 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
         return serviceAgg;
     }
 
-    // 步骤2：提取 Entry 类型 span，输出 Tuple3<service, operatorName, duration>
+    /**
+     * 步骤1：提取 Entry 类型 span，输出 Tuple3<service, operatorName, duration>
+     * 
+     * @param filtered 经过前置过滤的 SegmentObject 数据流
+     * @param spanType 需要提取的 span 类型（如 Entry）
+     * @return DataStream<Tuple3<service, operatorName, duration>>
+     *         其中 service 为服务名，operatorName 为操作名，duration 为耗时
+     *         事件时间戳由 assignTimestampsAndWatermarks 指定
+     */
     protected DataStream<Tuple3<String, String, Long>> extractEntrySpan(
             DataStream<SegmentObject> filtered,
             String spanType) {
         return filtered
                 .flatMap((SegmentObject segment, Collector<Tuple3<String, String, Long>> out) -> {
                     String service = segment.getService();
-                    int totalSpans = segment.getSpansCount();
-                    for (int i = 0; i < totalSpans; i++) {
+                    for (int i = 0; i < segment.getSpansCount(); i++) {
                         var span = segment.getSpans(i);
                         if (spanType.equals(span.getSpanType().name())) {
                             String operatorName = span.getOperationName();
@@ -64,8 +71,15 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
                         .withTimestampAssigner((tuple, ts) -> ts)); // 事件时间可用外部 source 时间戳
     }
 
-    // 步骤3：按 service、operator_name 分组窗口聚合，输出 Tuple5<service, operatorName, avg, max,
-    // windowStart>
+    /**
+     * 步骤2：按 service、operator_name 分组窗口聚合，输出 Tuple5<service, operatorName, avg, max,
+     * windowStart>
+     * 
+     * @param durationStream 经过 extractEntrySpan 处理后的耗时数据流
+     * @return DataStream<Tuple5<service, operatorName, avg, max, windowStart>>
+     *         其中 avg 为平均耗时，max 为最大耗时，windowStart 为窗口起始时间戳
+     *         使用事件时间的滚动窗口，窗口长度由 windowSeconds 决定
+     */
     protected DataStream<Tuple5<String, String, Double, Long, Long>> aggregateByService(
             DataStream<Tuple3<String, String, Long>> durationStream) {
         return durationStream
@@ -85,7 +99,12 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
                 .returns(Types.TUPLE(Types.STRING, Types.STRING, Types.DOUBLE, Types.LONG, Types.LONG));
     }
 
-    // 聚合函数：统计平均耗时和最大耗时
+    /**
+     * 聚合函数：统计平均耗时和最大耗时
+     * 输入：Tuple3<service, operatorName, duration>
+     * 累加器：Tuple3<sum, count, max>，分别为耗时总和、计数、最大耗时
+     * 输出：Tuple2<avg, max>，分别为平均耗时和最大耗时
+     */
     public static class ServiceAvgMaxAggregateFunction
             implements
             AggregateFunction<Tuple3<String, String, Long>, Tuple3<Long, Long, Long>, Tuple2<Double, Long>> {

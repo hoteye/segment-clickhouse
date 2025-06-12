@@ -11,7 +11,6 @@ import org.apache.flink.util.Collector;
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
