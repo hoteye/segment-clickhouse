@@ -24,6 +24,7 @@ import com.o11y.DatabaseService;
 import com.o11y.flink.operator.DubboEntryAvgDurationAggregateFunctionOperator;
 import com.o11y.flink.operator.FlinkOperator;
 import com.o11y.flink.operator.ServiceAvgDurationAggregateFunctionOperator;
+import com.o11y.flink.sink.OperatorAggResultClickHouseSink;
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
 
@@ -114,10 +115,18 @@ public class FlinkKafkaToClickHouseJob {
                                         .contains("Tuple4<String, Double, Long, Long>")) {
                                 @SuppressWarnings("unchecked")
                                 DataStream<org.apache.flink.api.java.tuple.Tuple4<String, Double, Long, Long>> castedStream = (DataStream<org.apache.flink.api.java.tuple.Tuple4<String, Double, Long, Long>>) resultStream;
-                                castedStream.addSink(
-                                                new com.o11y.flink.sink.OperatorAggResultClickHouseSink(
-                                                                clickhouseConfig))
+                                castedStream.addSink(new OperatorAggResultClickHouseSink(clickhouseConfig))
                                                 .name("OperatorAggResultClickHouseSink");
+                        }
+                        // 新增：如果是 Tuple5<String, String, Double, Long, Long> 类型，sink 到
+                        // flink_operator_agg_result
+                        else if (resultStream != null && resultStream.getType().toString()
+                                        .contains("Tuple5<String, String, Double, Long, Long>")) {
+                                @SuppressWarnings("unchecked")
+                                DataStream<org.apache.flink.api.java.tuple.Tuple5<String, String, Double, Long, Long>> castedStream = (DataStream<org.apache.flink.api.java.tuple.Tuple5<String, String, Double, Long, Long>>) resultStream;
+                                castedStream.addSink(new com.o11y.flink.sink.OperatorAggResultTuple5ClickHouseSink(
+                                                clickhouseConfig))
+                                                .name("OperatorAggResultTuple5ClickHouseSink");
                         }
                 }
                 env.execute("FlinkKafkaToClickHouseJob");
