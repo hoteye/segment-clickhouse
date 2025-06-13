@@ -38,7 +38,7 @@ CREATE TABLE events (
     tag_url Nullable(String),
     log_error_kind Nullable(String)
 ) ENGINE = MergeTree()
-ORDER BY (start_time, trace_id);
+ORDER BY (end_time);
 
 CREATE TABLE new_key
 (
@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS param_config (
     namespace String,
     operatorClass String,
     paramKey String,
-    paramValue String
+    paramValue String,
+    createTime DateTime
 ) ENGINE = MergeTree()
 ORDER BY (namespace, operatorClass, paramKey);
 

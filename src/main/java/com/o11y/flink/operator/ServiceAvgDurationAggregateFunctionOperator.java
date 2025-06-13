@@ -35,10 +35,8 @@ public class ServiceAvgDurationAggregateFunctionOperator implements FlinkOperato
     public ServiceAggAndAlarm applyWithAlarm(DataStream<?> input, Map<String, List<String>> params) {
         spanType = params.get("spanType").get(0);
         windowSeconds = Integer.parseInt(params.get("windowSeconds").get(0));
-        double avgThreshold = params.containsKey("avgThreshold") ? Double.parseDouble(params.get("avgThreshold").get(0))
-                : 100.0;
-        long maxThreshold = params.containsKey("maxThreshold") ? Long.parseLong(params.get("maxThreshold").get(0))
-                : 250L;
+        double avgThreshold = Double.parseDouble(params.get("avgThreshold").get(0));
+        long maxThreshold = Long.parseLong(params.get("maxThreshold").get(0));
         DataStream<SegmentObject> segmentStream = (DataStream<SegmentObject>) input;
         DataStream<Tuple3<String, String, Long>> durationStream = extractEntrySpan(segmentStream, spanType);
         DataStream<Tuple5<String, String, Double, Long, Long>> aggStream = aggregateByService(durationStream);

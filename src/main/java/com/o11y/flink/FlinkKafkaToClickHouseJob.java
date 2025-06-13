@@ -1,6 +1,7 @@
 package com.o11y.flink;
 
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
@@ -21,7 +22,6 @@ import com.o11y.flink.serde.SegmentDeserializationSchema;
 import com.o11y.flink.util.OperatorParamLoader;
 import com.o11y.flink.registry.OperatorRegistry;
 import com.o11y.DatabaseService;
-import com.o11y.flink.operator.DubboEntryAvgDurationAggregateFunctionOperator;
 import com.o11y.flink.operator.FlinkOperator;
 import com.o11y.flink.operator.ServiceAggAndAlarm;
 import com.o11y.flink.operator.ServiceAvgDurationAggregateFunctionOperator;
@@ -66,7 +66,7 @@ public class FlinkKafkaToClickHouseJob {
                                 .setBootstrapServers(kafkaConfig.get("bootstrap_servers"))
                                 .setTopics(kafkaConfig.get("topic"))
                                 .setGroupId(kafkaConfig.get("group_id"))
-                                .setStartingOffsets(OffsetsInitializer.committedOffsets())
+                                .setStartingOffsets(OffsetsInitializer.committedOffsets(OffsetResetStrategy.LATEST))
                                 .setValueOnlyDeserializer(new SegmentDeserializationSchema())
                                 .build();
                 LOG.warn("KafkaSource built, preparing to create DataStream");
@@ -84,7 +84,6 @@ public class FlinkKafkaToClickHouseJob {
                                 "KafkaSource-SegmentObject");
                 LOG.warn("DataStream created, preparing to add Sink");
                 // 注册所有算子
-                OperatorRegistry.register(new DubboEntryAvgDurationAggregateFunctionOperator());
                 OperatorRegistry.register(new ServiceAvgDurationAggregateFunctionOperator());
 
                 // 独立添加 SimpleClickHouseSink
