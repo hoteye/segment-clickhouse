@@ -13,15 +13,15 @@ import java.sql.PreparedStatement;
 import java.util.Map;
 
 /**
- * 将 ServiceDelayAggResult POJO 写入 ClickHouse 表 flink_operator_agg_result
+ * 通用 AggResult POJO 写入 ClickHouse 表 flink_operator_agg_result
  */
-public class ServiceDelayAggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> {
-    private static final Logger LOG = LoggerFactory.getLogger(ServiceDelayAggResultClickHouseSink.class);
+public class AggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> {
+    private static final Logger LOG = LoggerFactory.getLogger(AggResultClickHouseSink.class);
     private final Map<String, String> clickhouseConfig;
     private transient Connection connection;
     private transient PreparedStatement insertStmt;
 
-    public ServiceDelayAggResultClickHouseSink(Map<String, String> clickhouseConfig) {
+    public AggResultClickHouseSink(Map<String, String> clickhouseConfig) {
         this.clickhouseConfig = clickhouseConfig;
     }
 
@@ -37,7 +37,7 @@ public class ServiceDelayAggResultClickHouseSink extends RichSinkFunction<Servic
         // region, env, total_count, error_count, success_count
         String sql = "INSERT INTO flink_operator_agg_result (window_start, windowSize, operator_name, operator_class, service, instance, method, avg_duration, max_duration, error_rate, data_center, region, env, total_count, error_count, success_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         insertStmt = connection.prepareStatement(sql);
-        LOG.info("ServiceDelayAggResultClickHouseSink connected to ClickHouse: {}", url);
+        LOG.info("ServiceAggResultClickHouseSink connected to ClickHouse: {}", url);
     }
 
     @Override

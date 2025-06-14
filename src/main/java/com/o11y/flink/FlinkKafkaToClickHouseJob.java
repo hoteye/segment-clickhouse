@@ -25,7 +25,7 @@ import com.o11y.DatabaseService;
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
 import com.o11y.flink.sink.AlarmGatewaySink;
-import com.o11y.flink.sink.ServiceDelayAggResultClickHouseSink;
+import com.o11y.flink.sink.AggResultClickHouseSink;
 import com.o11y.flink.operator.aggregate.ServiceDelayAggregateOperator;
 import com.o11y.flink.operator.aggregate.ServiceSuccessRateAggregateOperator;
 import com.o11y.flink.operator.aggregate.ServiceThroughputAggregateOperator;
@@ -125,9 +125,9 @@ public class FlinkKafkaToClickHouseJob {
                         if (result != null) {
                                 if (result.aggStream != null) {
                                         DataStream<ServiceAggResult> castedStream = (DataStream<ServiceAggResult>) result.aggStream;
-                                        castedStream.addSink(new ServiceDelayAggResultClickHouseSink(
+                                        castedStream.addSink(new AggResultClickHouseSink(
                                                         clickhouseConfig))
-                                                        .name(ServiceDelayAggResultClickHouseSink.class
+                                                        .name(AggResultClickHouseSink.class
                                                                         .getSimpleName());
                                 }
                                 if (result.alarmStream != null) {

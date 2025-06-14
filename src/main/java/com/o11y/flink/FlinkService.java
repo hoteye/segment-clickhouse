@@ -8,7 +8,7 @@ import com.o11y.flink.operator.model.ServiceAggAndAlarm;
 import com.o11y.flink.operator.model.ServiceAggResult;
 import com.o11y.flink.registry.OperatorRegistry;
 import com.o11y.flink.sink.AlarmGatewaySink;
-import com.o11y.flink.sink.ServiceDelayAggResultClickHouseSink;
+import com.o11y.flink.sink.AggResultClickHouseSink;
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
 import com.o11y.DatabaseService;
@@ -144,9 +144,9 @@ public class FlinkService {
             if (result != null) {
                 if (result.aggStream != null) {
                     DataStream<ServiceAggResult> castedStream = (DataStream<ServiceAggResult>) result.aggStream;
-                    castedStream.addSink(new ServiceDelayAggResultClickHouseSink(
+                    castedStream.addSink(new AggResultClickHouseSink(
                             clickhouseConfig))
-                            .name(ServiceDelayAggResultClickHouseSink.class.getSimpleName());
+                            .name(AggResultClickHouseSink.class.getSimpleName());
                 }
                 if (result.alarmStream != null) {
                     result.alarmStream.addSink(new AlarmGatewaySink())
