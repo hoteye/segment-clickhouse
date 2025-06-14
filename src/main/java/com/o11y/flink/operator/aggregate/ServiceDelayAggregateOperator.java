@@ -1,4 +1,4 @@
-package com.o11y.flink.operator;
+package com.o11y.flink.operator.aggregate;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.AggregateFunction;
@@ -11,6 +11,11 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindo
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
+
+import com.o11y.flink.operator.base.FlinkOperator;
+import com.o11y.flink.operator.model.ServiceAggAndAlarm;
+import com.o11y.flink.operator.model.ServiceAggResult;
+
 import segment.v3.Segment.SegmentObject;
 import java.time.format.DateTimeFormatter;
 

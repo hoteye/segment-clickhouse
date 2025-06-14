@@ -1,4 +1,4 @@
-package com.o11y.flink.operator;
+package com.o11y.flink.operator.model;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 

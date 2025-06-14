@@ -1,10 +1,11 @@
 package com.o11y.flink.sink;
 
-import com.o11y.flink.operator.ServiceAggResult;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.o11y.flink.operator.model.ServiceAggResult;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

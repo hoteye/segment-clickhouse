@@ -1,6 +1,8 @@
-package com.o11y.flink.operator;
+package com.o11y.flink.operator.base;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
+
+import com.o11y.flink.operator.model.ServiceAggAndAlarm;
 
 import java.util.List;
 import java.util.Map;
