@@ -39,7 +39,7 @@ import java.time.Duration;
 public class FlinkKafkaToClickHouseJob {
         private static final Logger LOG = LoggerFactory.getLogger(FlinkKafkaToClickHouseJob.class);
 
-        public static void main(String[] args) throws Exception {
+        public static void main1(String[] args) throws Exception {
                 LOG.warn("FlinkKafkaToClickHouseJob starting, preparing to initialize environment");
                 Map<String, Object> config = com.o11y.ConfigLoader.loadConfig("application.yaml");
                 Map<String, String> kafkaConfig = (Map<String, String>) config.get("kafka");
