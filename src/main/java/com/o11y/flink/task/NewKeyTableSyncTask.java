@@ -26,6 +26,9 @@ public class NewKeyTableSyncTask {
         this.intervalMs = intervalMs;
     }
 
+    /**
+     * 启动定时同步任务，将 new_key 表中的新 key 同步到主表。
+     */
     public void start() {
         Timer timer = new Timer(true);
         timer.scheduleAtFixedRate(new TimerTask() {
@@ -41,6 +44,11 @@ public class NewKeyTableSyncTask {
         LOG.info("NewKeyTableSyncTask started, interval: {} ms", intervalMs);
     }
 
+    /**
+     * 执行新 key 同步逻辑，将未创建的新 key 字段同步到 ClickHouse 主表。
+     * 
+     * @throws Exception SQL 执行异常
+     */
     // 将 syncNewKeys 方法从 private 改为 package-private，便于集成测试反射调用
     void syncNewKeys() throws Exception {
         Connection conn = databaseService.getConnection();

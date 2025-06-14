@@ -8,6 +8,15 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 public class KafkaTopicUtil {
+    /**
+     * 重新创建 Kafka topic，先删除后新建。
+     * 
+     * @param bootstrapServers  Kafka 服务地址
+     * @param topic             topic 名称
+     * @param partitions        分区数
+     * @param replicationFactor 副本数
+     * @throws Exception Kafka 操作异常
+     */
     public static void recreateTopic(String bootstrapServers, String topic, int partitions, short replicationFactor)
             throws Exception {
         Properties props = new Properties();
@@ -60,6 +69,12 @@ public class KafkaTopicUtil {
         }
     }
 
+    /**
+     * 测试入口，重建测试 topic。
+     * 
+     * @param args 启动参数
+     * @throws Exception Kafka 操作异常
+     */
     public static void main(String[] args) throws Exception {
         String bootstrapServers = "localhost:9092";
         String topic = "test_flink_task";

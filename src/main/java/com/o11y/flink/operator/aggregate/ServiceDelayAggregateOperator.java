@@ -98,6 +98,14 @@ public class ServiceDelayAggregateOperator implements FlinkOperator {
                 .window(TumblingEventTimeWindows.of(Time.seconds(windowSeconds)))
                 .aggregate(new ServiceAvgMaxAggregateFunction(),
                         new ProcessWindowFunction<Tuple2<Double, Long>, ServiceAggResult, Tuple2<String, String>, TimeWindow>() {
+                            /**
+                             * 处理窗口内的延迟聚合，输出 ServiceAggResult。
+                             * 
+                             * @param key      分组 key
+                             * @param context  窗口上下文
+                             * @param elements 聚合元素
+                             * @param out      输出收集器
+                             */
                             @Override
                             public void process(Tuple2<String, String> key, Context context,
                                     Iterable<Tuple2<Double, Long>> elements,

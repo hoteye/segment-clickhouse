@@ -39,6 +39,12 @@ import java.time.Duration;
 public class FlinkKafkaToClickHouseJob {
         private static final Logger LOG = LoggerFactory.getLogger(FlinkKafkaToClickHouseJob.class);
 
+        /**
+         * 旧版主流程入口，初始化环境并提交 Flink 作业。
+         * 
+         * @param args 启动参数
+         * @throws Exception 各阶段异常
+         */
         public static void main1(String[] args) throws Exception {
                 LOG.warn("FlinkKafkaToClickHouseJob starting, preparing to initialize environment");
                 Map<String, Object> config = com.o11y.ConfigLoader.loadConfig("application.yaml");

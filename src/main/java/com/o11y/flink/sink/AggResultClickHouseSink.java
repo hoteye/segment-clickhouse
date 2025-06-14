@@ -21,10 +21,21 @@ public class AggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> 
     private transient Connection connection;
     private transient PreparedStatement insertStmt;
 
+    /**
+     * 构造函数，初始化 ClickHouse 连接配置。
+     * 
+     * @param clickhouseConfig ClickHouse 连接参数（url、username、password等）
+     */
     public AggResultClickHouseSink(Map<String, String> clickhouseConfig) {
         this.clickhouseConfig = clickhouseConfig;
     }
 
+    /**
+     * 初始化 ClickHouse 连接和预编译 SQL。
+     * 
+     * @param parameters Flink 配置参数
+     * @throws Exception 连接异常
+     */
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
@@ -40,6 +51,13 @@ public class AggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> 
         LOG.info("ServiceAggResultClickHouseSink connected to ClickHouse: {}", url);
     }
 
+    /**
+     * 每条聚合结果写入 ClickHouse。
+     * 
+     * @param value   聚合结果对象
+     * @param context Flink sink 上下文
+     * @throws Exception 写入异常
+     */
     @Override
     public void invoke(ServiceAggResult value, Context context) throws Exception {
         insertStmt.setLong(1, value.windowStart);
@@ -79,6 +97,11 @@ public class AggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> 
         insertStmt.executeUpdate();
     }
 
+    /**
+     * 关闭 ClickHouse 连接和资源。
+     * 
+     * @throws Exception 关闭异常
+     */
     @Override
     public void close() throws Exception {
         if (insertStmt != null)

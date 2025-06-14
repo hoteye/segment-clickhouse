@@ -34,12 +34,24 @@ public class ParamConfigSource extends RichSourceFunction<Map<String, List<Strin
         this.intervalMs = intervalMs;
     }
 
+    /**
+     * 初始化数据库服务连接。
+     * 
+     * @param parameters Flink 配置参数
+     * @throws Exception 初始化异常
+     */
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
         dbService = new DatabaseService(url, schema, table, username, password).initConnection();
     }
 
+    /**
+     * 定时从数据库加载参数并推送到下游。
+     * 
+     * @param ctx Flink SourceContext
+     * @throws Exception 加载或推送参数异常
+     */
     @Override
     public void run(SourceContext<Map<String, List<String>>> ctx) throws Exception {
         while (running) {
@@ -52,12 +64,20 @@ public class ParamConfigSource extends RichSourceFunction<Map<String, List<Strin
         }
     }
 
+    /**
+     * 关闭资源。
+     * 
+     * @throws Exception 关闭异常
+     */
     @Override
     public void close() throws Exception {
         // DatabaseService 无需显式关闭
         super.close();
     }
 
+    /**
+     * 取消数据源运行。
+     */
     @Override
     public void cancel() {
         running = false;

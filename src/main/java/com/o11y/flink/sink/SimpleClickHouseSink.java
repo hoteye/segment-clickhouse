@@ -36,6 +36,12 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
         this.clickhouseConfig = clickhouseConfig;
     }
 
+    /**
+     * 初始化 ClickHouse 数据库连接和批量参数。
+     * 
+     * @param parameters Flink 配置参数
+     * @throws Exception 初始化异常
+     */
     @Override
     public void open(Configuration parameters) throws Exception {
         if (databaseService == null) {
@@ -50,6 +56,13 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
         this.batchInterval = batchConfig.get("interval");
     }
 
+    /**
+     * 批量写入 SegmentObject 数据到 ClickHouse。
+     * 
+     * @param segmentObject 源数据对象
+     * @param context       Flink sink 上下文
+     * @throws Exception 写入异常
+     */
     @Override
     public void invoke(SegmentObject segmentObject, Context context) throws Exception {
         try {
@@ -91,7 +104,10 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     }
 
     /**
-     * 写入 new_key 表（keyName, keyType, isCreated, createTime），根据 keyName 自动推断类型
+     * 写入 new_key 表（keyName, keyType, isCreated, createTime），根据 keyName 自动推断类型。
+     * 
+     * @param keyName 新 key 名称
+     * @return 是否已创建
      */
     private Boolean insertNewKeyToClickHouse(String keyName) {
         String keyType = DEFAULT_KEY_TYPE;
@@ -134,6 +150,11 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
         }
     }
 
+    /**
+     * 关闭 sink，批量写入剩余数据。
+     * 
+     * @throws Exception 关闭异常
+     */
     @Override
     public void close() throws Exception {
         if (spanCounter > 0) {
@@ -144,7 +165,9 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     }
 
     /**
-     * 仅用于测试注入 mock DatabaseService
+     * 仅用于测试注入 mock DatabaseService。
+     * 
+     * @param databaseService mock 数据库服务
      */
     void setDatabaseService(DatabaseService databaseService) {
         this.databaseService = databaseService;

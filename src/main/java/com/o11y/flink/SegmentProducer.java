@@ -12,6 +12,12 @@ import java.util.Random;
 import java.util.UUID;
 
 public class SegmentProducer {
+    /**
+     * 生成 SegmentObject 并批量发送到 Kafka topic，用于测试。
+     * 
+     * @param args 启动参数
+     * @throws Exception Kafka 发送异常
+     */
     public static void main(String[] args) throws Exception {
         Properties props = new Properties();
         props.put("bootstrap.servers", "localhost:9092");

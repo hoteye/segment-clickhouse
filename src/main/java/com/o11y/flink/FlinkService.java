@@ -45,6 +45,11 @@ public class FlinkService {
     private DataStream<SegmentObject> stream;
     private DatabaseService dbService;
 
+    /**
+     * 构造函数，初始化配置参数。
+     *
+     * @param config 全局配置，包含 kafka、clickhouse、batch、flink 等子配置
+     */
     public FlinkService(Map<String, Object> config) {
         this.config = config;
         this.kafkaConfig = (Map<String, String>) config.get("kafka");
@@ -53,6 +58,12 @@ public class FlinkService {
         this.flinkConfig = (Map<String, Object>) config.get("flink");
     }
 
+    /**
+     * Flink 作业主流程入口，依次完成环境初始化、数据源构建、算子注册、sink 配置、数据库服务初始化、
+     * 新增字段表清理、同步任务启动、算子 sink 注册及作业提交。
+     *
+     * @throws Exception 各阶段可能抛出的异常
+     */
     public void run() throws Exception {
         initEnv();
         buildSource();
@@ -65,6 +76,10 @@ public class FlinkService {
         execute();
     }
 
+    /**
+     * 初始化 Flink 执行环境，设置并行度、checkpoint、序列化等参数。
+     * 注意：并行度和 checkpoint 参数需在 config 中配置。
+     */
     private void initEnv() {
         env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism((Integer) flinkConfig.get("parallelism"));
@@ -77,6 +92,10 @@ public class FlinkService {
         LOG.warn("Flink 环境初始化完成");
     }
 
+    /**
+     * 构建 Kafka 数据源，反序列化为 SegmentObject 流，并设置水位线和时间戳分配。
+     * 支持乱序 2 秒，时间戳取 Entry 类型 span 的 endTime。
+     */
     private void buildSource() {
         KafkaSource<SegmentObject> kafkaSource = KafkaSource.<SegmentObject>builder()
                 .setBootstrapServers(kafkaConfig.get("bootstrap_servers"))
@@ -100,6 +119,10 @@ public class FlinkService {
         LOG.warn("Kafka 数据源和 DataStream 构建完成");
     }
 
+    /**
+     * 注册所有聚合算子到 OperatorRegistry，便于后续自动遍历和 sink。
+     * 支持延迟、成功率、吞吐量等多种业务聚合。
+     */
     private void registerOperators() {
         OperatorRegistry.register(new ServiceDelayAggregateOperator());
         OperatorRegistry.register(new ServiceSuccessRateAggregateOperator());
@@ -107,11 +130,19 @@ public class FlinkService {
         LOG.warn("所有算子已注册");
     }
 
+    /**
+     * 配置主流的简单 ClickHouse sink，直接写入原始 SegmentObject 数据。
+     */
     private void setupSimpleSink() {
         stream.addSink(new SimpleClickHouseSink(clickhouseConfig, batchConfig))
                 .name(SimpleClickHouseSink.class.getSimpleName());
     }
 
+    /**
+     * 初始化 ClickHouse 数据库服务，建立连接。
+     *
+     * @throws Exception 连接失败时抛出
+     */
     private void setupDatabaseService() throws Exception {
         dbService = new DatabaseService(
                 clickhouseConfig.get("url"),
@@ -121,6 +152,11 @@ public class FlinkService {
                 clickhouseConfig.get("password")).initConnection();
     }
 
+    /**
+     * 清理 ClickHouse 新增字段表（new_key），移除无效字段。
+     *
+     * @throws Exception SQL 执行异常
+     */
     private void cleanNewKeyTable() throws Exception {
         String sql = "DELETE FROM new_key WHERE keyName NOT IN (SELECT name FROM system.columns WHERE table='"
                 + clickhouseConfig.get("table_name") + "')";
@@ -130,12 +166,21 @@ public class FlinkService {
         }
     }
 
+    /**
+     * 启动新字段同步任务，定时将 new_key 表中的新字段同步到主表。
+     */
     private void startNewKeySyncTask() {
         long addColumnsInterval = ((Number) config.get("add_columns_interval")).longValue();
         new NewKeyTableSyncTask(dbService, addColumnsInterval).start();
         LOG.warn("NewKeyTableSyncTask started");
     }
 
+    /**
+     * 遍历注册的所有 FlinkOperator，自动加载参数，聚合输出写入 ClickHouse，告警流写入告警网关。
+     * 支持多种业务聚合和扩展。
+     *
+     * @throws Exception 参数加载或 sink 初始化异常
+     */
     private void setupOperatorSinks() throws Exception {
         for (FlinkOperator op : OperatorRegistry.getOperators()) {
             Map<String, List<String>> params = OperatorParamLoader.loadParamList(dbService,
@@ -156,6 +201,11 @@ public class FlinkService {
         }
     }
 
+    /**
+     * 启动作业执行，提交到 Flink 集群。
+     *
+     * @throws Exception 作业提交异常
+     */
     private void execute() throws Exception {
         env.execute("FlinkKafkaToClickHouseJob");
     }

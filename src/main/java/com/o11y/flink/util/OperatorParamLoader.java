@@ -52,7 +52,14 @@ public class OperatorParamLoader {
         return params;
     }
 
-    // 新增参数
+    /**
+     * 新增参数并通知算子。
+     * 
+     * @param db            数据库服务
+     * @param operatorClass 算子类名
+     * @param params        参数列表
+     * @param producer      Kafka 生产者
+     */
     public static void newParams(DatabaseService db, String operatorClass, Map<String, List<String>> params,
             KafkaProducer<String, String> producer) {
         try {
@@ -84,7 +91,14 @@ public class OperatorParamLoader {
         }
     }
 
-    // 更新参数
+    /**
+     * 更新参数并通知算子。
+     * 
+     * @param db            数据库服务
+     * @param operatorClass 算子类名
+     * @param params        参数列表
+     * @param producer      Kafka 生产者
+     */
     public static void updateParams(DatabaseService db, String operatorClass, Map<String, List<String>> params,
             KafkaProducer<String, String> producer) {
         try {

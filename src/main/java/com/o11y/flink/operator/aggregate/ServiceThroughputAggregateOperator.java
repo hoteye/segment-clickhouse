@@ -90,6 +90,14 @@ public class ServiceThroughputAggregateOperator implements FlinkOperator {
                 .reduce(
                         (a, b) -> Tuple3.of(a.f0, a.f1, a.f2 + b.f2),
                         new org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction<Tuple3<String, String, Long>, ServiceAggResult, Tuple2<String, String>, org.apache.flink.streaming.api.windowing.windows.TimeWindow>() {
+                            /**
+                             * 处理窗口内的吞吐量聚合，输出 ServiceAggResult。
+                             * 
+                             * @param key      分组 key
+                             * @param context  窗口上下文
+                             * @param elements 聚合元素
+                             * @param out      输出收集器
+                             */
                             @Override
                             public void process(Tuple2<String, String> key, Context context,
                                     Iterable<Tuple3<String, String, Long>> elements,
