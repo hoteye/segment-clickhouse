@@ -44,7 +44,7 @@ CREATE TABLE new_key
 (
     keyName String,
     keyType String,
-    isCreated UInt8,
+    isCreated Boolean,
     createTime DateTime
 )
 ENGINE = MergeTree()
@@ -61,19 +61,20 @@ ORDER BY (namespace, operatorClass, paramKey);
 
 CREATE TABLE IF NOT EXISTS flink_operator_agg_result (
     window_start  DateTime64(3),          -- 窗口起始时间
-    window_end    DateTime64(3),          -- 窗口结束时间
-    operator_name Nullable(String),         -- 算子类名
-    service       Nullable(String),         -- 服务名
-    instance      Nullable(String),         -- 实例名
-    method        Nullable(String),         -- 方法名
-    avg_duration  Nullable(Float64),        -- 平均耗时
-    max_duration  Nullable(Int64),          -- 最大耗时
-    error_rate    Nullable(Float64),        -- 错误率
-    data_center    Nullable(String),         -- 数据中心
-    region        Nullable(String),         -- 区域
-    env           Nullable(String),         -- 环境
-    total_count  Nullable(Int64),          -- 总调用次数
-    error_count  Nullable(Int64),          -- 错误调用次数
-    success_count Nullable(Int64),          -- 成功调用次数
+    windowSize    Int32,                  -- 窗口大小（秒）
+    operator_class String,                -- 算子类全名
+    operator_name Nullable(String),       -- 算子类名
+    service       Nullable(String),       -- 服务名
+    instance      Nullable(String),       -- 实例名
+    method        Nullable(String),       -- 方法名
+    avg_duration  Nullable(Float64),      -- 平均耗时
+    max_duration  Nullable(Int64),        -- 最大耗时
+    error_rate    Nullable(Float64),      -- 错误率
+    data_center   Nullable(String),       -- 数据中心
+    region        Nullable(String),       -- 区域
+    env           Nullable(String),       -- 环境
+    total_count   Nullable(Int64),        -- 总调用次数
+    error_count   Nullable(Int64),        -- 错误调用次数
+    success_count Nullable(Int64),        -- 成功调用次数
 ) ENGINE = MergeTree()
 ORDER BY (window_start);

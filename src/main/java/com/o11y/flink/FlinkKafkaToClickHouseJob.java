@@ -24,17 +24,17 @@ import com.o11y.flink.registry.OperatorRegistry;
 import com.o11y.DatabaseService;
 import com.o11y.flink.operator.FlinkOperator;
 import com.o11y.flink.operator.ServiceAggAndAlarm;
-import com.o11y.flink.operator.ServiceAvgDurationAggregateFunctionOperator;
-import com.o11y.flink.sink.OperatorAggResultClickHouseSink;
+import com.o11y.flink.operator.ServiceDelayAggregateOperator;
+import com.o11y.flink.operator.ServiceSuccessRateAggregateOperator;
+import com.o11y.flink.operator.ServiceThroughputAggregateOperator;
 import com.o11y.flink.sink.SimpleClickHouseSink;
 import com.o11y.flink.task.NewKeyTableSyncTask;
-import com.o11y.flink.sink.OperatorAggResultTuple5ClickHouseSink;
 import com.o11y.flink.sink.AlarmGatewaySink;
+import com.o11y.flink.sink.ServiceDelayAggResultClickHouseSink;
+import com.o11y.flink.operator.ServiceAggResult;
 
 import java.sql.Statement;
 import java.time.Duration;
-import org.apache.flink.api.java.tuple.Tuple4;
-import org.apache.flink.api.java.tuple.Tuple5;
 
 public class FlinkKafkaToClickHouseJob {
         private static final Logger LOG = LoggerFactory.getLogger(FlinkKafkaToClickHouseJob.class);
@@ -84,7 +84,15 @@ public class FlinkKafkaToClickHouseJob {
                                 "KafkaSource-SegmentObject");
                 LOG.warn("DataStream created, preparing to add Sink");
                 // 注册所有算子
-                OperatorRegistry.register(new ServiceAvgDurationAggregateFunctionOperator());
+                // ServiceDelayAggregateOperator：延迟（耗时）聚合与告警
+                // ServiceSuccessRateAggregateOperator：成功率聚合与告警
+                // ServiceThroughputAggregateOperator：吞吐量聚合与告警
+                // 可通过 OperatorRegistry.register(new ServiceDelayAggregateOperator(...)) 等方式注册
+                // 并在主流程中动态选择和调用，实现多指标独立聚合与告警
+
+                OperatorRegistry.register(new ServiceDelayAggregateOperator());
+                OperatorRegistry.register(new ServiceSuccessRateAggregateOperator());
+                OperatorRegistry.register(new ServiceThroughputAggregateOperator());
 
                 // 独立添加 SimpleClickHouseSink
                 stream.addSink(new SimpleClickHouseSink(clickhouseConfig, batchConfig))
@@ -116,27 +124,15 @@ public class FlinkKafkaToClickHouseJob {
                         ServiceAggAndAlarm result = op.apply(stream, params);
                         if (result != null) {
                                 if (result.aggStream != null) {
-                                        String typeStr = result.aggStream.getType().toString();
-                                        if (typeStr.contains("Tuple4<String, Double, Long, Long>")) {
-                                                @SuppressWarnings("unchecked")
-                                                DataStream<Tuple4<String, Double, Long, Long>> castedStream = (DataStream<Tuple4<String, Double, Long, Long>>) result.aggStream;
-                                                castedStream.addSink(
-                                                                new OperatorAggResultClickHouseSink(
-                                                                                clickhouseConfig))
-                                                                .name("OperatorAggResultClickHouseSink");
-                                        } else if (typeStr.contains("Tuple5<String, String, Double, Long, Long>")) {
-                                                @SuppressWarnings("unchecked")
-                                                DataStream<Tuple5<String, String, Double, Long, Long>> castedStream = (DataStream<Tuple5<String, String, Double, Long, Long>>) result.aggStream;
-                                                castedStream.addSink(
-                                                                new OperatorAggResultTuple5ClickHouseSink(
-                                                                                clickhouseConfig))
-                                                                .name("OperatorAggResultTuple5ClickHouseSink");
-                                        }
-                                        // 可扩展更多 Tuple 类型 sink
+                                        DataStream<ServiceAggResult> castedStream = (DataStream<ServiceAggResult>) result.aggStream;
+                                        castedStream.addSink(new ServiceDelayAggResultClickHouseSink(
+                                                        clickhouseConfig))
+                                                        .name(ServiceDelayAggResultClickHouseSink.class
+                                                                        .getSimpleName());
                                 }
                                 if (result.alarmStream != null) {
                                         result.alarmStream.addSink(new AlarmGatewaySink())
-                                                        .name("AlarmGatewaySink");
+                                                        .name(AlarmGatewaySink.class.getSimpleName());
                                 }
                         }
                 }

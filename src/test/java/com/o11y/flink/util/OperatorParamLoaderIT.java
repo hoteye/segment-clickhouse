@@ -19,7 +19,7 @@ public class OperatorParamLoaderIT {
     private static DatabaseService dbService;
     private static KafkaProducer<String, String> producer;
     private static org.apache.kafka.clients.consumer.KafkaConsumer<String, String> consumer;
-    private static String operatorClass = "ServiceAvgDurationAggregateFunctionOperator";
+    private static String operatorClass = "ServiceAvgDurationAggregateFunctionOperator"; // 已废弃
     private static String paramUpdateTopic;
 
     @BeforeAll
