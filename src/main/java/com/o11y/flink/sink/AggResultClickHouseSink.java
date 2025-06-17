@@ -8,8 +8,10 @@ import org.slf4j.LoggerFactory;
 import com.o11y.flink.operator.model.ServiceAggResult;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.text.SimpleDateFormat;
 import java.util.Map;
 
 /**
@@ -95,6 +97,12 @@ public class AggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> 
         else
             insertStmt.setNull(16, java.sql.Types.BIGINT);
         insertStmt.executeUpdate();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        String windowStartStr = sdf.format(new Date(value.windowStart));
+        LOG.debug(
+                "Inserted ServiceAggResult into ClickHouse: window_start:{}, windowSize:{}, operatorName:{}, service:{}",
+                windowStartStr.substring(11),
+                value.windowSize, value.operatorName.substring(0, 8), value.service.substring(0, 8));
     }
 
     /**

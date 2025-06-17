@@ -24,19 +24,7 @@ CREATE TABLE events (
     refs_parent_endpoint Nullable(String),   -- Parent endpoint name
     refs_network_address_used_at_peer Nullable(String), -- Network address
 -- The following are dynamic fields
-    tag_status_code Nullable(String),
-    log_stack Nullable(String),
-    tag_Available_Memory Nullable(String),
-    tag_http_status_code Nullable(String),
-    tag_http_url Nullable(String),
-    tag_Processor_Name Nullable(String),
-    log_forward_url Nullable(String),
-    tag_http_method Nullable(String),
-    tag_Total_Memory Nullable(String),
-    log_event Nullable(String),
-    log_message Nullable(String),
-    tag_url Nullable(String),
-    log_error_kind Nullable(String)
+    tag_status_code Nullable(String)
 ) ENGINE = MergeTree()
 ORDER BY (end_time);
 

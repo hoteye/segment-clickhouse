@@ -1,8 +1,7 @@
 package com.o11y.flink.operator.base;
 
+import com.o11y.flink.operator.model.ServiceAggResult;
 import org.apache.flink.streaming.api.datastream.DataStream;
-
-import com.o11y.flink.operator.model.ServiceAggAndAlarm;
 
 import java.util.List;
 import java.util.Map;
@@ -16,9 +15,9 @@ public interface FlinkOperator {
      * 
      * @param input  原始数据流
      * @param params 算子参数（可选）
-     * @return ServiceAggAndAlarm，包含聚合流和告警流
+     * @return 聚合结果流
      */
-    ServiceAggAndAlarm apply(DataStream<?> input, Map<String, List<String>> params);
+    DataStream<ServiceAggResult> apply(DataStream<?> input, Map<String, List<String>> params);
 
     /**
      * 算子名称（唯一标识）

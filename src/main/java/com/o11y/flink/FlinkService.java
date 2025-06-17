@@ -1,10 +1,7 @@
 package com.o11y.flink;
 
-import com.o11y.flink.operator.aggregate.ServiceDelayAggregateOperator;
-import com.o11y.flink.operator.aggregate.ServiceSuccessRateAggregateOperator;
-import com.o11y.flink.operator.aggregate.ServiceThroughputAggregateOperator;
+import com.o11y.flink.operator.aggregate.AggregateOperator;
 import com.o11y.flink.operator.base.FlinkOperator;
-import com.o11y.flink.operator.model.ServiceAggAndAlarm;
 import com.o11y.flink.operator.model.ServiceAggResult;
 import com.o11y.flink.registry.OperatorRegistry;
 import com.o11y.flink.sink.AlarmGatewaySink;
@@ -30,6 +27,14 @@ import java.sql.Statement;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import com.o11y.flink.rule.AlarmRule;
+import com.o11y.flink.serde.AlarmRuleDeserializationSchema;
+import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.streaming.api.datastream.BroadcastStream;
+import com.o11y.flink.hotupdate.RuleBroadcastStreamFactory;
 
 /**
  * Flink 相关操作服务类，将环境初始化、流定义、算子注册、sink 配置等操作独立封装。
@@ -59,8 +64,7 @@ public class FlinkService {
     }
 
     /**
-     * Flink 作业主流程入口，依次完成环境初始化、数据源构建、算子注册、sink 配置、数据库服务初始化、
-     * 新增字段表清理、同步任务启动、算子 sink 注册及作业提交。
+     * Flink 作业主流程入口，依次完成环境初始化、数据源构建、规则流广播、业务流与规则流 connect、算子注册、sink 配置等操作。
      *
      * @throws Exception 各阶段可能抛出的异常
      */
@@ -72,7 +76,16 @@ public class FlinkService {
         setupDatabaseService();
         cleanNewKeyTable();
         startNewKeySyncTask();
-        setupOperatorSinks();
+        // 规则流广播和状态描述符
+        MapStateDescriptor<String, Map<String, AlarmRule>> ruleStateDescriptor = new MapStateDescriptor<>(
+                "alarmRules",
+                Types.STRING,
+                TypeInformation.of(new TypeHint<Map<String, AlarmRule>>() {
+                }));
+        BroadcastStream<Map<String, AlarmRule>> broadcastRuleStream = RuleBroadcastStreamFactory
+                .buildRuleBroadcastStream(env, kafkaConfig, ruleStateDescriptor);
+        // 聚合流与规则流 connect、告警流 sink
+        setupOperatorSinks(broadcastRuleStream, ruleStateDescriptor);
         execute();
     }
 
@@ -124,9 +137,7 @@ public class FlinkService {
      * 支持延迟、成功率、吞吐量等多种业务聚合。
      */
     private void registerOperators() {
-        OperatorRegistry.register(new ServiceDelayAggregateOperator());
-        OperatorRegistry.register(new ServiceSuccessRateAggregateOperator());
-        OperatorRegistry.register(new ServiceThroughputAggregateOperator());
+        OperatorRegistry.register(new AggregateOperator());
         LOG.warn("所有算子已注册");
     }
 
@@ -176,28 +187,36 @@ public class FlinkService {
     }
 
     /**
-     * 遍历注册的所有 FlinkOperator，自动加载参数，聚合输出写入 ClickHouse，告警流写入告警网关。
+     * 遍历注册的所有 FlinkOperator，自动加载参数，聚合输出与规则流 connect，告警流写入告警网关。
      * 支持多种业务聚合和扩展。
      *
+     * @param broadcastRuleStream 规则流广播流
+     * @param ruleStateDescriptor 规则流状态描述符
      * @throws Exception 参数加载或 sink 初始化异常
      */
-    private void setupOperatorSinks() throws Exception {
+    private void setupOperatorSinks(
+            BroadcastStream<java.util.Map<String, com.o11y.flink.rule.AlarmRule>> broadcastRuleStream,
+            MapStateDescriptor<String, java.util.Map<String, com.o11y.flink.rule.AlarmRule>> ruleStateDescriptor)
+            throws Exception {
         for (FlinkOperator op : OperatorRegistry.getOperators()) {
             Map<String, List<String>> params = OperatorParamLoader.loadParamList(dbService,
                     op.getClass().getSimpleName());
-            ServiceAggAndAlarm result = op.apply(stream, params);
-            if (result != null) {
-                if (result.aggStream != null) {
-                    DataStream<ServiceAggResult> castedStream = (DataStream<ServiceAggResult>) result.aggStream;
-                    castedStream.addSink(new AggResultClickHouseSink(
-                            clickhouseConfig))
-                            .name(AggResultClickHouseSink.class.getSimpleName());
-                }
-                if (result.alarmStream != null) {
-                    result.alarmStream.addSink(new AlarmGatewaySink())
-                            .name(AlarmGatewaySink.class.getSimpleName());
-                }
-            }
+            DataStream<ServiceAggResult> aggStream = op.apply(stream, params);
+            // 先对聚合流进行 keyBy，再与规则流 connect，输出告警流
+            DataStream<ServiceAggResult> alertStream = aggStream
+                    .keyBy(ServiceAggResult::getKey)
+                    .connect(broadcastRuleStream)
+                    .process(new com.o11y.flink.hotupdate.AggAlertBroadcastFunction(
+                            ruleStateDescriptor))
+                    .name(op.getClass().getSimpleName());
+            // 告警流写入告警网关
+            alertStream
+                    .map(ServiceAggResult::toString)
+                    .addSink(new AlarmGatewaySink())
+                    .name(op.getClass().getSimpleName());
+            // 聚合流写入 ClickHouse
+            aggStream.addSink(new AggResultClickHouseSink(clickhouseConfig))
+                    .name(AggResultClickHouseSink.class.getSimpleName() + "-" + op.getClass().getSimpleName());
         }
     }
 

@@ -23,6 +23,10 @@ public class ServiceAggResult implements Serializable {
     public Long errorCount; // error_count
     public Long successCount; // success_count
 
+    public String getKey() {
+        return service + "|" + operatorName;
+    }
+
     public ServiceAggResult() {
     }
 
