@@ -3,7 +3,6 @@ package com.o11y.flink.hotupdate;
 import com.o11y.flink.rule.AlarmRule;
 import com.o11y.flink.serde.AlarmRuleDeserializationSchema;
 import org.apache.flink.api.common.state.MapStateDescriptor;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.BroadcastStream;

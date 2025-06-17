@@ -28,13 +28,14 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import com.o11y.flink.rule.AlarmRule;
-import com.o11y.flink.serde.AlarmRuleDeserializationSchema;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.streaming.api.datastream.BroadcastStream;
 import com.o11y.flink.hotupdate.RuleBroadcastStreamFactory;
+import com.o11y.flink.model.AlertMessage;
+import com.o11y.flink.hotupdate.AggAlertBroadcastFunction;
 
 /**
  * Flink 相关操作服务类，将环境初始化、流定义、算子注册、sink 配置等操作独立封装。
@@ -203,15 +204,14 @@ public class FlinkService {
                     op.getClass().getSimpleName());
             DataStream<ServiceAggResult> aggStream = op.apply(stream, params);
             // 先对聚合流进行 keyBy，再与规则流 connect，输出告警流
-            DataStream<ServiceAggResult> alertStream = aggStream
+            DataStream<AlertMessage> alertStream = aggStream
                     .keyBy(ServiceAggResult::getKey)
                     .connect(broadcastRuleStream)
-                    .process(new com.o11y.flink.hotupdate.AggAlertBroadcastFunction(
+                    .process(new AggAlertBroadcastFunction(
                             ruleStateDescriptor))
                     .name(op.getClass().getSimpleName());
             // 告警流写入告警网关
             alertStream
-                    .map(ServiceAggResult::toString)
                     .addSink(new AlarmGatewaySink())
                     .name(op.getClass().getSimpleName());
             // 聚合流写入 ClickHouse

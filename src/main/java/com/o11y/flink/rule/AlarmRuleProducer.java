@@ -68,29 +68,11 @@ public class AlarmRuleProducer {
         rule3.avgDurationLow = 300.0;
         rule3.alarmTemplate = "服务${service}算子${operatorName}延迟超阈值";
 
-        AlarmRule rule4 = new AlarmRule();
-        rule4.service = "dubbo-consumer";
-        rule4.operatorName = "/sayBadMorning";
-        rule4.operatorClass = "AggregateOperator";
-        rule4.successRateHigh = 0.98;
-        rule4.successRateMid = 0.95;
-        rule4.successRateLow = 0.90;
-        rule4.trafficVolumeHigh = 8000.0;
-        rule4.trafficVolumeMid = 4000.0;
-        rule4.trafficVolumeLow = 1000.0;
-        rule4.maxDurationHigh = 1200.0;
-        rule4.maxDurationMid = 900.0;
-        rule4.maxDurationLow = 600.0;
-        rule4.avgDurationHigh = 700.0;
-        rule4.avgDurationMid = 500.0;
-        rule4.avgDurationLow = 300.0;
-        rule4.alarmTemplate = "服务${service}算子${operatorName}延迟超阈值";
         // 组装 map
         Map<String, AlarmRule> ruleMap = new HashMap<>();
         ruleMap.put(rule1.combine(), rule1);
         ruleMap.put(rule2.combine(), rule2);
         ruleMap.put(rule3.combine(), rule3);
-        ruleMap.put(rule4.combine(), rule4);
 
         // 序列化为 JSON
         ObjectMapper mapper = new ObjectMapper();
