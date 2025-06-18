@@ -3,12 +3,9 @@ package com.o11y.flink.hotupdate;
 import com.o11y.flink.model.AlertMessage;
 import com.o11y.flink.operator.model.ServiceAggResult;
 import com.o11y.flink.rule.AlarmRule;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction;
 import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
@@ -17,7 +14,6 @@ import java.util.Map;
 public class AggAlertBroadcastFunction
         extends KeyedBroadcastProcessFunction<String, ServiceAggResult, Map<String, AlarmRule>, AlertMessage> {
     private final MapStateDescriptor<String, Map<String, AlarmRule>> ruleStateDescriptor;
-    private static final Logger LOG = LoggerFactory.getLogger(AggAlertBroadcastFunction.class);
 
     public AggAlertBroadcastFunction(
             MapStateDescriptor<String, Map<String, AlarmRule>> ruleStateDescriptor) {
@@ -32,17 +28,7 @@ public class AggAlertBroadcastFunction
         if (ruleMap != null) {
             AlarmRule rule = ruleMap.get(key);
             if (rule != null) {
-                Pair<String, String> result = buildAlertReport(rule, value); // (alertLevel, content)
-                // 日志打印分析报告，带折行
-                System.out.println("\n==== 告警分析报告 BEGIN ====" + System.lineSeparator() + result.getRight()
-                        + "==== 告警分析报告 END ====" + System.lineSeparator());
-                AlertMessage alert = new AlertMessage(
-                        value.service,
-                        value.operatorName,
-                        result.getLeft(), // alertLevel
-                        value.windowStart, // 告警时间
-                        result.getRight() // content
-                );
+                AlertMessage alert = buildAlertReport(rule, value);
                 out.collect(alert);
             }
         }
@@ -58,7 +44,7 @@ public class AggAlertBroadcastFunction
     /**
      * 构建多指标多级阈值的告警分析报告，返回 Pair<alertLevel, content>。
      */
-    public static Pair<String, String> buildAlertReport(AlarmRule rule, ServiceAggResult value) {
+    public static AlertMessage buildAlertReport(AlarmRule rule, ServiceAggResult value) {
         StringBuilder sb = new StringBuilder();
         String alertLevel = "NORMAL";
         boolean triggered = false;
@@ -162,6 +148,14 @@ public class AggAlertBroadcastFunction
                 + (rule.trafficVolumeLow == null ? "N/A" : rule.trafficVolumeLow) + "\n\n");
         sb.append("**分析结论**\n");
         sb.append(conclusion);
-        return Pair.of(alertLevel, sb.toString());
+
+        AlertMessage alert = new AlertMessage(
+                value.service,
+                value.operatorName,
+                alertLevel, // alertLevel
+                value.windowStart, // 告警时间
+                sb.toString(),
+                triggered);
+        return alert;
     }
 }

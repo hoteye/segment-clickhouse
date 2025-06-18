@@ -4,6 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.o11y.flink.model.AlertMessage;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 /**
  * 模拟告警网关方法，可替换为实际 HTTP/Kafka/MQ Sink
  */
@@ -20,9 +24,29 @@ public class AlarmGatewaySink implements SinkFunction<AlertMessage> {
     @Override
     public void invoke(AlertMessage value, Context context) {
         try {
-            // 输出结构化 JSON，便于下游系统处理
+            if (!value.isTriggered) {
+                LOG.info("告警未触发，跳过发送: {}", value.content);
+                return;
+            }
+            LOG.info("发送告警信息到网关: {}", value.content);
+            int i = 0;
+            if (i == 0)
+                return;
             String json = OBJECT_MAPPER.writeValueAsString(value);
-            // 模拟发送到告警网关（实际应用中可替换为 HTTP 请求、Kafka 生产者等）
+            URL url = new URL("http://localhost:8320/api/alert");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(json.getBytes());
+                os.flush();
+            }
+            int responseCode = conn.getResponseCode();
+            if (responseCode != 200 && responseCode != 201) {
+                LOG.warn("模拟 HTTP sink 响应码: {} for alert: {}", responseCode, json);
+            }
+            conn.disconnect();
         } catch (Exception e) {
             LOG.error("Failed to send alert message to gateway: {}", value, e);
         }

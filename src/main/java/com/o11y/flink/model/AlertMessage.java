@@ -10,18 +10,22 @@ public class AlertMessage implements Serializable {
     public String operatorName;
     public String alertLevel;
     public long alertTime;
-    public String content; // 分析报告或简要描述
+    public String content;
+    public boolean isTriggered;
 
-    public AlertMessage(String service, String operatorName, String alertLevel, long alertTime, String content) {
+    public AlertMessage(String service, String operatorName, String alertLevel, long alertTime, String content,
+            boolean isTriggered) {
         this.service = service;
         this.operatorName = operatorName;
         this.alertLevel = alertLevel;
         this.alertTime = alertTime;
         this.content = content;
+        this.isTriggered = isTriggered;
     }
 
     @Override
     public String toString() {
-        return String.format("[ALERT] %s | %s | %s | %d | %s", service, operatorName, alertLevel, alertTime, content);
+        return String.format("[ALERT] %s | %s | %s | %d | %s | %s", service, operatorName, alertLevel, alertTime,
+                content, isTriggered);
     }
 }
