@@ -7,10 +7,11 @@ import com.o11y.flink.registry.OperatorRegistry;
 import com.o11y.flink.sink.AlarmGatewaySink;
 import com.o11y.flink.sink.AggResultClickHouseSink;
 import com.o11y.flink.sink.SimpleClickHouseSink;
-import com.o11y.flink.task.NewKeyTableSyncTask;
+import com.o11y.flink.task.NewKeyTableSyncProcessFunction;
 import com.o11y.DatabaseService;
 import com.o11y.flink.serde.SegmentDeserializationSchema;
 import com.o11y.flink.util.OperatorParamLoader;
+import com.o11y.flink.util.InfiniteSource;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
@@ -183,8 +184,19 @@ public class FlinkService {
      */
     private void startNewKeySyncTask() {
         long addColumnsInterval = ((Number) config.get("add_columns_interval")).longValue();
-        new NewKeyTableSyncTask(dbService, addColumnsInterval).start();
-        LOG.warn("NewKeyTableSyncTask started");
+        env.addSource(new InfiniteSource())
+                .keyBy(x -> x)
+                .process(new NewKeyTableSyncProcessFunction(
+                        clickhouseConfig.get("url"),
+                        clickhouseConfig.get("schema_name"),
+                        clickhouseConfig.get("table_name"),
+                        clickhouseConfig.get("username"),
+                        clickhouseConfig.get("password"),
+                        addColumnsInterval))
+                .setParallelism(1)
+                .name("NewKeyTableSyncProcessFunction")
+                .addSink(new org.apache.flink.streaming.api.functions.sink.DiscardingSink<>());
+        LOG.warn("NewKeyTableSyncProcessFunction started as Flink operator");
     }
 
     /**

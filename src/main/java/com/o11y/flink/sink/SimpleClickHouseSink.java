@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
@@ -29,7 +30,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     private final static String DEFAULT_KEY_TYPE = "String";
     // 新增：记录上次写入 new_key 的时间，避免高频访问
     private long lastNewKeyInsertTime = 0L;
-    private static final long NEW_KEY_INSERT_INTERVAL_MS = 60_000L;
+    private static long interval = 60_000L;
 
     public SimpleClickHouseSink(Map<String, String> clickhouseConfig, Map<String, Integer> batchConfig) {
         this.batchConfig = batchConfig;
@@ -77,7 +78,8 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             LOG.debug("Missing fields: {}", missingFields);
             // 2. 将 missingFields 中的新 key 写入 new_key 表（限流）
             long now = System.currentTimeMillis();
-            if (!missingFields.isEmpty() && (now - lastNewKeyInsertTime >= NEW_KEY_INSERT_INTERVAL_MS)) {
+            interval = interval + new Random().nextInt(30_000); // 增加随机延迟，避免高并发时频繁写入
+            if (!missingFields.isEmpty() && (now - lastNewKeyInsertTime >= interval)) {
                 for (String key : missingFields) {
                     if (insertNewKeyToClickHouse(key)) {
                         // 如果 key 已经写入 new_key 并且 isCreated 为 true，表示字段已经建立，则重建sql语句

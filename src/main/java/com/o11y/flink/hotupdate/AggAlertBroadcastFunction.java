@@ -6,6 +6,8 @@ import com.o11y.flink.rule.AlarmRule;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction;
 import org.apache.flink.util.Collector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
@@ -13,6 +15,7 @@ import java.util.Map;
  */
 public class AggAlertBroadcastFunction
         extends KeyedBroadcastProcessFunction<String, ServiceAggResult, Map<String, AlarmRule>, AlertMessage> {
+    private static final Logger LOG = LoggerFactory.getLogger(AggAlertBroadcastFunction.class);
     private final MapStateDescriptor<String, Map<String, AlarmRule>> ruleStateDescriptor;
 
     public AggAlertBroadcastFunction(
@@ -39,6 +42,11 @@ public class AggAlertBroadcastFunction
             throws Exception {
         // 直接用固定 key "all_rules" 存储整张规则表
         ctx.getBroadcastState(ruleStateDescriptor).put("all_rules", ruleMap);
+        if (ruleMap != null && !ruleMap.isEmpty()) {
+            LOG.info("[热更新] 收到 alarm_rule_topic 新规则消息，规则总数：{}，keys：{}", ruleMap.size(), ruleMap.keySet());
+        } else {
+            LOG.info("[热更新] 收到 alarm_rule_topic 空规则消息");
+        }
     }
 
     /**

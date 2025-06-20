@@ -1,6 +1,8 @@
-package com.o11y.flink.rule;
+package com.o11y.flink.hotupdate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.o11y.flink.rule.AlarmRule;
+
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;

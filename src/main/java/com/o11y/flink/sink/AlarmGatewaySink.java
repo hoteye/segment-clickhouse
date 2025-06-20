@@ -25,10 +25,10 @@ public class AlarmGatewaySink implements SinkFunction<AlertMessage> {
     public void invoke(AlertMessage value, Context context) {
         try {
             if (!value.isTriggered) {
-                LOG.info("告警未触发，跳过发送: {}", value.content);
+                LOG.debug("告警未触发，跳过发送: {}", value.content);
                 return;
             }
-            LOG.info("发送告警信息到网关: {}", value.content);
+            LOG.debug("发送告警信息到网关: {}", value.content);
             int i = 0;
             if (i == 0)
                 return;

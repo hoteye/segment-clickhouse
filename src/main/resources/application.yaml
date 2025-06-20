@@ -20,7 +20,7 @@ batch:
   size: 60         # Number of spans per batch insert
   interval: 200    # Batch insert interval (milliseconds)
 
-add_columns_interval: 80000  # Execute addColumns method every add_columns_interval milliseconds
+add_columns_interval: 4000  # Execute addColumns method every add_columns_interval milliseconds
 
 flink:
   parallelism: 3
