@@ -56,7 +56,7 @@ public class NewKeyTableSyncProcessFunction extends KeyedProcessFunction<String,
         LOG.info("processElement called, registering timer");
         if (!timerRegistered) {
             long now = ctx.timerService().currentProcessingTime();
-            ctx.timerService().registerProcessingTimeTimer(now + intervalMs);
+            ctx.timerService().registerProcessingTimeTimer(now);
             timerRegistered = true;
             LOG.info("NewKeyTableSyncProcessFunction timer registered, interval: {} ms", intervalMs);
         }
@@ -70,7 +70,6 @@ public class NewKeyTableSyncProcessFunction extends KeyedProcessFunction<String,
         } catch (Exception e) {
             LOG.error("Failed to sync new keys to events table", e);
         }
-        LOG.info("NewKeyTableSyncProcessFunction timer triggered at {}", timestamp);
         // 注册下一个定时器
         ctx.timerService().registerProcessingTimeTimer(timestamp + intervalMs);
     }
