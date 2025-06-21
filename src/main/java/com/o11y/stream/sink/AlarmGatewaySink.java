@@ -54,8 +54,8 @@ public class AlarmGatewaySink implements SinkFunction<AlertMessage> {
      */
     @Override
     public void invoke(AlertMessage value, Context context) {
-        LOG.info("是否生产告警: {}", value.isTriggered);
         if (!value.isTriggered) {
+            LOG.info("告警服务: {}", value.service);
             return;
         }
         // todo: 发送告警信息

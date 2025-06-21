@@ -3,8 +3,6 @@ package com.o11y.application.service;
 import com.o11y.infrastructure.database.DatabaseService;
 import com.o11y.infrastructure.kafka.KafkaService;
 import com.o11y.shared.util.TransformerUtils;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import segment.v3.Segment.SegmentObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,15 +14,13 @@ public class TransformerService {
     static final Logger logger = LoggerFactory.getLogger(TransformerService.class);
 
     private final DatabaseService databaseService;
-    private final KafkaService kafkaService;
     private final int batchSize;
     private final int batchInterval;
 
     static ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
     static ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
     private int spanCounter = 0;
-    private long lastInsertTime = System.currentTimeMillis(); // Initialize last insert time
-    public static Boolean tableStructureChanged = true;
+    private long lastInsertTime = System.currentTimeMillis();
 
     /**
      * Constructor for TransformerService using batchConfig map.
@@ -63,31 +59,8 @@ public class TransformerService {
     public TransformerService(DatabaseService databaseService, KafkaService kafkaService,
             int batchSize, int batchInterval) {
         this.databaseService = databaseService;
-        this.kafkaService = kafkaService;
         this.batchSize = batchSize;
         this.batchInterval = batchInterval;
-    }
-
-    /**
-     * Main loop for processing Kafka messages.
-     * 
-     * @throws Exception if an error occurs while processing messages.
-     */
-    public void run() throws Exception {
-        while (true) {
-            try {
-                if (tableStructureChanged) {
-                    databaseService.buildInsertSQL();
-                    tableStructureChanged = false; // Reset the flag
-                }
-                ConsumerRecords<String, byte[]> records = kafkaService.consumeMessages();
-                for (ConsumerRecord<String, byte[]> record : records) {
-                    insertToDb(record.value()); // Process each message
-                }
-            } catch (java.sql.SQLException e) {
-                databaseService.buildInsertSQL();
-            }
-        }
     }
 
     public void insertToDb(byte[] data) throws Exception {

@@ -5,19 +5,14 @@ import org.slf4j.LoggerFactory;
 
 import com.o11y.shared.util.Tools;
 import com.o11y.shared.util.TransformerUtils;
-import com.o11y.application.service.TransformerService;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * ClickHouse 数据库服务类。
