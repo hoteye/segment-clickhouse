@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  clickhouse-server:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse-server
+    restart: unless-stopped
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native client port
+    environment:
+      CLICKHOUSE_USER: root
+      CLICKHOUSE_PASSWORD: 123456
+      TZ: Asia/Shanghai
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      # 可选：持久化数据存储
+      - clickhouse_data:/var/lib/clickhouse
+      # 可选：自定义配置
+      # - ./clickhouse-config.xml:/etc/clickhouse-server/config.xml
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user", "root", "--password", "123456", "--query", "SELECT 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  clickhouse_data:
+    driver: local
