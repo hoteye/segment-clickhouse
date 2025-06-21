@@ -36,7 +36,6 @@ import java.net.URL;
  */
 public class AlarmGatewaySink implements SinkFunction<AlertMessage> {
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(AlarmGatewaySink.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * 发送告警消息到外部告警网关。
@@ -60,32 +59,10 @@ public class AlarmGatewaySink implements SinkFunction<AlertMessage> {
      */
     @Override
     public void invoke(AlertMessage value, Context context) {
-        try {
-            if (!value.isTriggered) {
-                LOG.debug("告警未触发，跳过发送: {}", value.content);
-                return;
-            }
-            LOG.debug("发送告警信息到网关: {}", value.content);
-            int i = 0;
-            if (i == 0)
-                return;
-            String json = OBJECT_MAPPER.writeValueAsString(value);
-            URL url = new URL("http://localhost:8320/api/alert");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(json.getBytes());
-                os.flush();
-            }
-            int responseCode = conn.getResponseCode();
-            if (responseCode != 200 && responseCode != 201) {
-                LOG.warn("模拟 HTTP sink 响应码: {} for alert: {}", responseCode, json);
-            }
-            conn.disconnect();
-        } catch (Exception e) {
-            LOG.error("Failed to send alert message to gateway: {}", value, e);
+        LOG.info("是否生产告警: {}", value.isTriggered);
+        if (!value.isTriggered) {
+            return;
         }
+        // todo: 发送告警信息
     }
 }
