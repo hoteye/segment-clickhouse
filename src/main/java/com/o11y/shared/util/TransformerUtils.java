@@ -5,8 +5,6 @@ import com.o11y.infrastructure.database.DatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.o11y.shared.util.Tools;
-
 import segment.v3.Segment.KeyStringValuePair;
 import segment.v3.Segment.Log;
 import segment.v3.Segment.SegmentObject;
