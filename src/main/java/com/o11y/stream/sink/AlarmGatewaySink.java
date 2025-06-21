@@ -1,12 +1,7 @@
 package com.o11y.stream.sink;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.o11y.domain.model.alarm.AlertMessage;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
-
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 
 /**
  * 告警网关 Sink 实现类。
