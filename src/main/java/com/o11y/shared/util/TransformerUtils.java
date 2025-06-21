@@ -207,9 +207,9 @@ public class TransformerUtils {
             // Check if the field name is valid
             if (!Tools.isValidFieldName(sanitizedKey)) {
                 invalidFields.add(sanitizedKey); // Record invalid fields
+                logger.debug("Invalid field name '{}'. Skipping.", sanitizedKey);
                 continue;
             }
-
             // Check if the field exists in columnNames
             if (!columnNames.contains(sanitizedKey)) {
                 missingFields.add(sanitizedKey); // Record fields not in columnNames

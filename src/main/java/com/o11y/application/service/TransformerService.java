@@ -2,10 +2,7 @@ package com.o11y.application.service;
 
 import com.o11y.infrastructure.database.DatabaseService;
 import com.o11y.infrastructure.kafka.KafkaService;
-import com.o11y.infrastructure.config.ConfigLoader;
 import com.o11y.shared.util.TransformerUtils;
-import com.o11y.shared.util.BackgroundTaskManager;
-
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import segment.v3.Segment.SegmentObject;
@@ -69,33 +66,6 @@ public class TransformerService {
         this.kafkaService = kafkaService;
         this.batchSize = batchSize;
         this.batchInterval = batchInterval;
-    }
-
-    /**
-     * Main entry point for the TransformerService application.
-     * 
-     * @param args Command line arguments.
-     * @throws Exception if an error occurs during execution.
-     */
-    public static void main(String[] args) throws Exception {
-        // Load configuration file
-        Map<String, Object> config = ConfigLoader.loadConfig("application.yaml");
-
-        // Initialize service
-        DatabaseService databaseService = new DatabaseService((Map<String, String>) config.get("clickhouse"))
-                .initConnection();
-        KafkaService kafkaService = new KafkaService((Map<String, Object>) config.get("kafka"));
-
-        TransformerService transformerService = new TransformerService(databaseService, kafkaService,
-                (Map<String, Integer>) config.get("batch"));
-
-        // Start a new thread to execute addColumns method every addColumnsInterval
-        // milliseconds
-        BackgroundTaskManager.startAddColumnsTask(databaseService, missingFields,
-                (int) config.get("add_columns_interval"));
-
-        // Call run method to process Kafka messages
-        transformerService.run();
     }
 
     /**

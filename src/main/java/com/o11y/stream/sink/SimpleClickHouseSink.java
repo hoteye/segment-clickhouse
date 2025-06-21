@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
@@ -64,9 +63,6 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     private Integer batchSize;
     private Integer batchInterval;
     private final static String DEFAULT_KEY_TYPE = "String";
-    // 新增：记录上次写入 new_key 的时间，避免高频访问，初始化为当前时间
-    private long lastNewKeyInsertTime = System.currentTimeMillis();
-    private static long interval = 60_000L;
 
     public SimpleClickHouseSink(Map<String, String> clickhouseConfig, Map<String, Integer> batchConfig) {
         this.batchConfig = batchConfig;
@@ -112,15 +108,14 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             LOG.debug("Successfully inserted data into ClickHouse: {}", segmentObject.getTraceId());
             LOG.debug("Invalid fields: {}", invalidFields);
             LOG.debug("Missing fields: {}", missingFields);
-            // 2. 将 missingFields 中的新 key 写入 new_key 表（限流）
-            long now = System.currentTimeMillis();
-            interval = interval + new Random().nextInt(3_000); // 增加随机延迟，避免高并发时频繁写入
-            if (!missingFields.isEmpty() && (now - lastNewKeyInsertTime >= interval)) {
-                lastNewKeyInsertTime = now;
+            // 2. 将 missingFields 中的新 key 写入 new_key 表
+            if (!missingFields.isEmpty()) {
+                LOG.info("Missing fields: {}", missingFields);
                 for (String key : missingFields) {
+                    // 根据 insertNewKeyToClickHouse() 返回值判断是否已创建。如果没有已经创建则重新初始化sql语句
                     if (insertNewKeyToClickHouse(key)) {
                         // 如果 key 已经写入 new_key 并且 isCreated 为 true，表示字段已经建立，则重建sql语句
-                        databaseService.initConnection();
+                        databaseService.initConnection().buildInsertSQL();
                         LOG.info("Key '{}' already exists in new_key table, re-initializing database connection.", key);
                     }
                 }

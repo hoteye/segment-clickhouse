@@ -115,7 +115,9 @@ public class NewKeyTableSyncTask {
                 newKeys.add(keyName);
             }
         }
-        // 3. 更新 isCreated=true
+        // 3. 更新 isCreated=true 后续主业务流 SimpleClickHouseSink invoke
+        // insertSegmentObjectToEvents insertNewKeyToClickHouse() ，
+        // 根据 insertNewKeyToClickHouse() 返回值判断是否已创建。如果没有已经创建则重新初始化sql语句
         if (!newKeys.isEmpty()) {
             String updateSql = "UPDATE new_key SET isCreated = 1 WHERE keyName = ?";
             try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
