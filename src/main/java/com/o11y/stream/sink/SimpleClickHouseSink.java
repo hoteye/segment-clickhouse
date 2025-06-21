@@ -1,7 +1,7 @@
 package com.o11y.stream.sink;
 
 import com.o11y.infrastructure.database.DatabaseService;
-import com.o11y.shared.util.TransformerUtils;
+import com.o11y.shared.util.SegmentObjectMapper;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import segment.v3.Segment.SegmentObject;
@@ -46,7 +46,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
  * </ul>
  * 
  * @see DatabaseService ClickHouse 数据库服务
- * @see TransformerUtils 数据转换工具
+ * @see SegmentObjectMapper 数据转换工具
  * @see SegmentObject Skywalking 数据模型
  * @author DDD Architecture Team
  * @since 1.0.0
@@ -100,7 +100,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     public void invoke(SegmentObject segmentObject, Context context) throws Exception {
         try {
             // 1. 正常数据写入（会自动填充 missingFields）
-            TransformerUtils.insertSegmentObjectToEvents(
+            SegmentObjectMapper.insertSegmentObjectToEvents(
                     databaseService, segmentObject,
                     invalidFields,
                     missingFields);
@@ -155,7 +155,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             String[] parts = keyName.split("_type_");
             if (parts.length == 2) {
                 String type = parts[1];
-                if (TransformerUtils.isClickhouseSupportedType(type)) {
+                if (SegmentObjectMapper.isClickhouseSupportedType(type)) {
                     keyType = type;
                 }
             }

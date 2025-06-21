@@ -1,7 +1,7 @@
 package com.o11y.stream.task;
 
 import com.o11y.infrastructure.database.DatabaseService;
-import com.o11y.shared.util.TransformerUtils;
+import com.o11y.shared.util.SegmentObjectMapper;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
@@ -83,7 +83,7 @@ public class NewKeyTableSyncProcessFunction extends KeyedProcessFunction<String,
         while (rs.next()) {
             String keyName = rs.getString("keyName");
             String keyType = rs.getString("keyType");
-            String chType = TransformerUtils.toClickHouseType(keyType);
+            String chType = SegmentObjectMapper.toClickHouseType(keyType);
             String alterSql = String.format(
                     "ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS %s Nullable(%s)",
                     databaseService.getSchemaName(),

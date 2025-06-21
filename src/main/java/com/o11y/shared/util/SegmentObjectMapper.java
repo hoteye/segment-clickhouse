@@ -17,26 +17,27 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.Arrays;
 
 /**
- * 数据转换工具类。
+ * SegmentObject 到数据库映射器。
  * 
  * <p>
- * 提供 Segment 数据到 ClickHouse 的转换功能，包括数据类型映射、
- * 字段验证、批量插入等核心功能。是数据处理管道中的关键组件。
+ * 负责将 SegmentObject 数据映射并插入到 ClickHouse 数据库中。
+ * 提供了丰富的类型检测、字段映射和数据转换功能。
  * 
  * <p>
- * <strong>主要功能：</strong>
+ * <strong>核心功能：</strong>
  * <ul>
- * <li>ClickHouse 数据类型验证和转换</li>
  * <li>SegmentObject 到数据库记录的映射</li>
- * <li>动态字段处理和表结构扩展</li>
- * <li>批量数据插入优化</li>
+ * <li>动态字段类型检测和转换</li>
+ * <li>ClickHouse 数据类型支持验证</li>
+ * <li>字段验证和错误处理</li>
+ * <li>批量数据插入处理</li>
  * <li>Tag 和 Log 数据的扁平化处理</li>
  * </ul>
  * 
  * <p>
  * <strong>设计原则：</strong>
  * <ul>
- * <li>静态方法提供无状态的转换功能</li>
+ * <li>静态方法提供无状态的映射功能</li>
  * <li>类型安全和数据完整性保证</li>
  * <li>高性能的批量操作支持</li>
  * <li>灵活的数据类型映射机制</li>
@@ -47,8 +48,8 @@ import java.util.Arrays;
  * @author DDD Architecture Team
  * @since 1.0.0
  */
-public class TransformerUtils {
-    private static final Logger logger = LoggerFactory.getLogger(TransformerUtils.class);
+public class SegmentObjectMapper {
+    private static final Logger logger = LoggerFactory.getLogger(SegmentObjectMapper.class);
 
     // 合并 ClickHouse 支持的所有类型为一个集合
     private static final List<String> CLICKHOUSE_SUPPORTED_TYPES = Arrays.asList(
@@ -197,7 +198,7 @@ public class TransformerUtils {
             if (parts.length == 2) {
                 columnType = parts[1]; // Extract the field type
 
-                if (!TransformerUtils.isClickhouseSupportedType(columnType)) {
+                if (!SegmentObjectMapper.isClickhouseSupportedType(columnType)) {
                     invalidFields.add(sanitizedKey); // Record invalid type
                     logger.warn("Invalid type '{}' for field '{}'. Skipping.", columnType, sanitizedKey);
                     continue; // Skip this field
@@ -205,7 +206,7 @@ public class TransformerUtils {
             }
 
             // Check if the field name is valid
-            if (!Tools.isValidFieldName(sanitizedKey)) {
+            if (!ConfigurationUtils.isValidFieldName(sanitizedKey)) {
                 invalidFields.add(sanitizedKey); // Record invalid fields
                 logger.debug("Invalid field name '{}'. Skipping.", sanitizedKey);
                 continue;

@@ -1,6 +1,6 @@
 package com.o11y;
 
-import com.o11y.shared.util.TransformerUtils;
+import com.o11y.shared.util.SegmentObjectMapper;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.mockito.Mockito;
@@ -10,48 +10,48 @@ import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 import segment.v3.Segment;
 
-class TransformerUtilsTest {
+class SegmentObjectMapperTest {
 
     @Test
     void testIsClickhouseNumericType_null() {
-        assertFalse(TransformerUtils.isClickhouseSupportedType(null));
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType(null));
     }
 
     @Test
     void testIsClickhouseNumericType_empty() {
-        assertFalse(TransformerUtils.isClickhouseSupportedType(""));
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType(""));
     }
 
     @Test
     void testIsClickhouseNumericType_oneChar_valid() {
-        assertFalse(TransformerUtils.isClickhouseSupportedType("i")); // "I" not in the list, returns false
-        assertFalse(TransformerUtils.isClickhouseSupportedType("I")); // "I" not in the list, returns false
-        assertFalse(TransformerUtils.isClickhouseSupportedType("8")); // "8" not in the list, returns false
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("i")); // "I" not in the list, returns false
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("I")); // "I" not in the list, returns false
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("8")); // "8" not in the list, returns false
     }
 
     @Test
     void testIsClickhouseNumericType_validType() {
-        assertTrue(TransformerUtils.isClickhouseSupportedType("Int8"));
-        assertTrue(TransformerUtils.isClickhouseSupportedType("int8"));
-        assertTrue(TransformerUtils.isClickhouseSupportedType("UInt64"));
-        assertTrue(TransformerUtils.isClickhouseSupportedType("float64"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("Int8"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("int8"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("UInt64"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("float64"));
     }
 
     @Test
     void testIsClickhouseNumericType_invalidType() {
-        assertFalse(TransformerUtils.isClickhouseSupportedType("String"));
-        assertFalse(TransformerUtils.isClickhouseSupportedType("Boolean"));
-        assertFalse(TransformerUtils.isClickhouseSupportedType("Decimal999"));
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("String"));
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("Boolean"));
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("Decimal999"));
     }
 
     @Test
     void testIsClickhouseSupportedType_dateTypes() {
-        assertTrue(TransformerUtils.isClickhouseSupportedType("Date"));
-        assertTrue(TransformerUtils.isClickhouseSupportedType("date"));
-        assertTrue(TransformerUtils.isClickhouseSupportedType("Date32"));
-        assertTrue(TransformerUtils.isClickhouseSupportedType("datetime"));
-        assertTrue(TransformerUtils.isClickhouseSupportedType("DateTime64"));
-        assertFalse(TransformerUtils.isClickhouseSupportedType("Date999"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("Date"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("date"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("Date32"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("datetime"));
+        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("DateTime64"));
+        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("Date999"));
     }
 
     @Test
@@ -67,7 +67,7 @@ class TransformerUtilsTest {
                 Segment.KeyStringValuePair.newBuilder().setKey("float_type_Float64").setValue("3.14").build());
         ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
         ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
-        TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
+        SegmentObjectMapper.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
         Mockito.verify(stmt).setString(1, "abc");
         Mockito.verify(stmt).setLong(2, 123456L);
         Mockito.verify(stmt).setDouble(3, 3.14);
@@ -83,7 +83,7 @@ class TransformerUtilsTest {
                 Segment.KeyStringValuePair.newBuilder().setKey("invalid_type_type_ABC").setValue("1").build());
         ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
         ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
-        TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
+        SegmentObjectMapper.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
         assertTrue(invalidFields.contains("tag_invalid_type_type_ABC"));
         Mockito.verifyNoInteractions(stmt);
     }
@@ -96,7 +96,7 @@ class TransformerUtilsTest {
                 Segment.KeyStringValuePair.newBuilder().setKey("not_exist").setValue("v").build());
         ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
         ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
-        TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
+        SegmentObjectMapper.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
         assertTrue(missingFields.contains("tag_not_exist"));
         Mockito.verifyNoInteractions(stmt);
     }
@@ -109,7 +109,7 @@ class TransformerUtilsTest {
                 Segment.KeyStringValuePair.newBuilder().setKey("abc$").setValue("v").build());
         ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
         ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
-        TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
+        SegmentObjectMapper.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
         assertTrue(invalidFields.contains("tag_abc$"));
         Mockito.verifyNoInteractions(stmt);
     }
@@ -122,7 +122,7 @@ class TransformerUtilsTest {
                 Segment.KeyStringValuePair.newBuilder().setKey("long_type_Int64").setValue("not_a_number").build());
         ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
         ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
-        TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
+        SegmentObjectMapper.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
         // Because the exception is caught, stmt.setLong will not be called
         Mockito.verifyNoInteractions(stmt);
     }
@@ -144,7 +144,7 @@ class TransformerUtilsTest {
                         .setValue("2025-05-20 12:34:56.789").build());
         ConcurrentSkipListSet<String> invalidFields = new ConcurrentSkipListSet<>();
         ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
-        TransformerUtils.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
+        SegmentObjectMapper.setTagOrLog(stmt, pairs, "tag_", columnNames, invalidFields, missingFields);
         Mockito.verify(stmt).setDate(1, java.sql.Date.valueOf("2025-05-20"));
         Mockito.verify(stmt).setDate(2, java.sql.Date.valueOf("2025-05-21"));
         Mockito.verify(stmt).setTimestamp(3, java.sql.Timestamp.valueOf("2025-05-20 12:34:56"));

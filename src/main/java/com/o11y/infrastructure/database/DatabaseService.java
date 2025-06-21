@@ -3,8 +3,8 @@ package com.o11y.infrastructure.database;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.o11y.shared.util.Tools;
-import com.o11y.shared.util.TransformerUtils;
+import com.o11y.shared.util.ConfigurationUtils;
+import com.o11y.shared.util.SegmentObjectMapper;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -44,8 +44,8 @@ import java.util.Map;
  * <strong>线程安全性：</strong>
  * 该类不是线程安全的，每个线程应该使用独立的实例。
  * 
- * @see TransformerUtils 数据转换工具
- * @see Tools 通用工具类
+ * @see SegmentObjectMapper 数据转换工具
+ * @see ConfigurationUtils 通用工具类
  * @author DDD Architecture Team
  * @since 1.0.0
  */
@@ -176,7 +176,7 @@ public class DatabaseService {
                         e.getMessage(), retry, maxRetry, e);
 
                 // 重试前等待 3 秒
-                Tools.sleep(3000);
+                ConfigurationUtils.sleep(3000);
             }
         }
 

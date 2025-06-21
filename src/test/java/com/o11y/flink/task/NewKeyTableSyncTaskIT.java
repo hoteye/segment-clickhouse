@@ -1,9 +1,9 @@
 package com.o11y.flink.task;
 
 import com.o11y.stream.task.NewKeyTableSyncTask;
-import com.o11y.infrastructure.config.ConfigLoader;
+import com.o11y.shared.util.ConfigurationUtils;
 import com.o11y.infrastructure.database.DatabaseService;
-import com.o11y.shared.util.TransformerUtils;
+import com.o11y.shared.util.SegmentObjectMapper;
 import org.junit.jupiter.api.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 集成测试：验证 NewKeyTableSyncTask 能正确将各种类型字段同步到 ClickHouse 表
+ * 集成测试：验证 NewKeyTableSyncTask 能正确将各种类型字段同步到 ClickHouse 中
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class NewKeyTableSyncTaskIT {
@@ -24,7 +24,7 @@ public class NewKeyTableSyncTaskIT {
 
     @BeforeAll
     static void setup() throws Exception {
-        Map<String, Object> config = ConfigLoader.loadConfig("application.yaml");
+        Map<String, Object> config = ConfigurationUtils.loadConfig("application.yaml");
         @SuppressWarnings("unchecked")
         Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
         String url = clickhouseConfig.get("url");
@@ -45,8 +45,8 @@ public class NewKeyTableSyncTaskIT {
     @Test
     @Order(1)
     void testSyncAllSupportedTypes() throws Exception {
-        // 插入所有支持类型的 key（包含 decimal 类型），统一字段名风格 col_xxx
-        for (String type : TransformerUtils.getClickhouseSupportedTypes()) {
+        // 插入所有支持类型的 key（包括 decimal 类型），统一字段名风格 col_xxx
+        for (String type : SegmentObjectMapper.getClickhouseSupportedTypes()) {
             String key = "col_"
                     + type.toLowerCase().replaceAll("[()]+", "_").replaceAll("_+", "_").replaceAll("_$", "");
             try (Statement st = conn.createStatement()) {
@@ -71,7 +71,7 @@ public class NewKeyTableSyncTaskIT {
             }
         }
         // 校验表结构，统一字段名风格 col_xxx
-        for (String type : TransformerUtils.getClickhouseSupportedTypes()) {
+        for (String type : SegmentObjectMapper.getClickhouseSupportedTypes()) {
             String key = "col_"
                     + type.toLowerCase().replaceAll("[()]+", "_").replaceAll("_+", "_").replaceAll("_$", "");
             Assertions.assertTrue(columns.contains(key), "缺少字段: " + key);

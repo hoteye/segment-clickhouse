@@ -7,10 +7,10 @@ import java.util.Map;
 import org.yaml.snakeyaml.Yaml;
 
 /**
- * 通用工具类。
+ * 配置和验证工具类。
  * 
  * <p>
- * 提供项目中常用的工具方法，包括配置文件加载、字段名验证、
+ * 提供项目中常用的配置工具方法，包括配置文件加载、字段名验证、
  * 数据验证等功能。作为共享组件为其他模块提供基础服务。
  * 
  * <p>
@@ -33,7 +33,7 @@ import org.yaml.snakeyaml.Yaml;
  * @author DDD Architecture Team
  * @since 1.0.0
  */
-public class Tools {
+public class ConfigurationUtils {
 
     /**
      * Check if the field name conforms to ClickHouse field naming requirements.
@@ -83,11 +83,29 @@ public class Tools {
     /**
      * Loads a YAML configuration file from the given file path.
      * 
+     * <p>
+     * 支持两种加载方式：
+     * <ul>
+     * <li>优先从 classpath 读取资源文件</li>
+     * <li>其次从文件系统读取指定路径的文件</li>
+     * </ul>
+     * 
      * @param filePath The path to the configuration file.
      * @return A map containing the configuration data.
      * @throws RuntimeException if loading fails.
      */
     public static Map<String, Object> loadConfig(String filePath) {
+        // 优先从 classpath 读取
+        try (InputStream input = ConfigurationUtils.class.getClassLoader().getResourceAsStream(filePath)) {
+            if (input != null) {
+                Yaml yaml = new Yaml();
+                return yaml.load(input);
+            }
+        } catch (Exception ignore) {
+            // 忽略异常，尝试下一种方式
+        }
+
+        // 其次从文件系统读取
         try (InputStream input = new FileInputStream(filePath)) {
             Yaml yaml = new Yaml();
             return yaml.load(input);

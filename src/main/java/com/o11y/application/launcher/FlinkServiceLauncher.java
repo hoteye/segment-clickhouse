@@ -1,6 +1,6 @@
 package com.o11y.application.launcher;
 
-import com.o11y.infrastructure.config.ConfigLoader;
+import com.o11y.shared.util.ConfigurationUtils;
 import com.o11y.infrastructure.flink.FlinkService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +31,7 @@ public class FlinkServiceLauncher {
      */
     public static void main(String[] args) {
         try {
-            Map<String, Object> config = ConfigLoader.loadConfig("application.yaml");
+            Map<String, Object> config = ConfigurationUtils.loadConfig("application.yaml");
             FlinkService flinkService = new FlinkService(config);
             flinkService.run();
         } catch (Exception e) {
