@@ -1,8 +1,9 @@
 package com.o11y.flink.task;
 
-import com.o11y.ConfigLoader;
-import com.o11y.DatabaseService;
-import com.o11y.TransformerUtils;
+import com.o11y.stream.task.NewKeyTableSyncTask;
+import com.o11y.infrastructure.config.ConfigLoader;
+import com.o11y.infrastructure.database.DatabaseService;
+import com.o11y.shared.util.TransformerUtils;
 import org.junit.jupiter.api.*;
 import java.sql.Connection;
 import java.sql.DriverManager;

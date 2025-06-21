@@ -1,6 +1,7 @@
 package com.o11y.flink.util;
 
-import com.o11y.DatabaseService;
+import com.o11y.shared.util.OperatorParamLoader;
+import com.o11y.infrastructure.database.DatabaseService;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,6 +1,7 @@
 package com.o11y.flink.util;
 
-import com.o11y.DatabaseService;
+import com.o11y.shared.util.OperatorParamLoader;
+import com.o11y.infrastructure.database.DatabaseService;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -25,7 +26,7 @@ public class OperatorParamLoaderIT {
     @BeforeAll
     public static void setup() throws Exception {
         // 读取 application.yaml
-        Map<String, Object> config = com.o11y.ConfigLoader.loadConfig("application.yaml");
+        Map<String, Object> config = com.o11y.infrastructure.config.ConfigLoader.loadConfig("application.yaml");
         Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
         Map<String, String> kafkaConfig = (Map<String, String>) config.get("kafka");
         paramUpdateTopic = kafkaConfig.getOrDefault("param_update_topic", "flink-operator-param-update");

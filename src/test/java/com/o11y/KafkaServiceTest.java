@@ -1,5 +1,6 @@
 package com.o11y;
 
+import com.o11y.infrastructure.kafka.KafkaService;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

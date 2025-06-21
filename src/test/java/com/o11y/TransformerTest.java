@@ -1,5 +1,7 @@
 package com.o11y;
 
+import com.o11y.infrastructure.database.DatabaseService;
+import com.o11y.application.service.TransformerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

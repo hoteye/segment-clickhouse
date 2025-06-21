@@ -1,11 +1,12 @@
 package com.o11y.flink.sink;
 
+import com.o11y.stream.sink.SimpleClickHouseSink;
 import org.apache.flink.configuration.Configuration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import com.o11y.DatabaseService;
+import com.o11y.infrastructure.database.DatabaseService;
 
 import java.sql.PreparedStatement;
 import java.util.HashMap;
