@@ -17,17 +17,17 @@ public class FlinkServiceLauncher {
 
     /**
      * 主函数，作为 Flink 作业的启动入口。
-     * 1. 加载 application.yaml 配置文件。
-     * 2. 构造 FlinkService 实例。
-     * 3. 调用 run() 启动完整 Flink 流式作业。
-     * 4. 捕获所有异常并输出日志，启动失败时退出进程。
-     *
-     * @param args 启动参数（当前未使用，预留扩展）
-     */
-    /**
-     * 启动入口：加载配置并启动 FlinkService。
      * 
-     * @param args 启动参数
+     * <p>
+     * 执行流程：
+     * <ol>
+     * <li>加载 application.yaml 配置文件</li>
+     * <li>构造 FlinkService 实例</li>
+     * <li>调用 run() 启动完整 Flink 流式作业</li>
+     * <li>捕获所有异常并输出日志，启动失败时退出进程</li>
+     * </ol>
+     *
+     * @param args 启动参数（当前未使用，预留扩展用于传递配置文件路径等）
      */
     public static void main(String[] args) {
         try {

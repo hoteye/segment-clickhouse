@@ -6,6 +6,33 @@ import java.util.Map;
 
 import org.yaml.snakeyaml.Yaml;
 
+/**
+ * 通用工具类。
+ * 
+ * <p>
+ * 提供项目中常用的工具方法，包括配置文件加载、字段名验证、
+ * 数据验证等功能。作为共享组件为其他模块提供基础服务。
+ * 
+ * <p>
+ * <strong>主要功能：</strong>
+ * <ul>
+ * <li>YAML 配置文件加载和解析</li>
+ * <li>ClickHouse 字段名验证</li>
+ * <li>数据完整性检查</li>
+ * <li>通用验证规则</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>设计原则：</strong>
+ * <ul>
+ * <li>静态方法提供无状态的工具功能</li>
+ * <li>异常处理和边界情况考虑</li>
+ * <li>高内聚低耦合的设计</li>
+ * </ul>
+ * 
+ * @author DDD Architecture Team
+ * @since 1.0.0
+ */
 public class Tools {
 
     /**

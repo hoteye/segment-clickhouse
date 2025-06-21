@@ -23,19 +23,80 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 延迟（耗时）聚合与告警
+ * 服务延迟聚合算子。
+ * 
+ * <p>
+ * 负责对 SegmentObject 流进行窗口聚合，计算服务的性能指标，
+ * 包括平均延迟、最大延迟、成功率、吞吐量等关键指标。
+ * 
+ * <p>
+ * <strong>聚合维度：</strong>
+ * <ul>
+ * <li>按服务名称（service）分组</li>
+ * <li>按操作名称（operationName）细分</li>
+ * <li>按时间窗口聚合（可配置窗口大小）</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>计算指标：</strong>
+ * <ul>
+ * <li>平均响应时间（avg_duration）</li>
+ * <li>最大响应时间（max_duration）</li>
+ * <li>总请求数（total_count）</li>
+ * <li>成功请求数（success_count）</li>
+ * <li>错误请求数（error_count）</li>
+ * <li>成功率（success_rate）</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>窗口策略：</strong>
+ * 使用滚动事件时间窗口，支持乱序数据处理和水位线机制。
+ * 
+ * @see FlinkOperator 算子基础接口
+ * @see ServiceAggResult 聚合结果模型
+ * @see SegmentObject Skywalking 数据模型
+ * @author DDD Architecture Team
+ * @since 1.0.0
  */
 public class AggregateOperator implements FlinkOperator {
     private int windowSeconds = 7;
     private final String NAME = this.getClass().getSimpleName();;
 
+    /**
+     * 默认构造函数。
+     * 使用默认的窗口大小（7秒）。
+     */
     public AggregateOperator() {
     }
 
+    /**
+     * 参数化构造函数。
+     * 
+     * @param windowSeconds 窗口大小（秒）
+     * @param avgThreshold  平均响应时间阈值（预留参数）
+     * @param maxThreshold  最大响应时间阈值（预留参数）
+     */
     public AggregateOperator(int windowSeconds, double avgThreshold, long maxThreshold) {
         this.windowSeconds = windowSeconds;
     }
 
+    /**
+     * 应用聚合算子到输入数据流。
+     * 
+     * <p>
+     * 执行完整的聚合流程：
+     * <ol>
+     * <li>从参数中解析窗口大小配置</li>
+     * <li>提取 Entry 类型的 Span 数据</li>
+     * <li>按服务维度进行窗口聚合</li>
+     * <li>输出聚合结果流</li>
+     * </ol>
+     * 
+     * @param input  输入数据流（SegmentObject 类型）
+     * @param params 算子参数，包含 windowSize 等配置
+     * @return 服务聚合结果数据流
+     * @throws RuntimeException 如果参数解析失败
+     */
     @Override
     public DataStream<ServiceAggResult> apply(DataStream<?> input, Map<String, List<String>> params) {
         // 不再做空判断，参数缺失时直接抛出异常，便于启动阶段发现配置问题

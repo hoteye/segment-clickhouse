@@ -16,6 +16,37 @@ import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.Arrays;
 
+/**
+ * 数据转换工具类。
+ * 
+ * <p>
+ * 提供 Segment 数据到 ClickHouse 的转换功能，包括数据类型映射、
+ * 字段验证、批量插入等核心功能。是数据处理管道中的关键组件。
+ * 
+ * <p>
+ * <strong>主要功能：</strong>
+ * <ul>
+ * <li>ClickHouse 数据类型验证和转换</li>
+ * <li>SegmentObject 到数据库记录的映射</li>
+ * <li>动态字段处理和表结构扩展</li>
+ * <li>批量数据插入优化</li>
+ * <li>Tag 和 Log 数据的扁平化处理</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>设计原则：</strong>
+ * <ul>
+ * <li>静态方法提供无状态的转换功能</li>
+ * <li>类型安全和数据完整性保证</li>
+ * <li>高性能的批量操作支持</li>
+ * <li>灵活的数据类型映射机制</li>
+ * </ul>
+ * 
+ * @see DatabaseService 数据库操作服务
+ * @see SegmentObject Skywalking 数据模型
+ * @author DDD Architecture Team
+ * @since 1.0.0
+ */
 public class TransformerUtils {
     private static final Logger logger = LoggerFactory.getLogger(TransformerUtils.class);
 
@@ -33,11 +64,14 @@ public class TransformerUtils {
             "Date", "Date32", "DateTime", "DateTime32", "DateTime64");
 
     /**
-     * Check if the given type is a ClickHouse supported type (numeric or
-     * date/time).
-     *
-     * @param type The type to check.
-     * @return true if the type is supported by ClickHouse, false otherwise.
+     * 检查给定类型是否为 ClickHouse 支持的数据类型。
+     * 
+     * <p>
+     * 支持的类型包括所有数值类型（整型、浮点型、小数类型）和日期时间类型。
+     * 不支持的类型将被转换为 String 类型存储。
+     * 
+     * @param type 待检查的数据类型字符串，可以为 null 或空
+     * @return true 如果类型被 ClickHouse 原生支持，false 否则
      */
     public static boolean isClickhouseSupportedType(String type) {
         if (type == null || type.isEmpty()) {
@@ -48,11 +82,22 @@ public class TransformerUtils {
     }
 
     /**
-     * Convert a type string to ClickHouse standard type name
-     * (首字母大写，其余小写，特殊处理如Float64等)
+     * 将类型字符串转换为 ClickHouse 标准类型名称。
      * 
-     * @param type 原始类型字符串
-     * @return ClickHouse 规范类型
+     * <p>
+     * 执行类型标准化，确保类型名称符合 ClickHouse 的命名约定。
+     * 对于不支持的类型，默认返回 "String" 类型。
+     * 
+     * <p>
+     * <strong>转换规则：</strong>
+     * <ul>
+     * <li>忽略大小写进行匹配</li>
+     * <li>支持的类型保持原始格式（如 Int32, Float64）</li>
+     * <li>不支持的类型统一转换为 String</li>
+     * </ul>
+     * 
+     * @param type 原始类型字符串，可以为 null 或空
+     * @return ClickHouse 标准类型名称，未知类型返回 "String"
      */
     public static String toClickHouseType(String type) {
         if (type == null || type.isEmpty())

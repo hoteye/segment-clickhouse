@@ -13,21 +13,58 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * 定时任务：定期扫描 new_key 表，将 isCreated=false 的 key 批量添加到 events 表，并将 isCreated 更新为
- * true。
+ * 动态字段同步任务类。
+ * 
+ * <p>
+ * 负责定时扫描 new_key 表，将标记为 isCreated=false 的新字段批量添加到 events 表结构中，
+ * 确保 ClickHouse 表能够动态扩展以适应新的数据字段。这是实现表结构动态管理的核心组件。
+ * 
+ * <p>
+ * <strong>主要功能：</strong>
+ * <ul>
+ * <li>定时扫描 new_key 表中未处理的新字段</li>
+ * <li>批量执行 ALTER TABLE 语句添加新列</li>
+ * <li>更新字段状态为已创建（isCreated=true）</li>
+ * <li>异常处理和日志记录</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>使用场景：</strong>
+ * 当 Segment 数据中包含新的 tag 或 log 字段时，会先记录到 new_key 表，
+ * 此任务负责将这些新字段同步到主表结构中，实现无停机的表结构扩展。
+ * 
+ * @see DatabaseService 数据库操作服务
+ * @see TransformerUtils 数据转换工具
+ * @author DDD Architecture Team
+ * @since 1.0.0
  */
 public class NewKeyTableSyncTask {
     private static final Logger LOG = LoggerFactory.getLogger(NewKeyTableSyncTask.class);
     private final DatabaseService databaseService;
     private final long intervalMs;
 
+    /**
+     * 构造函数，初始化数据库服务和同步间隔。
+     * 
+     * @param databaseService ClickHouse 数据库服务实例，用于执行表结构修改操作
+     * @param intervalMs      同步任务执行间隔（毫秒），建议设置为 30-60 秒以平衡性能和实时性
+     */
     public NewKeyTableSyncTask(DatabaseService databaseService, long intervalMs) {
         this.databaseService = databaseService;
         this.intervalMs = intervalMs;
     }
 
     /**
-     * 启动定时同步任务，将 new_key 表中的新 key 同步到主表。
+     * 启动定时同步任务。
+     * 
+     * <p>
+     * 创建一个守护线程定时器，按指定间隔执行新字段同步操作。
+     * 任务会持续运行直到应用程序关闭。
+     * 
+     * <p>
+     * <strong>注意：</strong>使用守护线程确保不会阻止 JVM 正常退出。
+     * 
+     * @throws RuntimeException 如果定时器创建失败
      */
     public void start() {
         Timer timer = new Timer(true);

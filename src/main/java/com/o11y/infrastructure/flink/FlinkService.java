@@ -37,7 +37,41 @@ import org.apache.flink.streaming.api.datastream.BroadcastStream;
 import com.o11y.domain.model.alarm.AlertMessage;
 
 /**
- * Flink 相关操作服务类，将环境初始化、流定义、算子注册、sink 配置等操作独立封装。
+ * Flink 流处理服务类。
+ * 
+ * <p>
+ * 负责构建和管理完整的 Flink 流处理作业，包括数据源配置、流式算子注册、
+ * 告警规则广播、数据汇聚和存储等核心功能的协调和管理。
+ * 
+ * <p>
+ * <strong>主要职责：</strong>
+ * <ul>
+ * <li>Flink 执行环境初始化和配置</li>
+ * <li>Kafka 数据源构建和 SegmentObject 流创建</li>
+ * <li>动态算子注册和参数加载</li>
+ * <li>告警规则广播流管理</li>
+ * <li>聚合结果和告警消息的 Sink 配置</li>
+ * <li>ClickHouse 表结构动态管理</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>架构特点：</strong>
+ * <ul>
+ * <li>支持多种业务聚合算子的动态注册</li>
+ * <li>实现告警规则的实时广播和状态管理</li>
+ * <li>提供表结构动态扩展能力</li>
+ * <li>支持批量写入和性能优化</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>配置依赖：</strong>
+ * 需要 application.yaml 中的 kafka、clickhouse、batch、flink 等配置段。
+ * 
+ * @see OperatorRegistry 算子注册管理
+ * @see DatabaseService ClickHouse 数据库服务
+ * @see AggAlertBroadcastFunction 告警广播函数
+ * @author DDD Architecture Team
+ * @since 1.0.0
  */
 public class FlinkService {
         private static final Logger LOG = LoggerFactory.getLogger(FlinkService.class);

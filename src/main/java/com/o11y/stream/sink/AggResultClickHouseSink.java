@@ -15,7 +15,39 @@ import java.text.SimpleDateFormat;
 import java.util.Map;
 
 /**
- * 通用 AggResult POJO 写入 ClickHouse 表 flink_operator_agg_result
+ * 聚合结果 ClickHouse Sink 实现。
+ * 
+ * <p>
+ * 负责将 Flink 流处理产生的服务聚合结果写入到 ClickHouse 的
+ * flink_operator_agg_result 表中，用于后续的数据分析和监控展示。
+ * 
+ * <p>
+ * <strong>主要功能：</strong>
+ * <ul>
+ * <li>聚合数据的批量写入</li>
+ * <li>数据格式化和类型转换</li>
+ * <li>连接管理和异常处理</li>
+ * <li>性能指标记录</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>表结构映射：</strong>
+ * ServiceAggResult 对象会被映射到包含以下字段的表：
+ * window_start, windowSize, operator_name, operator_class, service,
+ * instance, method, avg_duration, max_duration, error_rate 等。
+ * 
+ * <p>
+ * <strong>性能考虑：</strong>
+ * <ul>
+ * <li>使用 PreparedStatement 提高执行效率</li>
+ * <li>连接复用减少连接开销</li>
+ * <li>异常处理保证数据一致性</li>
+ * </ul>
+ * 
+ * @see ServiceAggResult 服务聚合结果模型
+ * @see RichSinkFunction Flink Rich Sink 基类
+ * @author DDD Architecture Team
+ * @since 1.0.0
  */
 public class AggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> {
     private static final Logger LOG = LoggerFactory.getLogger(AggResultClickHouseSink.class);
