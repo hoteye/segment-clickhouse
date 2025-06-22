@@ -199,20 +199,195 @@ public class FlinkService {
 
         /**
          * 清理 ClickHouse 新增字段表（new_key），移除无效字段。
+         * 
+         * <p>
+         * <strong>清理逻辑：</strong><br>
+         * 删除 new_key 表中那些在 events 表中已不存在的字段记录，
+         * 确保 new_key 表与实际的表结构保持一致。
+         * 
+         * <p>
+         * <strong>SQL 解释：</strong>
+         * 
+         * <pre>
+         * DELETE FROM new_key 
+         * WHERE keyName NOT IN (
+         *     SELECT name FROM system.columns 
+         *     WHERE table='events' AND database='default'
+         * )
+         * </pre>
+         * 
+         * <p>
+         * <strong>使用场景：</strong>
+         * <ul>
+         * <li>手动删除了 events 表中的某些列</li>
+         * <li>表结构回滚后需要清理过期的字段记录</li>
+         * <li>定期维护，确保元数据一致性</li>
+         * </ul>
          *
          * @throws Exception SQL 执行异常
          */
         private void cleanNewKeyTable() throws Exception {
-                String sql = "DELETE FROM new_key WHERE keyName NOT IN (SELECT name FROM system.columns WHERE table='"
-                                + clickhouseConfig.get("table_name") + "')";
+                // 构建清理 SQL，删除在 events 表中不存在的字段记录
+                String sql = "DELETE FROM new_key WHERE keyName NOT IN (SELECT `name` FROM system.columns WHERE table='"
+                                + clickhouseConfig.get("table_name") + "' AND database='"
+                                + clickhouseConfig.get("schema_name") + "')";
+                LOG.info("Cleaning up new_key table with SQL: {}", sql);
                 try (Statement stmt = dbService.getConnection().createStatement()) {
                         stmt.execute(sql);
-                        LOG.info("Cleaned up new_key table for non-existing columns in events table");
                 }
         }
 
         /**
-         * 启动新字段同步任务，定时将 new_key 表中的新字段同步到主表。
+         * 启动新字段动态同步任务，实现 ClickHouse 表结构的自动演进。
+         * 
+         * <p>
+         * <strong>业务背景：</strong><br>
+         * 在流处理系统中，随着业务发展和数据结构的演进，可能会不断出现新的字段和属性。
+         * 该方法启动一个独立的 Flink 算子，定期扫描 new_key 表中的新字段定义，
+         * 自动为 ClickHouse events 表添加对应的列，实现 schema 的动态演进。
+         * 
+         * <p>
+         * <strong>addColumnsInterval 参数详解：</strong>
+         * <table border="1" cellpadding="5" cellspacing="0">
+         * <tr>
+         * <th>属性</th>
+         * <th>说明</th>
+         * <th>示例</th>
+         * </tr>
+         * <tr>
+         * <td>配置来源</td>
+         * <td>application.yaml 根级别配置项</td>
+         * <td>add_columns_interval: 60000</td>
+         * </tr>
+         * <tr>
+         * <td>配置路径</td>
+         * <td>config.get("add_columns_interval")</td>
+         * <td>直接从根配置读取</td>
+         * </tr>
+         * <tr>
+         * <td>数据类型</td>
+         * <td>Long 类型，毫秒为单位</td>
+         * <td>60000L (1分钟)</td>
+         * </tr>
+         * <tr>
+         * <td>默认值建议</td>
+         * <td>30秒到5分钟之间</td>
+         * <td>30000-300000ms</td>
+         * </tr>
+         * <tr>
+         * <td>调优考虑</td>
+         * <td>平衡及时性与系统负载</td>
+         * <td>生产建议60秒</td>
+         * </tr>
+         * </table>
+         * 
+         * <p>
+         * <strong>配置示例 (application.yaml)：</strong>
+         * 
+         * <pre>{@code
+         * # 根级别配置 - 新字段同步间隔
+         * add_columns_interval: 60000  # 60秒，平衡及时性和性能
+         * 
+         * # 其他相关配置
+         * clickhouse:
+         *   url: jdbc:clickhouse://localhost:8123/default
+         *   schema_name: default
+         *   table_name: events
+         *   username: default
+         *   password: ""
+         * 
+         * flink:
+         *   parallelism: 4
+         *   checkpoint_interval: 30000
+         * }</pre>
+         * 
+         * <p>
+         * <strong>时间间隔选择指南：</strong>
+         * <ul>
+         * <li><strong>开发环境：</strong>10-30秒，便于快速验证新字段</li>
+         * <li><strong>测试环境：</strong>30-60秒，模拟生产环境</li>
+         * <li><strong>生产环境：</strong>60-300秒，确保系统稳定性</li>
+         * <li><strong>高频场景：</strong>30秒，新字段较多时</li>
+         * <li><strong>低频场景：</strong>300秒，稳定业务场景</li>
+         * </ul>
+         * 
+         * <p>
+         * <strong>算子配置特点：</strong>
+         * <ul>
+         * <li><strong>数据源：</strong>InfiniteSource - 产生无限的触发信号</li>
+         * <li><strong>并行度：</strong>setParallelism(1) - 确保全局唯一的同步过程</li>
+         * <li><strong>键分组：</strong>keyBy(x -> x) - 所有元素使用相同key，路由到同一算子实例</li>
+         * <li><strong>处理函数：</strong>NewKeyTableSyncProcessFunction - 核心同步逻辑</li>
+         * <li><strong>输出处理：</strong>DiscardingSink - 丢弃输出，仅执行副作用操作</li>
+         * </ul>
+         * 
+         * <p>
+         * <strong>后期用途和扩展：</strong>
+         * <ol>
+         * <li><strong>实时监控：</strong>
+         * <ul>
+         * <li>监控新字段发现的频率和数量</li>
+         * <li>跟踪同步任务的执行状态和耗时</li>
+         * <li>检测同步过程中的失败和重试</li>
+         * </ul>
+         * </li>
+         * <li><strong>性能优化：</strong>
+         * <ul>
+         * <li>根据业务负载动态调整 addColumnsInterval</li>
+         * <li>批量处理多个新字段，减少 DDL 操作频率</li>
+         * <li>基于数据库负载自适应调整同步策略</li>
+         * </ul>
+         * </li>
+         * <li><strong>功能扩展：</strong>
+         * <ul>
+         * <li>支持多表同步，扩展到不同的 ClickHouse 表</li>
+         * <li>添加字段类型校验和转换规则</li>
+         * <li>集成告警机制，同步失败时发送通知</li>
+         * </ul>
+         * </li>
+         * <li><strong>运维支持：</strong>
+         * <ul>
+         * <li>提供 REST API 支持手动触发同步</li>
+         * <li>添加同步历史记录和审计日志</li>
+         * <li>支持同步任务的暂停和恢复</li>
+         * </ul>
+         * </li>
+         * </ol>
+         * 
+         * <p>
+         * <strong>数据流架构：</strong>
+         * 
+         * <pre>
+         * InfiniteSource (每秒产生信号)
+         *        ↓
+         * keyBy(固定key) - 确保单实例处理
+         *        ↓
+         * NewKeyTableSyncProcessFunction
+         *   - 注册定时器 (间隔 = addColumnsInterval)
+         *   - 定期扫描 new_key 表
+         *   - 执行 ALTER TABLE 添加新列
+         *   - 更新 new_key.isCreated 状态
+         *        ↓
+         * DiscardingSink (丢弃输出)
+         * </pre>
+         * 
+         * <p>
+         * <strong>与其他组件的集成：</strong>
+         * <ul>
+         * <li><strong>SimpleClickHouseSink：</strong>主数据写入时可能会发现新字段</li>
+         * <li><strong>SegmentObjectMapper：</strong>字段映射时会向 new_key 表插入新发现的字段</li>
+         * <li><strong>DatabaseService：</strong>提供 ClickHouse 连接和类型转换支持</li>
+         * <li><strong>监控系统：</strong>可以监控同步任务的执行状态和性能指标</li>
+         * </ul>
+         * 
+         * <p>
+         * <strong>故障处理和恢复：</strong>
+         * <ul>
+         * <li><strong>网络异常：</strong>依赖 Flink checkpoint 机制自动恢复</li>
+         * <li><strong>数据库异常：</strong>任务会在下个周期自动重试</li>
+         * <li><strong>DDL 冲突：</strong>使用 IF NOT EXISTS 确保操作幂等性</li>
+         * <li><strong>任务重启：</strong>无状态设计，重启后立即恢复正常运行</li>
+         * </ul>
          */
         private void startNewKeySyncTask() {
                 long addColumnsInterval = ((Number) config.get("add_columns_interval")).longValue();

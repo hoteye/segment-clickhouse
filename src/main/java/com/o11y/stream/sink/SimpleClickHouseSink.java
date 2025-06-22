@@ -60,6 +60,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
     static ConcurrentSkipListSet<String> missingFields = new ConcurrentSkipListSet<>();
     private int spanCounter = 0;
     private long lastInsertTime = System.currentTimeMillis();
+    private long lastSyncTime = System.currentTimeMillis();
     private Integer batchSize;
     private Integer batchInterval;
     private final static String DEFAULT_KEY_TYPE = "String";
@@ -109,8 +110,9 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             LOG.debug("Invalid fields: {}", invalidFields);
             LOG.debug("Missing fields: {}", missingFields);
             // 2. 将 missingFields 中的新 key 写入 new_key 表
-            if (!missingFields.isEmpty()) {
+            if (!missingFields.isEmpty() && lastSyncTime + 9_000 <= System.currentTimeMillis()) {
                 LOG.info("Missing fields: {}", missingFields);
+                lastSyncTime = System.currentTimeMillis(); // 更新最后同步时间
                 for (String key : missingFields) {
                     // 根据 insertNewKeyToClickHouse() 返回值判断是否已创建。如果没有已经创建则重新初始化sql语句
                     if (insertNewKeyToClickHouse(key)) {
@@ -119,7 +121,6 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
                         LOG.info("Key '{}' already exists in new_key table, re-initializing database connection.", key);
                     }
                 }
-                LOG.info("Cached new tag keys to new_key table: {}", missingFields);
                 missingFields.clear(); // 避免重复写入
             }
             spanCounter += segmentObject.getSpansCount();
