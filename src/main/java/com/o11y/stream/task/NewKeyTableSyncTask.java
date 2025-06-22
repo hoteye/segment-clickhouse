@@ -1,7 +1,6 @@
 package com.o11y.stream.task;
 
 import com.o11y.infrastructure.database.DatabaseService;
-import com.o11y.shared.util.SegmentObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.sql.Connection;
@@ -34,7 +33,7 @@ import java.util.TimerTask;
  * 此任务负责将这些新字段同步到主表结构中，实现无停机的表结构扩展。
  * 
  * @see DatabaseService 数据库操作服务
- * @see SegmentObjectMapper 数据转换工具
+ * @see DatabaseService 数据库服务和类型转换
  * @author DDD Architecture Team
  * @since 1.0.0
  */
@@ -98,7 +97,7 @@ public class NewKeyTableSyncTask {
                 String keyName = rs.getString("keyName");
                 String keyType = rs.getString("keyType");
                 // 类型映射
-                String chType = SegmentObjectMapper.toClickHouseType(keyType);
+                String chType = DatabaseService.toClickHouseType(keyType);
                 // 2. 执行 ALTER TABLE 新增字段
                 String alterSql = String.format(
                         "ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS %s Nullable(%s)",

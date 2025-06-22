@@ -1,6 +1,7 @@
 package com.o11y;
 
 import com.o11y.shared.util.SegmentObjectMapper;
+import com.o11y.infrastructure.database.DatabaseService;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.mockito.Mockito;
@@ -14,44 +15,44 @@ class SegmentObjectMapperTest {
 
     @Test
     void testIsClickhouseNumericType_null() {
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType(null));
+        assertFalse(DatabaseService.isClickHouseSupportedType(null));
     }
 
     @Test
     void testIsClickhouseNumericType_empty() {
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType(""));
+        assertFalse(DatabaseService.isClickHouseSupportedType(""));
     }
 
     @Test
     void testIsClickhouseNumericType_oneChar_valid() {
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("i")); // "I" not in the list, returns false
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("I")); // "I" not in the list, returns false
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("8")); // "8" not in the list, returns false
+        assertFalse(DatabaseService.isClickHouseSupportedType("i")); // "I" not in the list, returns false
+        assertFalse(DatabaseService.isClickHouseSupportedType("I")); // "I" not in the list, returns false
+        assertFalse(DatabaseService.isClickHouseSupportedType("8")); // "8" not in the list, returns false
     }
 
     @Test
     void testIsClickhouseNumericType_validType() {
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("Int8"));
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("int8"));
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("UInt64"));
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("float64"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("Int8"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("int8"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("UInt64"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("float64"));
     }
 
     @Test
     void testIsClickhouseNumericType_invalidType() {
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("String"));
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("Boolean"));
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("Decimal999"));
+        assertFalse(DatabaseService.isClickHouseSupportedType("String"));
+        assertFalse(DatabaseService.isClickHouseSupportedType("Boolean"));
+        assertFalse(DatabaseService.isClickHouseSupportedType("Decimal999"));
     }
 
     @Test
     void testIsClickhouseSupportedType_dateTypes() {
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("Date"));
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("date"));
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("Date32"));
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("datetime"));
-        assertTrue(SegmentObjectMapper.isClickhouseSupportedType("DateTime64"));
-        assertFalse(SegmentObjectMapper.isClickhouseSupportedType("Date999"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("Date"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("date"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("Date32"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("datetime"));
+        assertTrue(DatabaseService.isClickHouseSupportedType("DateTime64"));
+        assertFalse(DatabaseService.isClickHouseSupportedType("Date999"));
     }
 
     @Test

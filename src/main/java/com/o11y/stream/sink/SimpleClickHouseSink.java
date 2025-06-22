@@ -155,7 +155,7 @@ public class SimpleClickHouseSink extends RichSinkFunction<SegmentObject> {
             String[] parts = keyName.split("_type_");
             if (parts.length == 2) {
                 String type = parts[1];
-                if (SegmentObjectMapper.isClickhouseSupportedType(type)) {
+                if (DatabaseService.isClickHouseSupportedType(type)) {
                     keyType = type;
                 }
             }

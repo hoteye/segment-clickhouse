@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -75,6 +76,19 @@ public class DatabaseService {
 
     /** 表列信息缓存，避免重复查询数据库元数据 */
     private final List<String> columns = new ArrayList<>();
+
+    // ClickHouse 支持的所有数据类型集合
+    private static final List<String> CLICKHOUSE_SUPPORTED_TYPES = Arrays.asList(
+            // Numeric types
+            "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32",
+            "Int64", "UInt64", "Int128", "UInt128", "Int256", "UInt256",
+            "Float32", "Float64",
+            "Decimal32(4)",
+            "Decimal64(8)",
+            "Decimal128(18)",
+            "Decimal256(18)",
+            // Date/Time types
+            "Date", "Date32", "DateTime", "DateTime32", "DateTime64");
 
     /**
      * 使用 ClickHouse 配置映射构造 DatabaseService。
@@ -420,5 +434,61 @@ public class DatabaseService {
      */
     public String getTableName() {
         return tableName;
+    }
+
+    /**
+     * 检查给定类型是否为 ClickHouse 支持的数据类型。
+     * 
+     * <p>
+     * 支持的类型包括所有数值类型（整型、浮点型、小数类型）和日期时间类型。
+     * 不支持的类型将被转换为 String 类型存储。
+     * 
+     * @param type 待检查的数据类型字符串，可以为 null 或空
+     * @return true 如果类型被 ClickHouse 原生支持，false 否则
+     */
+    public static boolean isClickHouseSupportedType(String type) {
+        if (type == null || type.isEmpty()) {
+            return false;
+        }
+        String normalized = type.toLowerCase();
+        return CLICKHOUSE_SUPPORTED_TYPES.stream().anyMatch(t -> t.toLowerCase().equals(normalized));
+    }
+
+    /**
+     * 将类型字符串转换为 ClickHouse 标准类型名称。
+     * 
+     * <p>
+     * 执行类型标准化，确保类型名称符合 ClickHouse 的命名约定。
+     * 对于不支持的类型，默认返回 "String" 类型。
+     * 
+     * <p>
+     * <strong>转换规则：</strong>
+     * <ul>
+     * <li>忽略大小写进行匹配</li>
+     * <li>支持的类型保持原始格式（如 Int32, Float64）</li>
+     * <li>不支持的类型统一转换为 String</li>
+     * </ul>
+     * 
+     * @param type 原始类型字符串，可以为 null 或空
+     * @return ClickHouse 标准类型名称，未知类型返回 "String"
+     */
+    public static String toClickHouseType(String type) {
+        if (type == null || type.isEmpty()) {
+            return "String";
+        }
+        String t = type.toLowerCase();
+        return CLICKHOUSE_SUPPORTED_TYPES.stream()
+                .filter(supportedType -> supportedType.toLowerCase().equals(t))
+                .findFirst()
+                .orElse("String");
+    }
+
+    /**
+     * 获取 ClickHouse 支持的所有数据类型列表。
+     * 
+     * @return 支持的数据类型列表
+     */
+    public static List<String> getClickHouseSupportedTypes() {
+        return new ArrayList<>(CLICKHOUSE_SUPPORTED_TYPES);
     }
 }
