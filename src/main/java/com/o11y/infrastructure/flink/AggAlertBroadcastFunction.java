@@ -8,6 +8,8 @@ import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -131,7 +133,7 @@ public class AggAlertBroadcastFunction
                 value.operatorName));
         sb.append("**窗口信息**\n");
         sb.append(String.format("- 窗口起始时间：%s\n- 窗口长度：%d 秒\n\n",
-                new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date(value.windowStart)),
+                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(value.windowStart)),
                 value.windowSize));
         sb.append("**聚合数据**\n");
         sb.append(String.format("- 平均耗时：%s ms\n- 最大耗时：%s ms\n- 成功率：%s%%\n- 总调用次数：%s\n- 成功次数：%s\n\n",

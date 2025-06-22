@@ -240,8 +240,8 @@ public class FlinkService {
          * @throws Exception 参数加载或 sink 初始化异常
          */
         private void setupOperatorSinks(
-                        BroadcastStream<java.util.Map<String, com.o11y.domain.model.alarm.AlarmRule>> broadcastRuleStream,
-                        MapStateDescriptor<String, java.util.Map<String, com.o11y.domain.model.alarm.AlarmRule>> ruleStateDescriptor)
+                        BroadcastStream<Map<String, AlarmRule>> broadcastRuleStream,
+                        MapStateDescriptor<String, Map<String, AlarmRule>> ruleStateDescriptor)
                         throws Exception {
                 for (FlinkOperator op : OperatorRegistry.getOperators()) {
                         Map<String, List<String>> params = OperatorParamLoader.loadParamList(dbService,
