@@ -6,6 +6,10 @@
 	<groupId>com.o11y</groupId>
 	<artifactId>segment-alarm-clickhouse</artifactId>
 	<version>1.0.5</version>
+	<packaging>pom</packaging>
+	
+	<name>Segment Alarm ClickHouse Parent</name>
+	<description>高并发可观测性系统 - 父项目</description>
 
 	<properties>
 		<java.version>11</java.version> <!-- Use Java 11 -->
@@ -94,42 +98,12 @@
 			<version>2.1.214</version>
 			<scope>test</scope>
 		</dependency>
-
 		<!-- Awaitility for async test waiting -->
 		<dependency>
 			<groupId>org.awaitility</groupId>
 			<artifactId>awaitility</artifactId>
 			<version>4.2.0</version>
 			<scope>test</scope>
-		</dependency>
-
-		<!-- Flink dependencies for Flink task support -->
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-java</artifactId>
-			<version>${flink.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-streaming-java</artifactId>
-			<version>${flink.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-kafka</artifactId>
-			<version>${flink.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-clients</artifactId>
-			<version>${flink.version}</version>
-		</dependency>
-
-		<!-- chill-protobuf for Flink Protobuf Kryo序列化 -->
-		<dependency>
-			<groupId>com.twitter</groupId>
-			<artifactId>chill-protobuf</artifactId>
-			<version>0.10.0</version>
 		</dependency>
 
 		<!-- Jackson for JSON serialization -->
@@ -151,126 +125,20 @@
 					<source>${java.version}</source>
 					<target>${java.version}</target>
 				</configuration>
-			</plugin>			<!-- Maven Shade Plugin -->
+			</plugin>			<!-- Maven Surefire Plugin -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.4.1</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-						<configuration>
-							<createDependencyReducedPom>true</createDependencyReducedPom>
-							<shadedArtifactAttached>true</shadedArtifactAttached>
-							<shadedClassifierName>shaded</shadedClassifierName>
-							<filters>
-								<filter>
-									<artifact>*:*</artifact>
-									<excludes>
-										<exclude>META-INF/*.SF</exclude>
-										<exclude>META-INF/*.DSA</exclude>
-										<exclude>META-INF/*.RSA</exclude>
-									</excludes>
-								</filter>
-							</filters>
-							<transformers>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>com.o11y.application.launcher.FlinkServiceLauncher</mainClass>
-								</transformer>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-									<resource>META-INF/spring.handlers</resource>
-								</transformer>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-									<resource>META-INF/spring.schemas</resource>
-								</transformer>
-							</transformers>
-						</configuration>
-					</execution>
-				</executions>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.2.5</version>
+				<configuration>
+					<argLine>--add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED</argLine>
+				</configuration>
 			</plugin>
-			
-            <!-- Docker Maven Plugin -->
-            <plugin>
-                <groupId>com.spotify</groupId>
-                <artifactId>dockerfile-maven-plugin</artifactId>
-                <version>1.4.13</version>
-                <executions>
-                    <execution>
-                        <id>build-image</id>
-                        <phase>install</phase> <!-- 修改为 install 阶段，避免 package 时执行 -->
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <repository>${project.artifactId}</repository>
-                    <tag>${project.version}</tag>
-                    <dockerfile>${project.basedir}/Dockerfile</dockerfile> <!-- Specify Dockerfile path -->
-                    <contextDirectory>${project.basedir}</contextDirectory> <!-- Specify context directory -->
-                    <buildArgs>
-                        <JAR_FILE>${project.build.finalName}.jar</JAR_FILE>
-                    </buildArgs>
-                </configuration>
-            </plugin>
-
-            <!-- Exec Maven Plugin -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <!-- Stop the original container -->
-                    <execution>
-                        <id>stop-docker-container</id>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>docker</executable>
-                            <arguments>
-                                <argument>rm</argument>
-                                <argument>-f</argument>
-                                <argument>${project.artifactId}</argument> <!-- Container name -->
-                            </arguments>
-                        </configuration>
-                    </execution>
-
-                    <!-- Start new container -->
-                    <execution>
-                        <id>start-docker-container</id>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>docker</executable>
-                            <arguments>
-                                <argument>run</argument>
-                                <argument>--name</argument>
-                                <argument>${project.artifactId}</argument>
-                                <argument>-d</argument>
-                                <argument>${project.artifactId}:${project.version}</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Maven Surefire Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-                <configuration>
-                    <argLine>--add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED</argLine>
-                </configuration>
-            </plugin>
 		</plugins>
 	</build>
+	<!-- 子模块配置 -->
+	<modules>
+		<module>ai-analysis-module</module>
+		<module>flink-data-transformer-module</module>
+	</modules>
 </project>

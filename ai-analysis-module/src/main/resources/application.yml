@@ -1,0 +1,115 @@
+# AI Analysis Module 配置文件
+
+server:
+  port: 8082
+  servlet:
+    context-path: /ai-analysis
+
+spring:
+  application:
+    name: ai-analysis-service
+    # 数据源配置 - H2 内存数据库（用于测试）
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+    # JPA/Hibernate 配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+# AI 分析配置
+ai:
+  analysis:
+    enabled: true
+    window:
+      hours: 1  # 默认分析时间窗口（小时）
+    schedule:
+      enabled: true
+      cron: "0 0 */1 * * ?"  # 每小时执行一次
+    thresholds:
+      response-time-ms: 1000      # 响应时间阈值（毫秒）
+      error-rate-percent: 5.0     # 错误率阈值（百分比）
+      cpu-usage-percent: 80.0     # CPU使用率阈值（百分比）
+      memory-usage-percent: 85.0  # 内存使用率阈值（百分比）
+      
+  # LLM 配置
+  llm:
+    provider: openai  # openai, azure, ollama, local
+    enabled: true
+    fallback-enabled: true  # 启用降级分析
+    
+    # OpenAI 配置
+    openai:
+      api-key: ${AI_OPENAI_API_KEY:}
+      base-url: ${AI_OPENAI_BASE_URL:https://api.openai.com/v1}
+      model: ${AI_OPENAI_MODEL:gpt-3.5-turbo}
+      timeout: 30000
+      max-tokens: 2000
+      temperature: 0.7
+    
+    # Azure OpenAI 配置
+    azure:
+      api-key: ${AI_AZURE_API_KEY:}
+      endpoint: ${AI_AZURE_ENDPOINT:}
+      deployment-name: ${AI_AZURE_DEPLOYMENT:}
+      api-version: ${AI_AZURE_API_VERSION:2023-05-15}
+    
+    # 本地 LLM 配置 (Ollama)
+    local:
+      url: ${AI_LOCAL_LLM_URL:http://localhost:11434}
+      model: ${AI_LOCAL_LLM_MODEL:llama2}
+      timeout: 60000
+
+# 报告配置
+report:
+  storage:
+    enabled: true
+    path: ${AI_REPORT_PATH:./reports}
+    retention-days: 30
+  email:
+    enabled: false
+    smtp:
+      host: ${SMTP_HOST:}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME:}
+      password: ${SMTP_PASSWORD:}
+    recipients:
+      - admin@example.com
+
+# 日志配置
+logging:
+  level:
+    com.o11y.ai: INFO
+    org.springframework: WARN
+    com.clickhouse: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/ai-analysis.log
+    max-size: 100MB
+    max-history: 30
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true

@@ -1,0 +1,466 @@
+package com.o11y.ai.service;
+
+import com.o11y.ai.config.AiAnalysisProperties;
+import com.o11y.ai.model.PerformanceMetrics;
+import com.o11y.ai.model.PerformanceAnomaly;
+import com.o11y.ai.model.PerformanceReport;
+import com.o11y.ai.model.OptimizationSuggestion;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 智能性能分析服务
+ * 
+ * 主要功能：
+ * 1. 定时收集性能数据
+ * 2. 异常检测和分析
+ * 3. 生成智能分析报告
+ * 4. 提供 REST API 接口
+ */
+@Service
+public class PerformanceAnalysisService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PerformanceAnalysisService.class);
+
+    @Autowired
+    private AiAnalysisProperties properties;
+
+    @Autowired
+    private DataSource dataSource;
+
+    @Autowired
+    private LLMAnalysisService llmService;
+
+    @Autowired
+    private ReportStorageService reportService;
+
+    /**
+     * 定时执行性能分析
+     */
+    @Scheduled(cron = "#{@aiAnalysisProperties.analysis.schedule.cron}")
+    public void scheduledAnalysis() {
+        if (!properties.getAnalysis().isEnabled() || !properties.getAnalysis().getSchedule().isEnabled()) {
+            LOG.debug("定时分析已禁用");
+            return;
+        }
+
+        try {
+            LOG.info("开始执行定时性能分析");
+            PerformanceReport report = generateAnalysisReport(properties.getAnalysis().getWindow().getHours());
+
+            if (report != null) {
+                reportService.saveReport(report);
+                LOG.info("定时性能分析完成，报告ID: {}", report.getReportId());
+            }
+
+        } catch (Exception e) {
+            LOG.error("定时性能分析失败", e);
+        }
+    }
+
+    /**
+     * 生成性能分析报告
+     */
+    public PerformanceReport generateAnalysisReport(int timeRangeHours) {
+        try {
+            LOG.info("开始生成性能分析报告，时间范围: {}小时", timeRangeHours);
+
+            // 1. 收集性能数据
+            PerformanceMetrics metrics = collectPerformanceMetrics(timeRangeHours);
+            if (metrics == null) {
+                LOG.warn("未收集到性能数据");
+                return null;
+            }
+
+            // 2. 异常检测
+            List<PerformanceAnomaly> anomalies = detectAnomalies(metrics);
+
+            // 3. 生成报告
+            PerformanceReport report = PerformanceReport.builder()
+                    .reportId(UUID.randomUUID().toString()).generatedAt(LocalDateTime.now())
+                    .timeRange(timeRangeHours)
+                    .build();
+
+            // 4. LLM 智能分析
+            if (properties.getLlm().isEnabled()) {
+                try {
+                    String intelligentAnalysis = llmService.analyzePerformanceData(metrics, anomalies);
+                    report.setIntelligentAnalysis(intelligentAnalysis);
+
+                    List<OptimizationSuggestion> suggestions = llmService.generateOptimizationSuggestions(metrics,
+                            anomalies);
+                    report.setOptimizationSuggestions(suggestions.stream()
+                            .map(s -> s.getTitle() + ": " + s.getDescription())
+                            .collect(java.util.stream.Collectors.toList()));
+
+                } catch (Exception e) {
+                    LOG.error("LLM分析失败，使用基础分析", e);
+                    report.setIntelligentAnalysis(generateBasicAnalysis(metrics, anomalies));
+                    report.setOptimizationSuggestions(generateBasicSuggestions(metrics, anomalies));
+                }
+            } else {
+                report.setIntelligentAnalysis(generateBasicAnalysis(metrics, anomalies));
+                report.setOptimizationSuggestions(generateBasicSuggestions(metrics, anomalies));
+            }
+
+            // 5. 设置其他报告内容
+            report.setMetrics(convertToReportMetrics(metrics));
+            report.setAnomalies(anomalies);
+            report.setSummary(generateSummary(metrics, anomalies));
+
+            LOG.info("性能分析报告生成完成，报告ID: {}", report.getReportId());
+            return report;
+
+        } catch (Exception e) {
+            LOG.error("生成性能分析报告失败", e);
+            throw new RuntimeException("性能分析报告生成失败", e);
+        }
+    }
+
+    /**
+     * 收集性能指标数据
+     */
+    private PerformanceMetrics collectPerformanceMetrics(int timeRangeHours) throws Exception {
+        PerformanceMetrics metrics = new PerformanceMetrics();
+        LocalDateTime endTime = LocalDateTime.now();
+        LocalDateTime startTime = endTime.minusHours(timeRangeHours);
+
+        metrics.setStartTime(startTime);
+        metrics.setEndTime(endTime);
+        metrics.setTimeRangeHours(timeRangeHours);
+
+        try (Connection conn = dataSource.getConnection()) {
+            // 收集基础应用指标
+            collectApplicationMetrics(conn, metrics, startTime, endTime);
+
+            // 收集 JVM 指标（如果有的话）
+            collectJvmMetrics(conn, metrics, startTime, endTime);
+
+            // 收集数据库指标
+            collectDatabaseMetrics(conn, metrics, startTime, endTime);
+
+            // 收集系统指标
+            collectSystemMetrics(conn, metrics, startTime, endTime);
+        }
+
+        return metrics;
+    }
+
+    /**
+     * 收集应用性能指标
+     */
+    private void collectApplicationMetrics(Connection conn, PerformanceMetrics metrics,
+            LocalDateTime startTime, LocalDateTime endTime) throws Exception {
+        String sql = "SELECT " +
+                "COUNT(*) as total_requests, " +
+                "AVG(end_time - start_time) as avg_response_time, " +
+                "MAX(end_time - start_time) as max_response_time, " +
+                "SUM(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) as failed_requests, " +
+                "COUNT(*) / (toUnixTimestamp(?) - toUnixTimestamp(?)) as avg_throughput " +
+                "FROM events " +
+                "WHERE start_time >= ? AND start_time <= ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, endTime);
+            stmt.setObject(2, startTime);
+            stmt.setObject(3, startTime);
+            stmt.setObject(4, endTime);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    metrics.setTotalRequests(rs.getLong("total_requests"));
+                    metrics.setAvgResponseTime(rs.getDouble("avg_response_time"));
+                    metrics.setMaxResponseTime(rs.getDouble("max_response_time"));
+                    metrics.setFailedRequests(rs.getLong("failed_requests"));
+                    metrics.setAvgThroughput(rs.getDouble("avg_throughput"));
+
+                    if (metrics.getTotalRequests() > 0) {
+                        metrics.setErrorRate(metrics.getFailedRequests() / (double) metrics.getTotalRequests());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 收集 JVM 指标（从 events 表的 tag 字段或其他表）
+     */
+    private void collectJvmMetrics(Connection conn, PerformanceMetrics metrics,
+            LocalDateTime startTime, LocalDateTime endTime) throws Exception {
+        // 这里可以从 events 表或专门的 JVM metrics 表收集数据
+        // 由于当前表结构限制，这里设置一些默认值
+        metrics.setAvgHeapUsed(512 * 1024 * 1024); // 512MB
+        metrics.setMaxHeapUsed(1024 * 1024 * 1024); // 1GB
+        metrics.setAvgThreadCount(100);
+        metrics.setAvgCpuUsage(0.5); // 50%
+        metrics.setTotalGcTime(1000); // 1s
+    }
+
+    /**
+     * 收集数据库指标
+     */
+    private void collectDatabaseMetrics(Connection conn, PerformanceMetrics metrics,
+            LocalDateTime startTime, LocalDateTime endTime) throws Exception {
+        String sql = "SELECT " +
+                "COUNT(*) as total_queries, " +
+                "AVG(end_time - start_time) as avg_query_duration, " +
+                "SUM(CASE WHEN end_time - start_time > 1000 THEN 1 ELSE 0 END) as slow_queries " +
+                "FROM events " +
+                "WHERE start_time >= ? AND start_time <= ? " +
+                "AND span_layer = 'Database'";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, startTime);
+            stmt.setObject(2, endTime);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    metrics.setTotalQueries(rs.getLong("total_queries"));
+                    metrics.setAvgQueryDuration(rs.getDouble("avg_query_duration"));
+                    metrics.setSlowQueries(rs.getLong("slow_queries"));
+                }
+            }
+        }
+
+        // 设置默认连接数
+        metrics.setAvgActiveConnections(5);
+    }
+
+    /**
+     * 收集系统指标
+     */
+    private void collectSystemMetrics(Connection conn, PerformanceMetrics metrics,
+            LocalDateTime startTime, LocalDateTime endTime) throws Exception {
+        // 设置一些默认的系统指标
+        metrics.setAvgSystemCpuUsage(0.6); // 60%
+        metrics.setAvgMemoryUsage(0.7); // 70%
+        metrics.setAvgDiskUsage(0.8); // 80%
+    }
+
+    /**
+     * 异常检测
+     */
+    private List<PerformanceAnomaly> detectAnomalies(PerformanceMetrics metrics) {
+        List<PerformanceAnomaly> anomalies = new ArrayList<>();
+        AiAnalysisProperties.Analysis.Thresholds thresholds = properties.getAnalysis().getThresholds();
+
+        // 响应时间异常检测
+        if (metrics.getAvgResponseTime() > thresholds.getResponseTimeMs()) {
+            PerformanceAnomaly anomaly = new PerformanceAnomaly();
+            anomaly.setAnomalyId(UUID.randomUUID().toString());
+            anomaly.setDetectedAt(LocalDateTime.now());
+            anomaly.setType(PerformanceAnomaly.AnomalyType.APPLICATION_RESPONSE_TIME_HIGH);
+            anomaly.setSeverity(PerformanceAnomaly.Severity.HIGH);
+            anomaly.setName("响应时间过高");
+            anomaly.setDescription("平均响应时间超过阈值");
+            anomaly.setActualValue(metrics.getAvgResponseTime());
+            anomaly.setExpectedValue(thresholds.getResponseTimeMs());
+            anomaly.setDeviationPercentage((metrics.getAvgResponseTime() - thresholds.getResponseTimeMs())
+                    / thresholds.getResponseTimeMs() * 100);
+            anomaly.setAffectedComponent("应用服务");
+            anomalies.add(anomaly);
+        }
+
+        // 错误率异常检测
+        if (metrics.getErrorRate() * 100 > thresholds.getErrorRatePercent()) {
+            PerformanceAnomaly anomaly = new PerformanceAnomaly();
+            anomaly.setAnomalyId(UUID.randomUUID().toString());
+            anomaly.setDetectedAt(LocalDateTime.now());
+            anomaly.setType(PerformanceAnomaly.AnomalyType.APPLICATION_ERROR_RATE_HIGH);
+            anomaly.setSeverity(PerformanceAnomaly.Severity.CRITICAL);
+            anomaly.setName("错误率过高");
+            anomaly.setDescription("应用错误率超过阈值");
+            anomaly.setActualValue(metrics.getErrorRate() * 100);
+            anomaly.setExpectedValue(thresholds.getErrorRatePercent());
+            anomaly.setDeviationPercentage((metrics.getErrorRate() * 100 - thresholds.getErrorRatePercent())
+                    / thresholds.getErrorRatePercent() * 100);
+            anomaly.setAffectedComponent("应用服务");
+            anomalies.add(anomaly);
+        }
+
+        // 可以添加更多异常检测逻辑...
+
+        return anomalies;
+    }
+
+    /**
+     * 生成基础分析（降级方案）
+     */
+    private String generateBasicAnalysis(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies) {
+        StringBuilder analysis = new StringBuilder();
+        analysis.append("## 系统性能分析报告\n\n");
+
+        analysis.append("### 基础性能指标\n");
+        analysis.append(String.format("- 总请求数: %d\n", metrics.getTotalRequests()));
+        analysis.append(String.format("- 平均响应时间: %.2f ms\n", metrics.getAvgResponseTime()));
+        analysis.append(String.format("- 错误率: %.2f%%\n", metrics.getErrorRate() * 100));
+        analysis.append(String.format("- 平均吞吐量: %.2f req/s\n", metrics.getAvgThroughput()));
+
+        if (!anomalies.isEmpty()) {
+            analysis.append("\n### 检测到的异常\n");
+            for (PerformanceAnomaly anomaly : anomalies) {
+                analysis.append(String.format("- %s: %s\n", anomaly.getName(), anomaly.getDescription()));
+            }
+        }
+
+        return analysis.toString();
+    }
+
+    /**
+     * 生成基础建议（降级方案）
+     */
+    private List<String> generateBasicSuggestions(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies) {
+        List<String> suggestions = new ArrayList<>();
+
+        if (metrics.getErrorRate() > 0.05) {
+            suggestions.add("建议检查应用日志，分析错误原因");
+        }
+
+        if (metrics.getAvgResponseTime() > 1000) {
+            suggestions.add("建议优化接口响应时间，检查数据库查询性能");
+        }
+
+        if (metrics.getSlowQueries() > 0) {
+            suggestions.add("建议优化数据库慢查询，添加适当索引");
+        }
+
+        return suggestions;
+    }
+
+    /**
+     * 生成优化建议
+     */
+    public List<OptimizationSuggestion> generateOptimizationSuggestions(int timeRangeHours) throws Exception {
+        LOG.info("开始生成优化建议，时间范围: {}小时", timeRangeHours);
+        try {
+            // 1. 收集性能数据
+            PerformanceMetrics metrics = collectPerformanceMetrics(timeRangeHours);
+            List<PerformanceAnomaly> anomalies = detectAnomalies(metrics);
+
+            // 2. 使用 LLM 生成优化建议
+            if (properties.getLlm().isEnabled()) {
+                try {
+                    return llmService.generateOptimizationSuggestions(metrics, anomalies);
+                } catch (Exception e) {
+                    LOG.error("LLM生成优化建议失败，使用基础建议", e);
+                    return generateBasicOptimizationSuggestions(metrics, anomalies);
+                }
+            } else {
+                return generateBasicOptimizationSuggestions(metrics, anomalies);
+            }
+
+        } catch (Exception e) {
+            LOG.error("生成优化建议失败", e);
+            throw new RuntimeException("优化建议生成失败", e);
+        }
+    }
+
+    /**
+     * 生成基础优化建议
+     */
+    private List<OptimizationSuggestion> generateBasicOptimizationSuggestions(PerformanceMetrics metrics,
+            List<PerformanceAnomaly> anomalies) {
+        List<OptimizationSuggestion> suggestions = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        // 基于指标生成基础建议
+        if (metrics.getErrorRate() > 0.05) {
+            OptimizationSuggestion suggestion = new OptimizationSuggestion();
+            suggestion.setId(UUID.randomUUID().toString());
+            suggestion.setCategory("应用");
+            suggestion.setTitle("降低应用错误率");
+            suggestion.setDescription("当前错误率偏高，建议检查异常处理逻辑和日志记录");
+            suggestion.setPriority("高");
+            suggestion.setImpactLevel("高");
+            suggestion.setImplementationComplexity("中等");
+            suggestion.setActionPlan("1. 分析错误日志 2. 优化异常处理 3. 加强监控告警");
+            suggestion.setExpectedBenefit("提升应用稳定性，改善用户体验");
+            suggestion.setCreatedTime(now);
+            suggestion.setSource("basic-analyzer");
+            suggestion.setConfidenceScore(0.7);
+            suggestions.add(suggestion);
+        }
+
+        if (metrics.getAvgResponseTime() > 1000) {
+            OptimizationSuggestion suggestion = new OptimizationSuggestion();
+            suggestion.setId(UUID.randomUUID().toString());
+            suggestion.setCategory("性能");
+            suggestion.setTitle("优化响应时间");
+            suggestion.setDescription("响应时间偏长，建议优化代码性能和数据库查询");
+            suggestion.setPriority("高");
+            suggestion.setImpactLevel("高");
+            suggestion.setImplementationComplexity("中等");
+            suggestion.setActionPlan("1. 分析慢接口 2. 优化数据库查询 3. 添加缓存");
+            suggestion.setExpectedBenefit("提升响应速度，改善用户体验");
+            suggestion.setCreatedTime(now);
+            suggestion.setSource("basic-analyzer");
+            suggestion.setConfidenceScore(0.7);
+            suggestions.add(suggestion);
+        }
+
+        if (metrics.getAvgHeapUsed() / 1024 / 1024 > 1024) {
+            OptimizationSuggestion suggestion = new OptimizationSuggestion();
+            suggestion.setId(UUID.randomUUID().toString());
+            suggestion.setCategory("JVM");
+            suggestion.setTitle("优化内存使用");
+            suggestion.setDescription("堆内存使用较高，建议进行内存调优");
+            suggestion.setPriority("中");
+            suggestion.setImpactLevel("中");
+            suggestion.setImplementationComplexity("中等");
+            suggestion.setActionPlan("1. 分析堆转储 2. 调整JVM参数 3. 优化对象生命周期");
+            suggestion.setExpectedBenefit("降低内存使用，提升系统稳定性");
+            suggestion.setCreatedTime(now);
+            suggestion.setSource("basic-analyzer");
+            suggestion.setConfidenceScore(0.6);
+            suggestions.add(suggestion);
+        }
+
+        return suggestions;
+    }
+
+    /**
+     * 转换为报告指标
+     */
+    private PerformanceReport.ReportMetrics convertToReportMetrics(PerformanceMetrics metrics) {
+        PerformanceReport.ReportMetrics reportMetrics = new PerformanceReport.ReportMetrics();
+        reportMetrics.setAvgResponseTime(metrics.getAvgResponseTime());
+        reportMetrics.setAvgThroughput(metrics.getAvgThroughput());
+        reportMetrics.setErrorRate(metrics.getErrorRate());
+        reportMetrics.setAvgCpuUsage(metrics.getAvgCpuUsage());
+        reportMetrics.setAvgMemoryUsage(metrics.getAvgMemoryUsage());
+        reportMetrics.setTotalRequests(metrics.getTotalRequests());
+        reportMetrics.setTotalErrors(metrics.getFailedRequests());
+        return reportMetrics;
+    }
+
+    /**
+     * 生成报告摘要
+     */
+    private String generateSummary(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies) {
+        StringBuilder summary = new StringBuilder();
+
+        summary.append("系统在过去").append(metrics.getTimeRangeHours()).append("小时内");
+        summary.append("处理了").append(metrics.getTotalRequests()).append("个请求，");
+        summary.append("平均响应时间").append(String.format("%.2f", metrics.getAvgResponseTime())).append("ms，");
+        summary.append("错误率").append(String.format("%.2f%%", metrics.getErrorRate() * 100)).append("。");
+
+        if (!anomalies.isEmpty()) {
+            summary.append("检测到").append(anomalies.size()).append("个性能异常，建议关注。");
+        } else {
+            summary.append("未检测到明显的性能异常。");
+        }
+
+        return summary.toString();
+    }
+}

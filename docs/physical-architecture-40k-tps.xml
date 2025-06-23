@@ -1,0 +1,218 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.1.1 Chrome/132.0.6834.210 Electron/34.3.3 Safari/537.36" version="26.1.1">
+  <diagram name="40K TPS 可观测性系统物理架构图" id="o11y-physical-arch">
+    <mxGraphModel dx="2120" dy="1069" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="2160" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="40,000 TPS 可观测性系统物理架构&#xa;每秒4万笔交易 × 4KB/笔 = 160MB/s 数据流" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e90ff;strokeColor=#0066cc;fontFamily=Microsoft YaHei;fontSize=18;fontStyle=1;fontColor=white" parent="1" vertex="1">
+          <mxGeometry x="200" y="20" width="1200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="network-layer" value="网络架构层" style="swimlane;fillColor=#f0f8ff;strokeColor=#1e90ff;fontFamily=Microsoft YaHei;fontSize=16;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="50" y="100" width="1400" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="core-switch" value="核心交换机&#xa;Cisco Nexus 9000&#xa;100GbE × 48端口&#xa;非阻塞架构&#xa;480Tbps 交换容量" style="shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#4CAF50;strokeColor=#2E7D32;fontFamily=Microsoft YaHei;fontSize=11" parent="network-layer" vertex="1">
+          <mxGeometry x="650" y="30" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="access-switch-1" value="接入交换机-1&#xa;40GbE × 48端口&#xa;LACP链路聚合" style="shape=mxgraph.cisco.switches.layer_2_remote_switch;fillColor=#81C784;strokeColor=#388E3C;fontFamily=Microsoft YaHei;fontSize=10" parent="network-layer" vertex="1">
+          <mxGeometry x="200" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="access-switch-2" value="接入交换机-2&#xa;40GbE × 48端口&#xa;LACP链路聚合" style="shape=mxgraph.cisco.switches.layer_2_remote_switch;fillColor=#81C784;strokeColor=#388E3C;fontFamily=Microsoft YaHei;fontSize=10" parent="network-layer" vertex="1">
+          <mxGeometry x="350" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="access-switch-3" value="接入交换机-3&#xa;40GbE × 48端口&#xa;LACP链路聚合" style="shape=mxgraph.cisco.switches.layer_2_remote_switch;fillColor=#81C784;strokeColor=#388E3C;fontFamily=Microsoft YaHei;fontSize=10" parent="network-layer" vertex="1">
+          <mxGeometry x="900" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="access-switch-4" value="接入交换机-4&#xa;40GbE × 48端口&#xa;LACP链路聚合" style="shape=mxgraph.cisco.switches.layer_2_remote_switch;fillColor=#81C784;strokeColor=#388E3C;fontFamily=Microsoft YaHei;fontSize=10" parent="network-layer" vertex="1">
+          <mxGeometry x="1050" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="load-balancer" value="负载均衡器&#xa;SSL卸载&#xa;40Gbps吞吐" style="shape=mxgraph.cisco.servers.content_switch_module;fillColor=#FF9800;strokeColor=#E65100;fontFamily=Microsoft YaHei;fontSize=10" parent="network-layer" vertex="1">
+          <mxGeometry x="30" y="30" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="net-conn-1" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;html=1;strokeColor=#2E7D32;strokeWidth=4;entryX=0.16;entryY=0.23;entryDx=0;entryDy=0;entryPerimeter=0;" parent="network-layer" source="access-switch-1" target="core-switch" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="260" y="30" />
+              <mxPoint x="682" y="30" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="net-conn-2" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;html=1;strokeColor=#2E7D32;strokeWidth=4" parent="network-layer" source="access-switch-2" target="core-switch" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="410" y="130" />
+              <mxPoint x="750" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="net-conn-3" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;html=1;strokeColor=#2E7D32;strokeWidth=4" parent="network-layer" source="access-switch-3" target="core-switch" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="net-conn-4" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;html=1;strokeColor=#2E7D32;strokeWidth=4" parent="network-layer" source="access-switch-4" target="core-switch" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1110" y="120" />
+              <mxPoint x="750" y="120" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="net-conn-lb" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;html=1;strokeColor=#E65100;strokeWidth=3" parent="network-layer" source="load-balancer" target="access-switch-1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="app-cluster" value="业务应用集群 (数据生产)" style="swimlane;fillColor=#e8f5e8;strokeColor=#4CAF50;fontFamily=Microsoft YaHei;fontSize=16;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="50" y="280" width="370" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="app-rack-1" value="应用机架-1&#xa;(服务器)" style="shape=mxgraph.cisco.storage.rack;fillColor=#C8E6C9;strokeColor=#4CAF50;fontFamily=Microsoft YaHei;fontSize=12" parent="app-cluster" vertex="1">
+          <mxGeometry x="30" y="40" width="90" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="app-rack-2" value="应用机架-2&#xa;(服务器)" style="shape=mxgraph.cisco.storage.rack;fillColor=#C8E6C9;strokeColor=#4CAF50;fontFamily=Microsoft YaHei;fontSize=12" parent="app-cluster" vertex="1">
+          <mxGeometry x="140" y="40" width="90" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="app-rack-3" value="应用机架-3&#xa;(服务器)" style="shape=mxgraph.cisco.storage.rack;fillColor=#C8E6C9;strokeColor=#4CAF50;fontFamily=Microsoft YaHei;fontSize=12" parent="app-cluster" vertex="1">
+          <mxGeometry x="250" y="40" width="90" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="AZRD1zahGm6LNKFl1ct0-4" value="应用机架-4&#xa;(服务器)" style="shape=mxgraph.cisco.storage.rack;fillColor=#C8E6C9;strokeColor=#4CAF50;fontFamily=Microsoft YaHei;fontSize=12" vertex="1" parent="app-cluster">
+          <mxGeometry x="30" y="170" width="90" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="AZRD1zahGm6LNKFl1ct0-5" value="应用机架-5&#xa;(服务器)" style="shape=mxgraph.cisco.storage.rack;fillColor=#C8E6C9;strokeColor=#4CAF50;fontFamily=Microsoft YaHei;fontSize=12" vertex="1" parent="app-cluster">
+          <mxGeometry x="140" y="170" width="90" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="AZRD1zahGm6LNKFl1ct0-6" value="应用机架-6&#xa;(服务器)" style="shape=mxgraph.cisco.storage.rack;fillColor=#C8E6C9;strokeColor=#4CAF50;fontFamily=Microsoft YaHei;fontSize=12" vertex="1" parent="app-cluster">
+          <mxGeometry x="250" y="170" width="90" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-cluster" value="Kafka 消息中间件集群" style="swimlane;fillColor=#fff3e0;strokeColor=#FF9800;fontFamily=Microsoft YaHei;fontSize=16;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="470" y="280" width="480" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-broker-1" value="Kafka Broker-1&#xa;CPU: 24C48T&#xa;内存: 128GB&#xa;存储: 8TB NVMe SSD&#xa;网络: 25GbE双口&#xa;分区: 32个" style="shape=mxgraph.cisco.servers.unix_server;fillColor=#FFE0B2;strokeColor=#FF9800;fontFamily=Microsoft YaHei;fontSize=10" parent="kafka-cluster" vertex="1">
+          <mxGeometry x="30" y="40" width="100" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-broker-2" value="Kafka Broker-2&#xa;CPU: 24C48T&#xa;内存: 128GB&#xa;存储: 8TB NVMe SSD&#xa;网络: 25GbE双口&#xa;分区: 32个" style="shape=mxgraph.cisco.servers.unix_server;fillColor=#FFE0B2;strokeColor=#FF9800;fontFamily=Microsoft YaHei;fontSize=10" parent="kafka-cluster" vertex="1">
+          <mxGeometry x="150" y="40" width="100" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-broker-3" value="Kafka Broker-3&#xa;CPU: 24C48T&#xa;内存: 128GB&#xa;存储: 8TB NVMe SSD&#xa;网络: 25GbE双口&#xa;分区: 32个" style="shape=mxgraph.cisco.servers.unix_server;fillColor=#FFE0B2;strokeColor=#FF9800;fontFamily=Microsoft YaHei;fontSize=10" parent="kafka-cluster" vertex="1">
+          <mxGeometry x="270" y="40" width="100" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="zookeeper-cluster" value="ZooKeeper集群&#xa;3节点 × 8C16GB&#xa;Consensus协调" style="shape=mxgraph.cisco.servers.generic_server;fillColor=#FFF3E0;strokeColor=#FF9800;fontFamily=Microsoft YaHei;fontSize=10" parent="kafka-cluster" vertex="1">
+          <mxGeometry x="390" y="40" width="70" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-performance" value="Kafka集群性能指标:&#xa;• 总吞吐: 200MB/s (3副本 = 600MB/s写入)&#xa;• 分区总数: 96个 (支持96并发消费者)&#xa;• 延迟: P99 &lt; 10ms&#xa;• 可用性: 99.99% (单节点故障容忍)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FF9800;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="kafka-cluster" vertex="1">
+          <mxGeometry x="30" y="140" width="430" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="flink-cluster" value="Flink 实时计算集群" style="swimlane;fillColor=#e3f2fd;strokeColor=#2196F3;fontFamily=Microsoft YaHei;fontSize=16;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="1000" y="280" width="450" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="flink-jobmanager-1" value="JobManager-1 (Active)&#xa;CPU: 16C32T&#xa;内存: 64GB&#xa;存储: 1TB SSD&#xa;网络: 25GbE双口&#xa;HA主节点" style="shape=mxgraph.cisco.servers.unix_server;fillColor=#BBDEFB;strokeColor=#2196F3;fontFamily=Microsoft YaHei;fontSize=10" parent="flink-cluster" vertex="1">
+          <mxGeometry x="30" y="40" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="flink-jobmanager-2" value="JobManager-2 (Standby)&#xa;CPU: 16C32T&#xa;内存: 64GB&#xa;存储: 1TB SSD&#xa;网络: 25GbE双口&#xa;HA备节点" style="shape=mxgraph.cisco.servers.unix_server;fillColor=#E1F5FE;strokeColor=#2196F3;fontFamily=Microsoft YaHei;fontSize=10" parent="flink-cluster" vertex="1">
+          <mxGeometry x="160" y="40" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="flink-taskmanager-rack" value="TaskManager机架&#xa;(8台高性能服务器)" style="shape=mxgraph.cisco.storage.rack;fillColor=#BBDEFB;strokeColor=#2196F3;fontFamily=Microsoft YaHei;fontSize=12" parent="flink-cluster" vertex="1">
+          <mxGeometry x="290" y="40" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="taskmanager-spec" value="单台TaskManager配置:&#xa;• CPU: 32C64T (Intel Xeon Platinum 8358)&#xa;• 内存: 256GB DDR4-3200&#xa;• 存储: 4TB NVMe SSD&#xa;• 网络: 25GbE双口LACP&#xa;• 并行度: 64 slots/台 (512 slots总计)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#2196F3;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="flink-cluster" vertex="1">
+          <mxGeometry x="30" y="130" width="370" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="flink-performance" value="Flink集群处理能力:&#xa;• 处理吞吐: 50,000 events/s (125%余量)&#xa;• 延迟: 端到端 &lt; 100ms (P95)&#xa;• Checkpoint: 每30秒, RocksDB状态后端&#xa;• 容错: exactly-once语义保证" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#2196F3;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="flink-cluster" vertex="1">
+          <mxGeometry x="30" y="230" width="370" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="clickhouse-cluster" value="ClickHouse 分析数据库集群" style="swimlane;fillColor=#f3e5f5;strokeColor=#9C27B0;fontFamily=Microsoft YaHei;fontSize=16;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="50" y="690" width="610" height="450" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-shard-1" value="Shard-1 (主)&#xa;CPU: 48C96T&#xa;内存: 512GB&#xa;存储: 16TB NVMe&#xa;网络: 25GbE双口&#xa;副本: 2个" style="shape=mxgraph.cisco.servers.unix_server;fillColor=#E1BEE7;strokeColor=#9C27B0;fontFamily=Microsoft YaHei;fontSize=10" parent="clickhouse-cluster" vertex="1">
+          <mxGeometry x="40" y="40" width="110" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-shard-2" value="Shard-2 (主)&#xa;CPU: 48C96T&#xa;内存: 512GB&#xa;存储: 16TB NVMe&#xa;网络: 25GbE双口&#xa;副本: 2个" style="shape=mxgraph.cisco.servers.unix_server;fillColor=#E1BEE7;strokeColor=#9C27B0;fontFamily=Microsoft YaHei;fontSize=10" parent="clickhouse-cluster" vertex="1">
+          <mxGeometry x="170" y="40" width="110" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-shard-3" value="Shard-3 (主)&#xa;CPU: 48C96T&#xa;内存: 512GB&#xa;存储: 16TB NVMe&#xa;网络: 25GbE双口&#xa;副本: 2个" style="shape=mxgraph.cisco.servers.unix_server;fillColor=#E1BEE7;strokeColor=#9C27B0;fontFamily=Microsoft YaHei;fontSize=10" parent="clickhouse-cluster" vertex="1">
+          <mxGeometry x="300" y="40" width="110" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-replica-rack" value="副本节点机架&#xa;(3台副本服务器)&#xa;完全镜像配置" style="shape=mxgraph.cisco.storage.rack;fillColor=#E1BEE7;strokeColor=#9C27B0;fontFamily=Microsoft YaHei;fontSize=11" parent="clickhouse-cluster" vertex="1">
+          <mxGeometry x="430" y="40" width="110" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-storage-strategy" value="存储策略与性能:&#xa;• 分片策略: 按时间分片 (日期 + 服务名Hash)&#xa;• 压缩比: 1:8 (LZ4算法) 实际存储 ~2.5TB/月&#xa;• 查询性能: 单查询 &lt; 100ms, 并发查询 1000+ QPS&#xa;• 数据保留: 热数据30天, 温数据90天, 冷数据1年" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#9C27B0;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="clickhouse-cluster" vertex="1">
+          <mxGeometry x="40" y="140" width="500" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-capacity-planning" value="容量规划 (40K TPS × 4KB):&#xa;• 日数据量: 160MB/s × 86400s = 13.8TB/天 (原始)&#xa;• 压缩后: 1.7TB/天, 51TB/月&#xa;• 副本因子: 2倍, 总存储需求: 102TB/月&#xa;• 当前配置: 48TB × 3分片 × 2副本 = 288TB (预留180%容量)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#9C27B0;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="clickhouse-cluster" vertex="1">
+          <mxGeometry x="40" y="230" width="500" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-performance-metrics" value="性能指标:&#xa;• 写入吞吐: 300MB/s (峰值 500MB/s)&#xa;• 查询延迟: P95 &lt; 200ms, P99 &lt; 500ms&#xa;• 并发支持: 2000+ 并发查询&#xa;• 可用性: 99.95% (单节点故障零影响)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#9C27B0;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="clickhouse-cluster" vertex="1">
+          <mxGeometry x="40" y="320" width="500" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="viz-monitor" value="可视化与监控层" style="swimlane;fillColor=#fff8e1;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=16;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="800" y="690" width="650" height="450" as="geometry" />
+        </mxCell>
+        <mxCell id="superset-cluster" value="Apache Superset集群&#xa;(3节点负载均衡)" style="shape=mxgraph.cisco.servers.content_switch_module;fillColor=#FFF9C4;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=12" parent="viz-monitor" vertex="1">
+          <mxGeometry x="40" y="40" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="superset-spec" value="单台Superset节点:&#xa;• CPU: 16C32T&#xa;• 内存: 64GB&#xa;• 存储: 2TB SSD&#xa;• Redis缓存: 32GB&#xa;• 用户并发: 200+" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="viz-monitor" vertex="1">
+          <mxGeometry x="40" y="130" width="140" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="prometheus-cluster" value="Prometheus监控集群&#xa;(HA双节点)" style="shape=mxgraph.cisco.servers.monitor;fillColor=#FFF9C4;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=12" parent="viz-monitor" vertex="1">
+          <mxGeometry x="200" y="40" width="110" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana-cluster" value="Grafana可视化集群&#xa;(2节点 + 外部LB)" style="shape=mxgraph.cisco.servers.communications_server;fillColor=#FFF9C4;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=12" parent="viz-monitor" vertex="1">
+          <mxGeometry x="330" y="40" width="110" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="alertmanager" value="AlertManager&#xa;告警路由&#xa;多渠道通知" style="shape=mxgraph.cisco.servers.communications_server;fillColor=#FFECB3;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=11" parent="viz-monitor" vertex="1">
+          <mxGeometry x="460" y="40" width="110" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="monitor-performance" value="监控系统性能:&#xa;• Prometheus: 100K+ metrics/s, 90天数据保留&#xa;• Grafana: 500+ 并发用户, &lt;2s 仪表板加载&#xa;• AlertManager: &lt;30s 告警触达, 多级告警升级&#xa;• Superset: 1000+ 并发查询, 智能缓存" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="viz-monitor" vertex="1">
+          <mxGeometry x="200" y="130" width="370" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="business-metrics" value="业务指标监控:&#xa;• 实时TPS: 当前 40,000/s, 峰值容量 50,000/s&#xa;• 系统延迟: 端到端 P95 &lt; 100ms&#xa;• 错误率: &lt; 0.01%&#xa;• 可用性: 99.99% SLA保证" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="viz-monitor" vertex="1">
+          <mxGeometry x="40" y="220" width="530" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="disaster-recovery" value="灾难恢复与备份:&#xa;• 双活数据中心: 主中心(北京) + 灾备中心(上海)&#xa;• RTO: 5分钟, RPO: 30秒&#xa;• 数据备份: 每日增量 + 每周全量备份至对象存储&#xa;• 演练频率: 每季度一次灾备切换演练" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="viz-monitor" vertex="1">
+          <mxGeometry x="40" y="330" width="530" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-app-kafka" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#4CAF50;strokeWidth=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" edge="1" target="kafka-cluster" source="app-cluster">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="400" as="sourcePoint" />
+            <mxPoint x="470" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow-kafka-flink" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#FF9800;strokeWidth=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" edge="1" target="flink-cluster" source="kafka-cluster">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="930" y="400" as="sourcePoint" />
+            <mxPoint x="980" y="440" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow-flink-ch" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#2196F3;strokeWidth=6;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" edge="1" target="clickhouse-cluster">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1170" y="600" as="sourcePoint" />
+            <mxPoint x="500" y="640" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1170" y="640" />
+              <mxPoint x="355" y="640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow-ch-viz" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#9C27B0;strokeWidth=4;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" edge="1" target="viz-monitor" source="clickhouse-cluster">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="750" y="800" as="sourcePoint" />
+            <mxPoint x="800" y="800" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="traffic-1" value="160MB/s&#xa;40K TPS" style="text;strokeColor=none;fillColor=none;html=1;fontSize=12;fontStyle=1;verticalAlign=middle;align=center;fontFamily=Microsoft YaHei;fontColor=#4CAF50" parent="1" vertex="1">
+          <mxGeometry x="430" y="360" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="traffic-2" value="160MB/s&#xa;处理延迟&lt;100ms" style="text;strokeColor=none;fillColor=none;html=1;fontSize=12;fontStyle=1;verticalAlign=middle;align=center;fontFamily=Microsoft YaHei;fontColor=#FF9800" parent="1" vertex="1">
+          <mxGeometry x="920" y="380" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="traffic-3" value="聚合后50MB/s&#xa;存储压缩1:8" style="text;strokeColor=none;fillColor=none;html=1;fontSize=12;fontStyle=1;verticalAlign=middle;align=center;fontFamily=Microsoft YaHei;fontColor=#2196F3" parent="1" vertex="1">
+          <mxGeometry x="620" y="610" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="traffic-4" value="查询QPS 1000+&#xa;P95延迟&lt;200ms" style="text;strokeColor=none;fillColor=none;html=1;fontSize=12;fontStyle=1;verticalAlign=middle;align=center;fontFamily=Microsoft YaHei;fontColor=#9C27B0" parent="1" vertex="1">
+          <mxGeometry x="680" y="840" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="arch-summary" value="总体架构特点:&#xa;• 数据流: 业务应用 → Kafka → Flink → ClickHouse → Superset&#xa;• 高可用: 每层都有冗余, 单点故障零影响&#xa;• 高性能: 25% 性能余量, 支持突发流量&#xa;• 可扩展: 水平扩展设计, 支持10倍容量增长&#xa;• 监控完备: 全链路监控, 5分钟故障发现&#xa;• 成本优化: 采用开源技术栈, TCO降低60%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;fontFamily=Microsoft YaHei;fontSize=12;align=left;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="50" y="1170" width="470" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="capacity-forecast" value="容量预测与扩展:&#xa;• 当前利用率: 80% (安全运行水位)&#xa;• 预测增长: 每季度15%增长&#xa;• 扩展策略: 水平扩展, 单节点故障零影响&#xa;• 弹性伸缩: 基于负载自动触发, 5分钟内完成" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FFC107;fontFamily=Microsoft YaHei;fontSize=10;align=left" parent="1" vertex="1">
+          <mxGeometry x="800" y="1170" width="650" height="130" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

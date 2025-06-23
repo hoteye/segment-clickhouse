@@ -1,0 +1,117 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.1.1 Chrome/132.0.6834.210 Electron/34.3.3 Safari/537.36" version="26.1.1">
+  <diagram name="生产环境硬件结构图" id="prod-hardware-arch">
+    <mxGraphModel dx="3612" dy="2052" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="100" value="业务应用节点（上万台，集成 SkyWalking Agent）" style="shape=mxgraph.cisco.storage.rack;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+          <mxGeometry x="-1201" y="-459" width="120" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="101" value="App 1\nAgent" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="100" vertex="1">
+          <mxGeometry x="10" y="10" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="102" value="App 2\nAgent" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="100" vertex="1">
+          <mxGeometry x="10" y="60" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="103" value="App ...\nAgent" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="100" vertex="1">
+          <mxGeometry x="10" y="110" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="104" value="App N\nAgent" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="100" vertex="1">
+          <mxGeometry x="10" y="250" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="Kafka 集群" style="shape=mxgraph.cisco.storage.rack;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="1" vertex="1">
+          <mxGeometry x="-1001" y="-399" width="120" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="Broker 1&#xa;CPU: 16C32T&#xa;内存: 64GB&#xa;SSD: 2TB&#xa;10GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="3" vertex="1">
+          <mxGeometry x="10" y="10" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="Broker 2&#xa;CPU: 16C32T&#xa;内存: 64GB&#xa;SSD: 2TB&#xa;10GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="3" vertex="1">
+          <mxGeometry x="10" y="65" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="Broker 3&#xa;CPU: 16C32T&#xa;内存: 64GB&#xa;SSD: 2TB&#xa;10GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="3" vertex="1">
+          <mxGeometry x="10" y="120" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="Flink 集群" style="shape=mxgraph.cisco.storage.rack;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="1" vertex="1">
+          <mxGeometry x="-821" y="-399" width="120" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="JobManager(HA)&#xa;CPU: 8C16T&#xa;内存: 32GB&#xa;SSD: 500GB&#xa;10GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="7" vertex="1">
+          <mxGeometry x="10" y="10" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="TaskManager 1&#xa;CPU: 16C32T&#xa;内存: 128GB&#xa;SSD: 2TB&#xa;10GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="7" vertex="1">
+          <mxGeometry x="10" y="65" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="10" value="TaskManager 2&#xa;CPU: 16C32T&#xa;内存: 128GB&#xa;SSD: 2TB&#xa;10GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="7" vertex="1">
+          <mxGeometry x="10" y="120" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="ClickHouse 集群" style="shape=mxgraph.cisco.storage.rack;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="1" vertex="1">
+          <mxGeometry x="-621" y="-399" width="120" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="节点 1&#xa;CPU: 32C64T&#xa;内存: 256GB&#xa;NVMe: 8TB&#xa;25GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="11" vertex="1">
+          <mxGeometry x="10" y="10" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="节点 2&#xa;CPU: 32C64T&#xa;内存: 256GB&#xa;NVMe: 8TB&#xa;25GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="11" vertex="1">
+          <mxGeometry x="10" y="65" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="节点 3&#xa;CPU: 32C64T&#xa;内存: 256GB&#xa;NVMe: 8TB&#xa;25GbE" style="shape=mxgraph.cisco.servers.unix_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="11" vertex="1">
+          <mxGeometry x="10" y="120" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="15" value="ZooKeeper 集群" style="shape=mxgraph.cisco.servers.generic_server;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="1" vertex="1">
+          <mxGeometry x="-811" y="-149" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="16" value="监控/告警&#xa;Prometheus/Grafana" style="shape=mxgraph.cisco.servers.monitor;whiteSpace=wrap;html=1;fontFamily=Microsoft YaHei;" parent="1" vertex="1">
+          <mxGeometry x="-811" y="-569" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="200" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#b85450;" parent="1" source="100" target="3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="18" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#6c8ebf;" parent="1" source="3" target="7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="19" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#9673a6;" parent="1" source="7" target="11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="21" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;dashed=1;strokeColor=#82b366;" parent="1" source="15" target="7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="22" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;dashed=1;strokeColor=#82b366;" parent="1" source="15" target="11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="23" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#d6b656;" parent="1" source="3" target="16" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-941" y="-539" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="24" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#d6b656;" parent="1" source="7" target="16" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="25" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#d6b656;" parent="1" source="11" target="16" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-561" y="-460" />
+              <mxPoint x="-761" y="-460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UmGbqOT0SlRk4LmOTote-201" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-851" y="-39" as="sourcePoint" />
+            <mxPoint x="-851" y="-679" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UmGbqOT0SlRk4LmOTote-204" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;防火墙&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="UmGbqOT0SlRk4LmOTote-201">
+          <mxGeometry x="0.2855" y="4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UmGbqOT0SlRk4LmOTote-202" value="核心区" style="text;strokeColor=none;fillColor=none;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="-991" y="-650" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="UmGbqOT0SlRk4LmOTote-203" value="运维区" style="text;strokeColor=none;fillColor=none;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="-801" y="-650" width="100" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
