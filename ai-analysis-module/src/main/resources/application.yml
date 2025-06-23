@@ -8,23 +8,27 @@ server:
 spring:
   application:
     name: ai-analysis-service
-    # 数据源配置 - H2 内存数据库（用于测试）
+  # 数据源配置 - ClickHouse 
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password: 
+    driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+    url: ${CLICKHOUSE_URL:jdbc:clickhouse://localhost:8123/o11y}
+    username: ${CLICKHOUSE_USERNAME:default}
+    password: ${CLICKHOUSE_PASSWORD:}
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-    # JPA/Hibernate 配置
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+  # JPA/Hibernate 配置 (ClickHouse 不完全支持 JPA，主要用于基础数据源管理)
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none  # ClickHouse 不支持自动建表
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect  # ClickHouse 没有专用方言，使用 PostgreSQL
         format_sql: true
 
 # AI 分析配置
@@ -41,6 +45,29 @@ ai:
       error-rate-percent: 5.0     # 错误率阈值（百分比）
       cpu-usage-percent: 80.0     # CPU使用率阈值（百分比）
       memory-usage-percent: 85.0  # 内存使用率阈值（百分比）
+
+# ClickHouse 配置
+clickhouse:
+  connection:
+    url: ${CLICKHOUSE_URL:jdbc:clickhouse://localhost:8123/o11y}
+    username: ${CLICKHOUSE_USERNAME:default}
+    password: ${CLICKHOUSE_PASSWORD:}
+    socket-timeout: 30000
+    connection-timeout: 10000
+    max-rows-to-read: 1000000
+    max-result-rows: 100000
+  query:
+    # 性能数据查询相关表
+    tables:
+      segments: "segments"           # 段数据表
+      service_metrics: "service_agg_result"  # 服务聚合结果表
+      error_logs: "error_logs"       # 错误日志表
+      trace_data: "trace_data"       # 追踪数据表
+    # 分析报告存储表
+    reports:
+      performance_reports: "ai_performance_reports"
+      anomaly_reports: "ai_anomaly_reports"
+      optimization_suggestions: "ai_optimization_suggestions"
       
   # LLM 配置
   llm:
