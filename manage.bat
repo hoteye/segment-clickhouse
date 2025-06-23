@@ -31,25 +31,25 @@ set /p choice="请输入选项编号 (0-10): "
 
 if "%choice%"=="1" (
     echo 正在快速启动开发环境...
-    call scripts\start_dev_env.bat
+    call flink-data-transformer-module\scripts\start_dev_env.bat
 ) else if "%choice%"=="2" (
     echo 正在检查环境状态...
-    call scripts\check_env_status.bat
+    call flink-data-transformer-module\scripts\check_env_status.bat
 ) else if "%choice%"=="3" (
     echo 正在清理开发环境...
-    call scripts\cleanup_dev_env.bat
+    call flink-data-transformer-module\scripts\cleanup_dev_env.bat
 ) else if "%choice%"=="4" (
     echo 正在启动 ClickHouse (Docker)...
-    call scripts\setup_clickhouse_full.bat
+    call flink-data-transformer-module\scripts\setup_clickhouse_full.bat
 ) else if "%choice%"=="5" (
     echo 正在启动 ClickHouse (Docker Compose)...
-    call scripts\setup_clickhouse_compose_full.bat
+    call flink-data-transformer-module\scripts\setup_clickhouse_compose_full.bat
 ) else if "%choice%"=="6" (
     echo 正在重置 ClickHouse 数据库...
-    call scripts\reset_clickhouse.bat
+    call flink-data-transformer-module\scripts\reset_clickhouse.bat
 ) else if "%choice%"=="7" (
     echo 正在部署 Flink 作业到集群...
-    call scripts\flink_deploy.bat
+    call flink-data-transformer-module\scripts\flink_deploy.bat
 ) else if "%choice%"=="8" (
     echo 正在本地运行 Flink 作业...
     java --add-opens=java.base/java.util=ALL-UNNAMED ^

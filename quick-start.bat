@@ -19,11 +19,11 @@ if %errorlevel% equ 0 (
         echo ✅ ClickHouse 服务正常
     ) else (
         echo ⚠️  ClickHouse 服务异常，正在重启...
-        call scripts\reset_clickhouse.bat
+        call flink-data-transformer-module\scripts\reset_clickhouse.bat
     )
 ) else (
     echo 🚀 启动 ClickHouse 容器...
-    call scripts\setup_clickhouse_full.bat
+    call flink-data-transformer-module\scripts\setup_clickhouse_full.bat
 )
 
 echo.
@@ -55,7 +55,7 @@ if %errorlevel% equ 0 (
         flink list
     ) else (
         echo 🚀 部署 Flink 作业...
-        call scripts\flink_deploy.bat
+        call flink-data-transformer-module\scripts\flink_deploy.bat
     )
 ) else (
     echo ⚠️  Flink 集群未运行，启动本地作业...
@@ -77,9 +77,9 @@ echo   ClickHouse Web UI: http://localhost:8123/play
 echo   Flink Web UI: http://localhost:8081
 echo.
 echo 💡 有用的命令：
-echo   完整管理界面: scripts\manage.bat
-echo   环境状态检查: scripts\check_env_status.bat
-echo   清理环境: scripts\cleanup_dev_env.bat
+echo   完整管理界面: flink-data-transformer-module\scripts\manage.bat
+echo   环境状态检查: flink-data-transformer-module\scripts\check_env_status.bat
+echo   清理环境: flink-data-transformer-module\scripts\cleanup_dev_env.bat
 echo.
 
 pause
