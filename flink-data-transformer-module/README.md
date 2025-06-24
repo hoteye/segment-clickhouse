@@ -118,7 +118,7 @@ mvn clean package
 java --add-opens=java.base/java.util=ALL-UNNAMED \
      --add-opens=java.base/java.lang=ALL-UNNAMED \
      -cp target/flink-data-transformer-module-1.0.5-shaded.jar \
-     com.o11y.flink.FlinkKafkaToClickHouseJob
+     com.o11y.application.launcher.FlinkServiceLauncher
 ```
 
 #### 生产环境部署

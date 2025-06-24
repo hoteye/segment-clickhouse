@@ -121,7 +121,7 @@ mvn clean package
 java --add-opens=java.base/java.util=ALL-UNNAMED \
      --add-opens=java.base/java.lang=ALL-UNNAMED \
      -cp flink-data-transformer-module/target/flink-data-transformer-module-1.0.5-shaded.jar \
-     com.o11y.flink.FlinkKafkaToClickHouseJob
+     com.o11y.application.launcher.FlinkServiceLauncher
 
 # 方式 2: 使用 VS Code 任务
 # 在 VS Code 中按 Ctrl+Shift+P，搜索 "Tasks: Run Task"，选择相应的 Flink 任务

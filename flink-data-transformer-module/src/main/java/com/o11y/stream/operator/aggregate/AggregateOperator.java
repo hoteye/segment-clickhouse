@@ -5,7 +5,7 @@ import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.api.java.tuple.Tuple4;
+import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
@@ -102,21 +102,25 @@ public class AggregateOperator implements FlinkOperator {
         // 不再做空判断，参数缺失时直接抛出异常，便于启动阶段发现配置问题
         windowSeconds = Integer.parseInt(params.get("windowSize").get(0));
         DataStream<SegmentObject> segmentStream = (DataStream<SegmentObject>) input;
-        DataStream<Tuple4<String, String, Boolean, Long>> baseAggStream = extractEntrySpan(segmentStream);
+        DataStream<Tuple5<String, String, Boolean, Long, Long>> baseAggStream = extractEntrySpan(segmentStream);
         DataStream<ServiceAggResult> aggStream = aggregateByService(baseAggStream);
         return aggStream;
     }
 
     /**
-     * 步骤1：提取 Entry 类型 span，输出 Tuple4<service, operatorName, isSuccess, duration>
+     * 步骤1：提取 Entry 类型 span，输出 Tuple5<service, operatorName, isSuccess, duration,
+     * endTime>
      * 
      * @param stream 原始 SegmentObject 数据流
-     * @return DataStream<Tuple4<service, operatorName, isSuccess, duration>>
-     *         其中 service 为服务名，operatorName 为操作名，isSuccess 是否成功，duration 为耗时
+     * @return DataStream<Tuple5<service, operatorName, isSuccess, duration,
+     *         endTime>>
+     *         其中 service 为服务名，operatorName 为操作名，isSuccess 是否成功，duration 为耗时，endTime
+     *         为结束时间
      *         事件时间戳由 assignTimestampsAndWatermarks 指定
      */
-    protected DataStream<Tuple4<String, String, Boolean, Long>> extractEntrySpan(DataStream<SegmentObject> stream) {
-        return stream.flatMap((SegmentObject segment, Collector<Tuple4<String, String, Boolean, Long>> out) -> {
+    protected DataStream<Tuple5<String, String, Boolean, Long, Long>> extractEntrySpan(
+            DataStream<SegmentObject> stream) {
+        return stream.flatMap((SegmentObject segment, Collector<Tuple5<String, String, Boolean, Long, Long>> out) -> {
             String service = segment.getService();
             for (int i = 0; i < segment.getSpansCount(); i++) {
                 var span = segment.getSpans(i);
@@ -124,13 +128,16 @@ public class AggregateOperator implements FlinkOperator {
                     String operatorName = span.getOperationName();
                     boolean isSuccess = !span.getIsError();
                     long duration = span.getEndTime() - span.getStartTime();
-                    out.collect(Tuple4.of(service, operatorName, isSuccess, duration));
+                    // 步骤1：flatMap 输出 Tuple5<service, operatorName, isSuccess, duration, endTime>
+                    out.collect(Tuple5.of(service, operatorName, isSuccess, duration, span.getEndTime()));
                 }
             }
-        }).returns(Types.TUPLE(Types.STRING, Types.STRING, Types.BOOLEAN, Types.LONG))
-                .assignTimestampsAndWatermarks(WatermarkStrategy
-                        .<Tuple4<String, String, Boolean, Long>>forBoundedOutOfOrderness(Duration.ofSeconds(2))
-                        .withTimestampAssigner((tuple, ts) -> ts));
+        }).returns(Types.TUPLE(Types.STRING, Types.STRING, Types.BOOLEAN, Types.LONG, Types.LONG))
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Tuple5<String, String, Boolean, Long, Long>>forBoundedOutOfOrderness(
+                                        Duration.ofSeconds(2))
+                                .withTimestampAssigner((tuple, ts) -> tuple.f4));
     }
 
     /**
@@ -142,22 +149,23 @@ public class AggregateOperator implements FlinkOperator {
      *         使用事件时间的滚动窗口，窗口长度由 windowSeconds 决定
      */
     protected DataStream<ServiceAggResult> aggregateByService(
-            DataStream<Tuple4<String, String, Boolean, Long>> inputStream) {
+            DataStream<Tuple5<String, String, Boolean, Long, Long>> inputStream) {
         final int windowSizeFinal = this.windowSeconds;
         final String operatorClassName = getName();
         return inputStream
                 .keyBy(t -> Tuple2.of(t.f0, t.f1), Types.TUPLE(Types.STRING, Types.STRING))
                 .window(TumblingEventTimeWindows.of(Time.seconds(windowSeconds)))
-                .apply(new WindowFunction<Tuple4<String, String, Boolean, Long>, ServiceAggResult, Tuple2<String, String>, TimeWindow>() {
+                .apply(new WindowFunction<Tuple5<String, String, Boolean, Long, Long>, ServiceAggResult, Tuple2<String, String>, TimeWindow>() {
                     @Override
                     public void apply(Tuple2<String, String> key,
                             TimeWindow window,
-                            Iterable<Tuple4<String, String, Boolean, Long>> input, Collector<ServiceAggResult> out) {
+                            Iterable<Tuple5<String, String, Boolean, Long, Long>> input,
+                            Collector<ServiceAggResult> out) {
                         long count = 0;
                         long successCount = 0;
                         long totalDuration = 0;
                         long maxDuration = Long.MIN_VALUE;
-                        for (Tuple4<String, String, Boolean, Long> t : input) {
+                        for (Tuple5<String, String, Boolean, Long, Long> t : input) {
                             count++;
                             if (t.f2)
                                 successCount++;
