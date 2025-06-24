@@ -75,117 +75,146 @@ public class PerformanceAnalysisService {
         } catch (Exception e) {
             LOG.error("定时性能分析失败", e);
         }
-    }
-
-    /**
+    }    /**
      * 生成性能分析报告
      */
     public PerformanceReport generateAnalysisReport(int timeRangeHours) {
         try {
-            LOG.info("开始生成性能分析报告，时间范围: {}小时", timeRangeHours);
+            LOG.info("=== 开始生成性能分析报告，时间范围: {}小时 ===", timeRangeHours);
 
             // 1. 收集性能数据
+            LOG.info("步骤1: 开始收集性能数据...");
             PerformanceMetrics metrics = collectPerformanceMetrics(timeRangeHours);
             if (metrics == null) {
                 LOG.warn("未收集到性能数据");
                 return null;
             }
-
-            // 2. 异常检测
+            LOG.info("步骤1完成: 成功收集性能数据，总请求数: {}, 平均响应时间: {}ms", 
+                    metrics.getTotalRequests(), metrics.getAvgResponseTime());            // 2. 异常检测
+            LOG.info("步骤2: 开始异常检测...");
             List<PerformanceAnomaly> anomalies = detectAnomalies(metrics);
+            LOG.info("步骤2完成: 检测到 {} 个异常", anomalies.size());
 
             // 3. 生成报告
+            LOG.info("步骤3: 创建报告对象...");
             PerformanceReport report = PerformanceReport.builder()
                     .reportId(UUID.randomUUID().toString()).generatedAt(LocalDateTime.now())
                     .timeRange(timeRangeHours)
                     .build();
-
-            // 4. LLM 智能分析
+            LOG.info("步骤3完成: 报告对象创建完成，报告ID: {}", report.getReportId());            // 4. LLM 智能分析
+            LOG.info("步骤4: 开始LLM智能分析...");
+            LOG.info("LLM配置状态 - 启用: {}, 提供商: {}", 
+                    properties.getLlm().isEnabled(), 
+                    properties.getLlm().getProvider());
+            
             if (properties.getLlm().isEnabled()) {
                 try {
+                    LOG.info("步骤4a: 调用LLM分析性能数据...");
                     String intelligentAnalysis = llmService.analyzePerformanceData(metrics, anomalies);
+                    LOG.info("步骤4a完成: LLM分析完成，分析长度: {} 字符", intelligentAnalysis.length());
                     report.setIntelligentAnalysis(intelligentAnalysis);
 
+                    LOG.info("步骤4b: 调用LLM生成优化建议...");
                     List<OptimizationSuggestion> suggestions = llmService.generateOptimizationSuggestions(metrics,
                             anomalies);
+                    LOG.info("步骤4b完成: LLM生成了 {} 条优化建议", suggestions.size());
                     report.setOptimizationSuggestions(suggestions.stream()
                             .map(s -> s.getTitle() + ": " + s.getDescription())
                             .collect(java.util.stream.Collectors.toList()));
 
                 } catch (Exception e) {
                     LOG.error("LLM分析失败，使用基础分析", e);
+                    LOG.info("步骤4备用: 使用基础分析...");
                     report.setIntelligentAnalysis(generateBasicAnalysis(metrics, anomalies));
                     report.setOptimizationSuggestions(generateBasicSuggestions(metrics, anomalies));
+                    LOG.info("步骤4备用完成: 基础分析已完成");
                 }
             } else {
+                LOG.info("步骤4跳过: LLM已禁用，使用基础分析...");
                 report.setIntelligentAnalysis(generateBasicAnalysis(metrics, anomalies));
                 report.setOptimizationSuggestions(generateBasicSuggestions(metrics, anomalies));
-            } // 5. 设置其他报告内容
+                LOG.info("步骤4完成: 基础分析已完成");
+            }            // 5. 设置其他报告内容
+            LOG.info("步骤5: 设置报告其他内容...");
             report.setMetrics(convertToReportMetrics(metrics));
             report.setAnomalies(anomalies);
             report.setSummary(generateSummary(metrics, anomalies));
+            LOG.info("步骤5完成: 报告内容设置完成");
 
             // 6. 保存报告
+            LOG.info("步骤6: 保存报告到文件系统...");
             try {
                 reportService.saveReport(report);
-                LOG.info("性能分析报告已保存到文件系统");
+                LOG.info("步骤6a完成: 性能分析报告已保存到文件系统");
             } catch (Exception e) {
-                LOG.error("保存报告到文件系统失败", e);
+                LOG.error("步骤6a失败: 保存报告到文件系统失败", e);
             }
 
             // 7. 保存到 ClickHouse
+            LOG.info("步骤7: 保存报告到 ClickHouse...");
             try {
                 String reportContent = convertReportToJson(report);
                 clickHouseRepository.savePerformanceReport(report.getReportId(), reportContent,
                         report.getGeneratedAt());
-                LOG.info("性能分析报告已保存到 ClickHouse");
+                LOG.info("步骤7完成: 性能分析报告已保存到 ClickHouse");
             } catch (Exception e) {
-                LOG.error("保存报告到 ClickHouse 失败", e);
+                LOG.error("步骤7失败: 保存报告到 ClickHouse 失败", e);
             }
 
-            LOG.info("性能分析报告生成完成，报告ID: {}", report.getReportId());
+            LOG.info("=== 性能分析报告生成完成，报告ID: {} ===", report.getReportId());
             return report;
 
         } catch (Exception e) {
             LOG.error("生成性能分析报告失败", e);
             throw new RuntimeException("性能分析报告生成失败", e);
         }
-    }
-
-    /**
+    }    /**
      * 收集性能指标数据
      */
     private PerformanceMetrics collectPerformanceMetrics(int timeRangeHours) throws Exception {
+        LOG.info("--- 开始收集性能指标数据 ---");
         PerformanceMetrics metrics = new PerformanceMetrics();
         LocalDateTime endTime = LocalDateTime.now();
         LocalDateTime startTime = endTime.minusHours(timeRangeHours);
 
+        LOG.info("时间范围: {} 到 {}", startTime, endTime);
+        
         metrics.setStartTime(startTime);
         metrics.setEndTime(endTime);
         metrics.setTimeRangeHours(timeRangeHours);
 
         try (Connection conn = dataSource.getConnection()) {
+            LOG.info("数据库连接已建立");
+            
             // 收集基础应用指标
+            LOG.info("收集应用性能指标...");
             collectApplicationMetrics(conn, metrics, startTime, endTime);
+            LOG.info("应用指标收集完成");
 
             // 收集 JVM 指标（如果有的话）
+            LOG.info("收集JVM指标...");
             collectJvmMetrics(conn, metrics, startTime, endTime);
+            LOG.info("JVM指标收集完成");
 
             // 收集数据库指标
+            LOG.info("收集数据库指标...");
             collectDatabaseMetrics(conn, metrics, startTime, endTime);
+            LOG.info("数据库指标收集完成");
 
             // 收集系统指标
+            LOG.info("收集系统指标...");
             collectSystemMetrics(conn, metrics, startTime, endTime);
+            LOG.info("系统指标收集完成");
         }
 
+        LOG.info("--- 性能指标数据收集完成 ---");
         return metrics;
-    }
-
-    /**
+    }    /**
      * 收集应用性能指标
      */
     private void collectApplicationMetrics(Connection conn, PerformanceMetrics metrics,
             LocalDateTime startTime, LocalDateTime endTime) throws Exception {
+        LOG.info("执行应用指标查询...");
         String sql = "SELECT " +
                 "COUNT(*) as total_requests, " +
                 "AVG(end_time - start_time) as avg_response_time, " +
@@ -194,11 +223,16 @@ public class PerformanceAnalysisService {
                 "COUNT(*) / (toUnixTimestamp(toDateTime(?)) - toUnixTimestamp(toDateTime(?))) as avg_throughput " +
                 "FROM events " +
                 "WHERE start_time >= toDateTime(?) AND start_time <= toDateTime(?)";
+        
+        LOG.info("执行SQL: {}", sql);
+        
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             // 格式化时间为 ClickHouse 兼容的格式（只保留到秒）
             String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
+            LOG.info("查询参数: startTime={}, endTime={}", startTimeStr, endTimeStr);
+            
             stmt.setString(1, endTimeStr);
             stmt.setString(2, startTimeStr);
             stmt.setString(3, startTimeStr);
@@ -206,17 +240,33 @@ public class PerformanceAnalysisService {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    metrics.setTotalRequests(rs.getLong("total_requests"));
-                    metrics.setAvgResponseTime(rs.getDouble("avg_response_time"));
-                    metrics.setMaxResponseTime(rs.getDouble("max_response_time"));
-                    metrics.setFailedRequests(rs.getLong("failed_requests"));
-                    metrics.setAvgThroughput(rs.getDouble("avg_throughput"));
+                    long totalRequests = rs.getLong("total_requests");
+                    double avgResponseTime = rs.getDouble("avg_response_time");
+                    double maxResponseTime = rs.getDouble("max_response_time");
+                    long failedRequests = rs.getLong("failed_requests");
+                    double avgThroughput = rs.getDouble("avg_throughput");
+                    
+                    LOG.info("查询结果: 总请求数={}, 平均响应时间={}ms, 最大响应时间={}ms, 失败请求数={}, 平均吞吐量={}", 
+                            totalRequests, avgResponseTime, maxResponseTime, failedRequests, avgThroughput);
+                    
+                    metrics.setTotalRequests(totalRequests);
+                    metrics.setAvgResponseTime(avgResponseTime);
+                    metrics.setMaxResponseTime(maxResponseTime);
+                    metrics.setFailedRequests(failedRequests);
+                    metrics.setAvgThroughput(avgThroughput);
 
                     if (metrics.getTotalRequests() > 0) {
-                        metrics.setErrorRate(metrics.getFailedRequests() / (double) metrics.getTotalRequests());
+                        double errorRate = metrics.getFailedRequests() / (double) metrics.getTotalRequests();
+                        metrics.setErrorRate(errorRate);
+                        LOG.info("计算得出错误率: {}%", errorRate * 100);
                     }
+                } else {
+                    LOG.warn("应用指标查询没有返回结果");
                 }
             }
+        } catch (Exception e) {
+            LOG.error("执行应用指标查询失败", e);
+            throw e;
         }
     }
 

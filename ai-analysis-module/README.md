@@ -18,6 +18,7 @@
 - **趋势预测**：基于历史数据进行性能趋势分析
 
 ### 🤖 多 LLM 智能引擎
+- **DeepSeek AI**：国产 LLM，中文支持优秀，价格实惠
 - **OpenAI GPT**：支持 GPT-3.5-turbo/GPT-4 模型
 - **Azure OpenAI**：企业级 OpenAI 服务集成
 - **本地 LLM**：支持 Ollama 等本地部署模型
@@ -51,6 +52,7 @@
 - LLM 驱动的智能分析和洞察
 
 ### 🤖 多 LLM 支持
+- **DeepSeek AI**：国产大模型，中文理解能力强，成本优势明显
 - **OpenAI GPT**：支持 GPT-3.5/GPT-4
 - **Azure OpenAI**：企业级 OpenAI 服务
 - **本地 LLM**：支持 Ollama 等本地部署模型
@@ -130,11 +132,17 @@ ai:
       error-rate-percent: 5.0
       cpu-usage-percent: 80.0
       memory-usage-percent: 85.0
-
   # LLM 配置
   llm:
     enabled: true
-    provider: openai  # openai, azure, ollama
+    provider: deepseek  # deepseek, openai, azure, ollama
+    deepseek:
+      api-key: ${AI_DEEPSEEK_API_KEY:}
+      base-url: https://api.deepseek.com/v1
+      model: deepseek-chat
+      timeout: 30000
+      max-tokens: 2000
+      temperature: 0.7
     openai:
       api-key: ${AI_OPENAI_API_KEY:}
       base-url: https://api.openai.com/v1
@@ -153,6 +161,11 @@ ai:
 ### 4. 环境变量配置
 
 ```bash
+# DeepSeek 配置（推荐）
+export AI_DEEPSEEK_API_KEY="sk-your-deepseek-api-key"
+export AI_DEEPSEEK_BASE_URL="https://api.deepseek.com/v1"
+export AI_DEEPSEEK_MODEL="deepseek-chat"
+
 # OpenAI 配置
 export AI_OPENAI_API_KEY="sk-your-openai-api-key"
 
@@ -161,14 +174,116 @@ export AI_AZURE_API_KEY="your-azure-api-key"
 export AI_AZURE_ENDPOINT="https://your-resource.openai.azure.com"
 export AI_AZURE_DEPLOYMENT="your-deployment-name"
 
-# 或者 DeepSeek 配置（推荐）
-export AI_DEEPSEEK_API_KEY="sk-your-deepseek-api-key"
-export AI_DEEPSEEK_BASE_URL="https://api.deepseek.com/v1"
-export AI_DEEPSEEK_MODEL="deepseek-chat"
-
 # 或者本地 LLM 配置
 export AI_LOCAL_LLM_URL="http://localhost:11434"
 export AI_LOCAL_LLM_MODEL="llama2"
+```
+
+## 🤖 DeepSeek AI 详细配置
+
+### DeepSeek 优势
+- **💰 成本优势**：相比 OpenAI GPT，价格更具竞争力，新用户通常有免费额度
+- **🇨🇳 中文支持**：原生中文理解，技术术语准确，符合中文表达习惯
+- **🔌 API 兼容**：完全兼容 OpenAI API 格式，无需修改现有代码
+- **🎯 多模型**：提供 deepseek-chat、deepseek-coder、deepseek-math 等专业模型
+
+### 快速配置 DeepSeek
+
+#### 1. 获取 API Key
+1. 访问 [DeepSeek 官网](https://platform.deepseek.com/)
+2. 注册账号并完成实名认证
+3. 在控制台中创建 API Key
+4. 确保账户有足够的余额
+
+#### 2. 配置环境变量
+```bash
+# Windows
+set AI_DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
+set AI_DEEPSEEK_MODEL=deepseek-chat
+
+# Linux/macOS
+export AI_DEEPSEEK_API_KEY="sk-your-deepseek-api-key-here"
+export AI_DEEPSEEK_MODEL="deepseek-chat"
+```
+
+#### 3. 应用配置
+```yaml
+ai:
+  llm:
+    enabled: true
+    provider: deepseek  # 设置为 deepseek
+    deepseek:
+      api-key: ${AI_DEEPSEEK_API_KEY}
+      base-url: https://api.deepseek.com/v1
+      model: ${AI_DEEPSEEK_MODEL:deepseek-chat}
+      timeout: 30000       # 30秒超时
+      max-tokens: 2000     # 最大输出令牌数
+      temperature: 0.7     # 创造性控制 (0-1)
+```
+
+### DeepSeek 模型选择
+
+| 模型 | 适用场景 | 推荐用途 |
+|------|----------|----------|
+| **deepseek-chat** | 通用对话、性能分析 | 默认选择，适合大多数分析任务 |
+| **deepseek-coder** | 代码分析、技术优化 | 代码性能优化、架构分析 |
+| **deepseek-math** | 数学计算、统计分析 | 复杂性能指标计算和趋势分析 |
+
+### DeepSeek 实际效果示例
+
+使用 DeepSeek 生成的性能分析报告特点：
+
+```json
+{
+  "intelligentAnalysis": "### 1. 系统性能总体评估\n- **吞吐量与响应时间**：系统整体吞吐量较低（8.33 req/s），但平均响应时间极短（0.21 ms），表明轻量级请求处理效率较高...\n- **错误率**：11.11%的错误率严重超标（期望值≤5%），是当前最突出的问题，需优先排查...",
+  "optimizationSuggestions": [
+    "降低错误率: 当前错误率11.11%远超5%的期望阈值，需立即排查错误来源。常见原因包括：输入验证不足、第三方服务调用失败、资源竞争或业务逻辑缺陷。",
+    "优化线程池配置: 平均线程数100且CPU使用率50%，存在线程资源分配不合理可能。建议结合业务场景调整线程池参数。"
+  ]
+}
+```
+
+**DeepSeek 分析特点**：
+- ✅ **详细分析**：提供深入的技术分析和数据解读
+- ✅ **中文表达**：使用专业但易懂的中文技术术语
+- ✅ **实用建议**：给出具体可执行的优化建议
+- ✅ **结构化输出**：分析结果结构清晰，便于理解和执行
+
+### DeepSeek 故障排除
+
+#### 常见问题解决
+
+1. **API Key 错误**
+```bash
+# 检查环境变量
+echo $AI_DEEPSEEK_API_KEY
+# 确认格式：应以 sk- 开头
+```
+
+2. **网络连接问题**
+```bash
+# 测试连接
+curl -I https://api.deepseek.com
+```
+
+3. **中文乱码问题**
+```yaml
+# 确保 UTF-8 编码配置
+server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+```
+
+4. **请求限流**
+```yaml
+# 增加重试配置
+ai:
+  llm:
+    deepseek:
+      retry-delay: 2000  # 2秒重试间隔
 ```
 
 ### 5. 构建和运行
@@ -399,8 +514,10 @@ curl -X POST "http://localhost:8082/ai-analysis/api/ai-analysis/suggestions?time
 | **框架** | Spring Boot | 2.7.12 | 主应用框架 |
 | **数据库** | ClickHouse | 25.4+ | 高性能列式数据库 |
 | **数据库驱动** | ClickHouse JDBC | Latest | ClickHouse Java 驱动 |
+| **AI 引擎** | DeepSeek API | V3 | 国产大模型，中文支持优秀 |
+| **AI 引擎** | OpenAI API | GPT-3.5/4 | OpenAI 大模型服务 |
 | **序列化** | Jackson | 2.13+ | JSON 处理 |
-| **HTTP 客户端** | OkHttp | 4.x | LLM API 调用 |
+| **HTTP 客户端** | Java HttpClient | 11+ | LLM API 调用 |
 | **任务调度** | Spring Scheduler | Built-in | 定时分析任务 |
 | **日志** | Logback | 1.2+ | 日志框架 |
 
@@ -426,6 +543,37 @@ spring:
 ```
 
 ### LLM 提供商详细配置
+
+#### DeepSeek 配置 （⭐ 推荐）
+```yaml
+ai:
+  llm:
+    enabled: true
+    provider: deepseek
+    deepseek:
+      api-key: ${AI_DEEPSEEK_API_KEY}
+      base-url: https://api.deepseek.com/v1
+      model: deepseek-chat    # 或 deepseek-coder（代码优化）
+      timeout: 30000
+      max-tokens: 2000
+      temperature: 0.7
+```
+
+**DeepSeek 使用指南：**
+- 🌐 **官网注册**: https://platform.deepseek.com/
+- 💰 **价格优势**: 相比 OpenAI 更具价格优势
+- 🇨🇳 **中文支持**: 对中文理解和生成效果良好
+- 🔌 **API 兼容**: 完全兼容 OpenAI API 格式
+- 🤖 **模型选择**:
+  - `deepseek-chat`: 通用对话和分析任务
+  - `deepseek-coder`: 代码分析和优化建议
+  - `deepseek-math`: 数学和逻辑推理
+
+**环境变量配置：**
+```bash
+export AI_DEEPSEEK_API_KEY="sk-your-deepseek-api-key"
+export AI_DEEPSEEK_MODEL="deepseek-chat"
+```
 
 #### OpenAI 配置
 ```yaml
@@ -843,6 +991,18 @@ grep -A 5 "clickhouse" src/main/resources/application.yml
 
 #### 2. LLM 服务问题
 
+**症状**: DeepSeek API 调用失败
+```bash
+# 检查 DeepSeek API 密钥配置
+echo $AI_DEEPSEEK_API_KEY
+
+# 测试 DeepSeek API 连接
+curl -H "Authorization: Bearer $AI_DEEPSEEK_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"Hello"}]}' \
+     https://api.deepseek.com/v1/chat/completions
+```
+
 **症状**: OpenAI API 调用失败
 ```bash
 # 检查 API 密钥配置
@@ -853,11 +1013,27 @@ curl -H "Authorization: Bearer $AI_OPENAI_API_KEY" \
      https://api.openai.com/v1/models
 ```
 
+**症状**: 中文响应乱码
+```yaml
+# 确保应用配置了正确的编码
+server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# 启动时指定编码参数
+java -Dfile.encoding=UTF-8 -jar ai-analysis-module.jar
+```
+
 **症状**: API 调用超时
 ```yaml
 # 增加超时时间
 ai:
   llm:
+    deepseek:
+      timeout: 60000  # 增加到 60 秒
     openai:
       timeout: 60000  # 增加到 60 秒
       retry-attempts: 5
@@ -940,17 +1116,21 @@ INSERT INTO flink_operator_agg_result VALUES
 
 ## 🔄 版本更新记录
 
-### v1.0.5 (当前版本) - 2025-06-23
+### v1.0.5 (当前版本) - 2025-06-24
 
 #### ✨ 新增功能
+- **DeepSeek LLM 集成**: 新增国产大模型支持，中文分析能力优秀
 - **双重存储架构**: 支持 ClickHouse 和文件系统双重报告存储
 - **完整 REST API**: 新增多种数据查询和报告检索接口
 - **错误链路追踪**: 支持从 events 表分析错误调用链
 - **慢请求分析**: 可配置阈值的慢请求检测和分析
 - **服务拓扑**: 动态服务依赖关系分析
 - **数据探索**: 支持查询 events 表结构和样例数据
+- **中文编码优化**: 解决 DeepSeek 返回内容的中文乱码问题
 
 #### 🔧 技术改进
+- **多 LLM 引擎**: 新增 DeepSeek 支持，提供更多 LLM 选择
+- **编码问题修复**: 完善 UTF-8 编码处理，确保中文内容正确显示
 - **ClickHouse 深度集成**: 替换 H2，使用 ClickHouse 作为主数据源
 - **时间格式优化**: 修复 LocalDateTime 与 ClickHouse DateTime 兼容性问题
 - **查询性能优化**: 优化聚合查询和批量数据处理
@@ -968,8 +1148,11 @@ INSERT INTO flink_operator_agg_result VALUES
 - 新增 `/traces/slow` 端点支持慢请求分析
 - 新增 `/topology/services` 端点支持服务拓扑查询
 - 新增 `/data/events/*` 端点支持数据探索
+- 优化所有 API 的中文响应编码处理
 
 #### 🛠️ 配置优化
+- 新增 DeepSeek LLM 配置选项和环境变量支持
+- 优化 UTF-8 编码配置，支持中文内容正确处理
 - 简化 ClickHouse 数据源配置
 - 优化 LLM 服务配置结构
 - 增强日志和监控配置
