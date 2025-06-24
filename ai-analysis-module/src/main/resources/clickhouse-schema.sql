@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS ai_performance_reports (
     analysis_window_end DateTime,
     service_name String,
     report_type String DEFAULT 'PERFORMANCE',
-    metadata String DEFAULT '{}',
-    PRIMARY KEY (report_id)
+    metadata String DEFAULT '{}'
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(created_time)
 ORDER BY (created_time, report_id)
@@ -31,8 +30,7 @@ CREATE TABLE IF NOT EXISTS ai_anomaly_reports (
     deviation_percentage Float64,
     description String,
     recommended_action String,
-    status String DEFAULT 'DETECTED',
-    PRIMARY KEY (anomaly_id)
+    status String DEFAULT 'DETECTED'
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(detected_time)
 ORDER BY (detected_time, service_name, anomaly_type)

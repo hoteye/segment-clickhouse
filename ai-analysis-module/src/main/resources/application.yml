@@ -4,16 +4,26 @@ server:
   port: 8082
   servlet:
     context-path: /ai-analysis
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
   application:
     name: ai-analysis-service
-  # 数据源配置 - ClickHouse 
+  # HTTP 编码配置
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  # 数据源配置 - ClickHouse
   datasource:
     driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
-    url: ${CLICKHOUSE_URL:jdbc:clickhouse://localhost:8123/o11y}
-    username: ${CLICKHOUSE_USERNAME:default}
-    password: ${CLICKHOUSE_PASSWORD:}
+    url: ${CLICKHOUSE_URL:jdbc:clickhouse://192.168.100.6:8123/default?use_time_zone=UTC+8&use_server_time_zone=UTC+8}
+    username: ${CLICKHOUSE_USERNAME:root}
+    password: ${CLICKHOUSE_PASSWORD:123456}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -45,33 +55,10 @@ ai:
       error-rate-percent: 5.0     # 错误率阈值（百分比）
       cpu-usage-percent: 80.0     # CPU使用率阈值（百分比）
       memory-usage-percent: 85.0  # 内存使用率阈值（百分比）
-
-# ClickHouse 配置
-clickhouse:
-  connection:
-    url: ${CLICKHOUSE_URL:jdbc:clickhouse://localhost:8123/o11y}
-    username: ${CLICKHOUSE_USERNAME:default}
-    password: ${CLICKHOUSE_PASSWORD:}
-    socket-timeout: 30000
-    connection-timeout: 10000
-    max-rows-to-read: 1000000
-    max-result-rows: 100000
-  query:
-    # 性能数据查询相关表
-    tables:
-      segments: "segments"           # 段数据表
-      service_metrics: "service_agg_result"  # 服务聚合结果表
-      error_logs: "error_logs"       # 错误日志表
-      trace_data: "trace_data"       # 追踪数据表
-    # 分析报告存储表
-    reports:
-      performance_reports: "ai_performance_reports"
-      anomaly_reports: "ai_anomaly_reports"
-      optimization_suggestions: "ai_optimization_suggestions"
       
   # LLM 配置
   llm:
-    provider: openai  # openai, azure, ollama, local
+    provider: deepseek  # 改为使用 deepseek
     enabled: true
     fallback-enabled: true  # 启用降级分析
     
@@ -90,12 +77,42 @@ clickhouse:
       endpoint: ${AI_AZURE_ENDPOINT:}
       deployment-name: ${AI_AZURE_DEPLOYMENT:}
       api-version: ${AI_AZURE_API_VERSION:2023-05-15}
+      # DeepSeek 配置
+    deepseek:
+      api-key: ${AI_DEEPSEEK_API_KEY:sk-af87414f0b044883a76f2a297b6eaf86}
+      base-url: ${AI_DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+      model: ${AI_DEEPSEEK_MODEL:deepseek-chat}
+      timeout: 15000    # 减少超时时间到15秒
+      max-tokens: 2000
+      temperature: 0.7
     
     # 本地 LLM 配置 (Ollama)
     local:
       url: ${AI_LOCAL_LLM_URL:http://localhost:11434}
       model: ${AI_LOCAL_LLM_MODEL:llama2}
       timeout: 60000
+
+# ClickHouse 配置
+clickhouse:
+  connection:
+    url: ${CLICKHOUSE_URL:jdbc:clickhouse://localhost:8123/default?password=}
+    username: ${CLICKHOUSE_USERNAME:root}
+    password: ${CLICKHOUSE_PASSWORD:123456}
+    socket-timeout: 30000
+    connection-timeout: 10000
+    max-rows-to-read: 1000000
+    max-result-rows: 100000
+  query:
+    # 性能数据查询相关表
+    tables:
+      events: "events"                        # 事件数据表（包含 segmentObject 详细信息）
+      operator_metrics: "flink_operator_agg_result"  # Flink 算子聚合结果表
+      error_logs: "error_logs"                # 错误日志表（如果存在）
+      trace_data: "trace_data"                # 追踪数据表（如果存在）    # 分析报告存储表
+    reports:
+      performance_reports: "ai_performance_reports"
+      anomaly_reports: "ai_anomaly_reports"      
+      optimization_suggestions: "ai_optimization_suggestions"
 
 # 报告配置
 report:

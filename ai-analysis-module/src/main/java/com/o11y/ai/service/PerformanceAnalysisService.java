@@ -5,6 +5,9 @@ import com.o11y.ai.model.PerformanceMetrics;
 import com.o11y.ai.model.PerformanceAnomaly;
 import com.o11y.ai.model.PerformanceReport;
 import com.o11y.ai.model.OptimizationSuggestion;
+import com.o11y.ai.repository.ClickHouseRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -16,8 +19,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 智能性能分析服务
@@ -41,9 +44,14 @@ public class PerformanceAnalysisService {
 
     @Autowired
     private LLMAnalysisService llmService;
-
     @Autowired
     private ReportStorageService reportService;
+
+    @Autowired
+    private ClickHouseRepository clickHouseRepository;
+
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
 
     /**
      * 定时执行性能分析
@@ -112,12 +120,28 @@ public class PerformanceAnalysisService {
             } else {
                 report.setIntelligentAnalysis(generateBasicAnalysis(metrics, anomalies));
                 report.setOptimizationSuggestions(generateBasicSuggestions(metrics, anomalies));
-            }
-
-            // 5. 设置其他报告内容
+            } // 5. 设置其他报告内容
             report.setMetrics(convertToReportMetrics(metrics));
             report.setAnomalies(anomalies);
             report.setSummary(generateSummary(metrics, anomalies));
+
+            // 6. 保存报告
+            try {
+                reportService.saveReport(report);
+                LOG.info("性能分析报告已保存到文件系统");
+            } catch (Exception e) {
+                LOG.error("保存报告到文件系统失败", e);
+            }
+
+            // 7. 保存到 ClickHouse
+            try {
+                String reportContent = convertReportToJson(report);
+                clickHouseRepository.savePerformanceReport(report.getReportId(), reportContent,
+                        report.getGeneratedAt());
+                LOG.info("性能分析报告已保存到 ClickHouse");
+            } catch (Exception e) {
+                LOG.error("保存报告到 ClickHouse 失败", e);
+            }
 
             LOG.info("性能分析报告生成完成，报告ID: {}", report.getReportId());
             return report;
@@ -167,15 +191,18 @@ public class PerformanceAnalysisService {
                 "AVG(end_time - start_time) as avg_response_time, " +
                 "MAX(end_time - start_time) as max_response_time, " +
                 "SUM(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) as failed_requests, " +
-                "COUNT(*) / (toUnixTimestamp(?) - toUnixTimestamp(?)) as avg_throughput " +
+                "COUNT(*) / (toUnixTimestamp(toDateTime(?)) - toUnixTimestamp(toDateTime(?))) as avg_throughput " +
                 "FROM events " +
-                "WHERE start_time >= ? AND start_time <= ?";
-
+                "WHERE start_time >= toDateTime(?) AND start_time <= toDateTime(?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, endTime);
-            stmt.setObject(2, startTime);
-            stmt.setObject(3, startTime);
-            stmt.setObject(4, endTime);
+            // 格式化时间为 ClickHouse 兼容的格式（只保留到秒）
+            String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+            stmt.setString(1, endTimeStr);
+            stmt.setString(2, startTimeStr);
+            stmt.setString(3, startTimeStr);
+            stmt.setString(4, endTimeStr);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -462,5 +489,17 @@ public class PerformanceAnalysisService {
         }
 
         return summary.toString();
+    }
+
+    /**
+     * 将报告转换为JSON字符串
+     */
+    private String convertReportToJson(PerformanceReport report) {
+        try {
+            return objectMapper.writeValueAsString(report);
+        } catch (Exception e) {
+            LOG.error("转换报告为JSON失败", e);
+            return "{}";
+        }
     }
 }

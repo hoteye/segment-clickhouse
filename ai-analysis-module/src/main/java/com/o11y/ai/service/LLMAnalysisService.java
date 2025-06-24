@@ -46,12 +46,13 @@ public class LLMAnalysisService {
     public String analyzePerformanceData(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies) {
         try {
             String prompt = buildAnalysisPrompt(metrics, anomalies);
-
             switch (properties.getLlm().getProvider().toLowerCase()) {
                 case "openai":
                     return callOpenAI(prompt);
                 case "azure":
                     return callAzureOpenAI(prompt);
+                case "deepseek":
+                    return callDeepSeek(prompt);
                 case "ollama":
                 case "local":
                     return callLocalLLM(prompt);
@@ -75,13 +76,15 @@ public class LLMAnalysisService {
         try {
             String prompt = buildOptimizationPrompt(metrics, anomalies);
             String response = null;
-
             switch (properties.getLlm().getProvider().toLowerCase()) {
                 case "openai":
                     response = callOpenAI(prompt);
                     break;
                 case "azure":
                     response = callAzureOpenAI(prompt);
+                    break;
+                case "deepseek":
+                    response = callDeepSeek(prompt);
                     break;
                 case "ollama":
                 case "local":
@@ -254,6 +257,41 @@ public class LLMAnalysisService {
             return jsonResponse.path("choices").get(0).path("message").path("content").asText();
         } else {
             throw new RuntimeException("Azure OpenAI API 调用失败: " + response.statusCode() + " - " + response.body());
+        }
+    }
+
+    /**
+     * 调用 DeepSeek API
+     */
+    private String callDeepSeek(String prompt) throws Exception {
+        AiAnalysisProperties.Llm.Deepseek config = properties.getLlm().getDeepseek();
+
+        if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()) {
+            throw new IllegalArgumentException("DeepSeek API Key 未配置");
+        }
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", config.getModel());
+        requestBody.put("messages", Arrays.asList(
+                Map.of("role", "user", "content", prompt)));
+        requestBody.put("max_tokens", config.getMaxTokens());
+        requestBody.put("temperature", config.getTemperature());
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(config.getBaseUrl() + "/chat/completions"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + config.getApiKey())
+                .timeout(Duration.ofMillis(config.getTimeout()))
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestBody)))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request,
+                HttpResponse.BodyHandlers.ofString(java.nio.charset.StandardCharsets.UTF_8));
+
+        if (response.statusCode() == 200) {
+            JsonNode jsonResponse = objectMapper.readTree(response.body());
+            return jsonResponse.path("choices").get(0).path("message").path("content").asText();
+        } else {
+            throw new RuntimeException("DeepSeek API 调用失败: " + response.statusCode() + " - " + response.body());
         }
     }
 

@@ -1,0 +1,34 @@
+{
+  "reportId" : "ae0f0310-b4d4-4b4d-a37f-10c3ba6fbe21",
+  "generatedAt" : [ 2025, 6, 23, 23, 50, 58, 85513700 ],
+  "timeRange" : 1,
+  "summary" : "系统在过去1小时内处理了28086个请求，平均响应时间0.21ms，错误率11.19%。检测到1个性能异常，建议关注。",
+  "intelligentAnalysis" : "## 系统性能分析报告\\n\\n### 基础性能评估\\n⚠️ **错误率偏高**: 当前错误率为 11.19%，建议关注应用稳定性。\\n\\n### JVM 性能评估\\n\\n### 数据库性能评估\\n\\n### 检测到的异常\\n\uD83D\uDEA8 **严重异常**: 1 个，需要立即处理。\\n\\n### 总体建议\\n建议定期监控系统性能指标，及时发现和解决性能瓶颈问题。",
+  "optimizationSuggestions" : [ "降低应用错误率: 当前错误率偏高，建议检查异常处理逻辑和日志记录" ],
+  "metrics" : {
+    "avgResponseTime" : 0.21192526525671151,
+    "avgThroughput" : 7.801666666666667,
+    "errorRate" : 0.1118706829025137,
+    "avgCpuUsage" : 0.5,
+    "avgMemoryUsage" : 0.7,
+    "totalRequests" : 28086,
+    "totalErrors" : 3142
+  },
+  "anomalies" : [ {
+    "anomalyId" : "c25201ea-aead-469a-854f-49bdf8cdb876",
+    "detectedAt" : [ 2025, 6, 23, 23, 50, 58, 84393300 ],
+    "type" : "APPLICATION_ERROR_RATE_HIGH",
+    "severity" : "CRITICAL",
+    "name" : "错误率过高",
+    "description" : "应用错误率超过阈值",
+    "metric" : null,
+    "actualValue" : 11.18706829025137,
+    "expectedValue" : 5.0,
+    "deviationPercentage" : 123.74136580502739,
+    "affectedComponent" : "应用服务",
+    "durationSeconds" : 0,
+    "rootCause" : null,
+    "recommendedAction" : null,
+    "context" : null
+  } ]
+}

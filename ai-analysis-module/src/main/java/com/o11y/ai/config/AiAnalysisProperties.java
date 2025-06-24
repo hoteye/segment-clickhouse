@@ -49,6 +49,7 @@ public class AiAnalysisProperties {
         private boolean fallbackEnabled = true;
         private Openai openai = new Openai();
         private Azure azure = new Azure();
+        private Deepseek deepseek = new Deepseek();
         private Local local = new Local();
 
         @Data
@@ -67,6 +68,16 @@ public class AiAnalysisProperties {
             private String endpoint;
             private String deploymentName;
             private String apiVersion = "2023-05-15";
+        }
+
+        @Data
+        public static class Deepseek {
+            private String apiKey;
+            private String baseUrl = "https://api.deepseek.com/v1";
+            private String model = "deepseek-chat";
+            private int timeout = 30000;
+            private int maxTokens = 2000;
+            private double temperature = 0.7;
         }
 
         @Data

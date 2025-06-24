@@ -1,0 +1,64 @@
+# DeepSeek AI 配置示例
+# 将这些配置添加到您的 application.yml 或通过环境变量设置
+
+# 方式1：在 application.yml 中直接配置
+ai:
+  llm:
+    provider: deepseek  # 设置提供商为 deepseek
+    deepseek:
+      api-key: sk-your-deepseek-api-key-here  # 替换为您的 DeepSeek API Key
+      base-url: https://api.deepseek.com/v1   # DeepSeek API 基础 URL
+      model: deepseek-chat                    # 使用的模型名称
+      timeout: 30000                          # 超时时间（毫秒）
+      max-tokens: 2000                        # 最大令牌数
+      temperature: 0.7                        # 随机性控制（0-1）
+
+# 方式2：通过环境变量配置（推荐）
+# 设置以下环境变量：
+# AI_DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
+# AI_DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+# AI_DEEPSEEK_MODEL=deepseek-chat
+
+# 然后在 application.yml 中：
+# ai:
+#   llm:
+#     provider: deepseek
+
+# DeepSeek 模型选择：
+# - deepseek-chat: 适用于对话和通用任务
+# - deepseek-coder: 专门针对代码相关任务优化
+# - deepseek-math: 数学推理任务
+
+# 使用示例：
+# 1. 获取 DeepSeek API Key：
+#    - 访问 https://platform.deepseek.com/
+#    - 注册账号并获取 API Key
+#    - 确保账户有足够的余额
+
+# 2. 配置环境变量：
+#    export AI_DEEPSEEK_API_KEY="sk-your-api-key"
+#    或在 Windows 中：
+#    set AI_DEEPSEEK_API_KEY=sk-your-api-key
+
+# 3. 启动应用：
+#    java -jar ai-analysis-module.jar
+
+# 4. 测试 API：
+#    curl -X POST http://localhost:8082/ai-analysis/api/reports/generate \
+#         -H "Content-Type: application/json" \
+#         -d '{"hours": 1}'
+
+# 价格信息（截至2024年）：
+# DeepSeek 的定价相对较低，适合中小型项目使用
+# 具体价格请参考官方网站
+
+# 优势：
+# - 中文支持良好
+# - 价格相对便宜
+# - API 兼容 OpenAI 格式
+# - 支持多种专业模型
+
+# 注意事项：
+# - 确保网络能够访问 api.deepseek.com
+# - 如果使用代理，请配置相应的 HTTP 代理设置
+# - 保护好您的 API Key，不要提交到代码仓库中
