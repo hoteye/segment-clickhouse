@@ -25,6 +25,7 @@ public class PerformanceReport {
     private List<String> optimizationSuggestions;
     private ReportMetrics metrics;
     private List<PerformanceAnomaly> anomalies;
+    private List<String> errorStacks;
 
     /**
      * 简化的指标数据模型

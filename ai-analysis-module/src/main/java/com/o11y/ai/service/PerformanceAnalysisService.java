@@ -75,7 +75,9 @@ public class PerformanceAnalysisService {
         } catch (Exception e) {
             LOG.error("定时性能分析失败", e);
         }
-    }    /**
+    }
+
+    /**
      * 生成性能分析报告
      */
     public PerformanceReport generateAnalysisReport(int timeRangeHours) {
@@ -89,8 +91,14 @@ public class PerformanceAnalysisService {
                 LOG.warn("未收集到性能数据");
                 return null;
             }
-            LOG.info("步骤1完成: 成功收集性能数据，总请求数: {}, 平均响应时间: {}ms", 
-                    metrics.getTotalRequests(), metrics.getAvgResponseTime());            // 2. 异常检测
+            LOG.info("步骤1完成: 成功收集性能数据，总请求数: {}, 平均响应时间: {}ms",
+                    metrics.getTotalRequests(), metrics.getAvgResponseTime());
+
+            // 1.1 收集错误堆栈
+            List<String> errorStacks = collectErrorStacks(timeRangeHours);
+            LOG.info("步骤1.1: 收集到 {} 条错误堆栈", errorStacks.size());
+
+            // 2. 异常检测
             LOG.info("步骤2: 开始异常检测...");
             List<PerformanceAnomaly> anomalies = detectAnomalies(metrics);
             LOG.info("步骤2完成: 检测到 {} 个异常", anomalies.size());
@@ -101,18 +109,20 @@ public class PerformanceAnalysisService {
                     .reportId(UUID.randomUUID().toString()).generatedAt(LocalDateTime.now())
                     .timeRange(timeRangeHours)
                     .build();
-            LOG.info("步骤3完成: 报告对象创建完成，报告ID: {}", report.getReportId());            // 4. LLM 智能分析
+            LOG.info("步骤3完成: 报告对象创建完成，报告ID: {}", report.getReportId());
+
+            // 4. LLM 智能分析
             LOG.info("步骤4: 开始LLM智能分析...");
-            LOG.info("LLM配置状态 - 启用: {}, 提供商: {}", 
-                    properties.getLlm().isEnabled(), 
+            LOG.info("LLM配置状态 - 启用: {}, 提供商: {}",
+                    properties.getLlm().isEnabled(),
                     properties.getLlm().getProvider());
-            
             if (properties.getLlm().isEnabled()) {
                 try {
-                    LOG.info("步骤4a: 调用LLM分析性能数据...");
-                    String intelligentAnalysis = llmService.analyzePerformanceData(metrics, anomalies);
+                    LOG.info("步骤4a: 调用LLM分析性能数据和错误堆栈...");
+                    String intelligentAnalysis = llmService.analyzePerformanceData(metrics, anomalies, errorStacks);
                     LOG.info("步骤4a完成: LLM分析完成，分析长度: {} 字符", intelligentAnalysis.length());
                     report.setIntelligentAnalysis(intelligentAnalysis);
+                    report.setErrorStacks(errorStacks);
 
                     LOG.info("步骤4b: 调用LLM生成优化建议...");
                     List<OptimizationSuggestion> suggestions = llmService.generateOptimizationSuggestions(metrics,
@@ -127,14 +137,16 @@ public class PerformanceAnalysisService {
                     LOG.info("步骤4备用: 使用基础分析...");
                     report.setIntelligentAnalysis(generateBasicAnalysis(metrics, anomalies));
                     report.setOptimizationSuggestions(generateBasicSuggestions(metrics, anomalies));
+                    report.setErrorStacks(errorStacks);
                     LOG.info("步骤4备用完成: 基础分析已完成");
                 }
             } else {
                 LOG.info("步骤4跳过: LLM已禁用，使用基础分析...");
                 report.setIntelligentAnalysis(generateBasicAnalysis(metrics, anomalies));
                 report.setOptimizationSuggestions(generateBasicSuggestions(metrics, anomalies));
+                report.setErrorStacks(errorStacks);
                 LOG.info("步骤4完成: 基础分析已完成");
-            }            // 5. 设置其他报告内容
+            } // 5. 设置其他报告内容
             LOG.info("步骤5: 设置报告其他内容...");
             report.setMetrics(convertToReportMetrics(metrics));
             report.setAnomalies(anomalies);
@@ -168,7 +180,9 @@ public class PerformanceAnalysisService {
             LOG.error("生成性能分析报告失败", e);
             throw new RuntimeException("性能分析报告生成失败", e);
         }
-    }    /**
+    }
+
+    /**
      * 收集性能指标数据
      */
     private PerformanceMetrics collectPerformanceMetrics(int timeRangeHours) throws Exception {
@@ -178,14 +192,14 @@ public class PerformanceAnalysisService {
         LocalDateTime startTime = endTime.minusHours(timeRangeHours);
 
         LOG.info("时间范围: {} 到 {}", startTime, endTime);
-        
+
         metrics.setStartTime(startTime);
         metrics.setEndTime(endTime);
         metrics.setTimeRangeHours(timeRangeHours);
 
         try (Connection conn = dataSource.getConnection()) {
             LOG.info("数据库连接已建立");
-            
+
             // 收集基础应用指标
             LOG.info("收集应用性能指标...");
             collectApplicationMetrics(conn, metrics, startTime, endTime);
@@ -209,7 +223,9 @@ public class PerformanceAnalysisService {
 
         LOG.info("--- 性能指标数据收集完成 ---");
         return metrics;
-    }    /**
+    }
+
+    /**
      * 收集应用性能指标
      */
     private void collectApplicationMetrics(Connection conn, PerformanceMetrics metrics,
@@ -223,16 +239,16 @@ public class PerformanceAnalysisService {
                 "COUNT(*) / (toUnixTimestamp(toDateTime(?)) - toUnixTimestamp(toDateTime(?))) as avg_throughput " +
                 "FROM events " +
                 "WHERE start_time >= toDateTime(?) AND start_time <= toDateTime(?)";
-        
+
         LOG.info("执行SQL: {}", sql);
-        
+
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             // 格式化时间为 ClickHouse 兼容的格式（只保留到秒）
             String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
             LOG.info("查询参数: startTime={}, endTime={}", startTimeStr, endTimeStr);
-            
+
             stmt.setString(1, endTimeStr);
             stmt.setString(2, startTimeStr);
             stmt.setString(3, startTimeStr);
@@ -245,10 +261,10 @@ public class PerformanceAnalysisService {
                     double maxResponseTime = rs.getDouble("max_response_time");
                     long failedRequests = rs.getLong("failed_requests");
                     double avgThroughput = rs.getDouble("avg_throughput");
-                    
-                    LOG.info("查询结果: 总请求数={}, 平均响应时间={}ms, 最大响应时间={}ms, 失败请求数={}, 平均吞吐量={}", 
+
+                    LOG.info("查询结果: 总请求数={}, 平均响应时间={}ms, 最大响应时间={}ms, 失败请求数={}, 平均吞吐量={}",
                             totalRequests, avgResponseTime, maxResponseTime, failedRequests, avgThroughput);
-                    
+
                     metrics.setTotalRequests(totalRequests);
                     metrics.setAvgResponseTime(avgResponseTime);
                     metrics.setMaxResponseTime(maxResponseTime);
@@ -551,5 +567,36 @@ public class PerformanceAnalysisService {
             LOG.error("转换报告为JSON失败", e);
             return "{}";
         }
+    }
+
+    /**
+     * 收集错误堆栈信息
+     */
+    private List<String> collectErrorStacks(int timeRangeHours) {
+        List<String> errorStacks = new ArrayList<>();
+        LocalDateTime endTime = LocalDateTime.now();
+        LocalDateTime startTime = endTime.minusHours(timeRangeHours);
+        String sql = "SELECT log_stack FROM events WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND log_stack IS NOT NULL LIMIT 20";
+        try (Connection conn = dataSource.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            stmt.setString(1, startTimeStr);
+            stmt.setString(2, endTimeStr);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String stack = rs.getString("log_stack");
+                    if (stack != null && !stack.isEmpty()) {
+                        if (stack.length() > 2000) {
+                            stack = stack.substring(0, 3000) + "... [truncated]";
+                        }
+                        errorStacks.add(stack);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("收集 log_stack 失败", e);
+        }
+        return errorStacks;
     }
 }
