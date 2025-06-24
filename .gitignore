@@ -13,6 +13,10 @@ dependency-reduced-pom.xml
 *.log
 logs/
 
+# 报告文件目录
+reports/
+*/reports/
+
 # 临时文件
 *.tmp
 *.bak
