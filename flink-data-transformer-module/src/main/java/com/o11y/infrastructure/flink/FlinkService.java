@@ -402,7 +402,8 @@ public class FlinkService {
                                                 addColumnsInterval))
                                 .setParallelism(1)
                                 .name("NewKeyTableSyncProcessFunction")
-                                .addSink(new org.apache.flink.streaming.api.functions.sink.DiscardingSink<>());
+                                .addSink(new org.apache.flink.streaming.api.functions.sink.DiscardingSink<>())
+                                .name("DiscardingSink-NewKeyTableSyncProcessFunction");
                 LOG.warn("NewKeyTableSyncProcessFunction started as Flink operator");
         }
 
@@ -435,8 +436,7 @@ public class FlinkService {
                                         .name(op.getClass().getSimpleName());
                         // 聚合流写入 ClickHouse
                         aggStream.addSink(new AggResultClickHouseSink(clickhouseConfig))
-                                        .name(AggResultClickHouseSink.class.getSimpleName() + "-"
-                                                        + op.getClass().getSimpleName());
+                                        .name(AggResultClickHouseSink.class.getSimpleName());
                 }
         }
 

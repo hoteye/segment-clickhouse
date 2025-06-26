@@ -129,12 +129,8 @@ public class AggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> 
         else
             insertStmt.setNull(16, java.sql.Types.BIGINT);
         insertStmt.executeUpdate();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-        String windowStartStr = sdf.format(new Date(value.windowStart));
-        LOG.debug(
-                "Inserted ServiceAggResult into ClickHouse: window_start:{}, windowSize:{}, operatorName:{}, service:{}",
-                windowStartStr.substring(11),
-                value.windowSize, value.operatorName.substring(0, 8), value.service.substring(0, 8));
+        LOG.debug("Inserted ServiceAggResult into ClickHouse: windowSize:{}, operatorName:{}, service:{}",
+                value.windowSize, value.operatorName, value.service);
     }
 
     /**

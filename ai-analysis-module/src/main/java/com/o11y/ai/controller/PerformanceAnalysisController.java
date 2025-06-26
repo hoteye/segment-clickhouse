@@ -40,11 +40,12 @@ public class PerformanceAnalysisController {
      * 生成性能分析报告
      */
     @PostMapping("/reports/generate")
-    public ResponseEntity<?> generateReport(@RequestParam(defaultValue = "1") int timeRangeHours) {
+    public ResponseEntity<?> generateReport(@RequestParam(defaultValue = "1") int timeRangeHours,
+            @RequestParam(required = false) String service) {
         try {
-            LOG.info("收到生成报告请求，时间范围: {}小时", timeRangeHours);
+            LOG.info("收到生成报告请求，时间范围: {}小时, service={}", timeRangeHours, service);
 
-            PerformanceReport report = analysisService.generateAnalysisReport(timeRangeHours);
+            PerformanceReport report = analysisService.generateAnalysisReport(timeRangeHours, service);
             if (report == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "无法生成报告，可能缺少数据"));
             }
@@ -110,11 +111,14 @@ public class PerformanceAnalysisController {
      * 获取优化建议
      */
     @PostMapping("/suggestions")
-    public ResponseEntity<?> getOptimizationSuggestions(@RequestParam(defaultValue = "1") int timeRangeHours) {
+    public ResponseEntity<?> getOptimizationSuggestions(
+            @RequestParam(defaultValue = "1") int timeRangeHours,
+            @RequestParam(required = false) String service) {
         try {
-            LOG.info("收到获取优化建议请求，时间范围: {}小时", timeRangeHours);
+            LOG.info("收到获取优化建议请求，时间范围: {}小时, service={}", timeRangeHours, service);
 
-            List<OptimizationSuggestion> suggestions = analysisService.generateOptimizationSuggestions(timeRangeHours);
+            List<OptimizationSuggestion> suggestions = analysisService.generateOptimizationSuggestions(timeRangeHours,
+                    service);
 
             return ResponseEntity.ok(Map.of(
                     "suggestions", suggestions,

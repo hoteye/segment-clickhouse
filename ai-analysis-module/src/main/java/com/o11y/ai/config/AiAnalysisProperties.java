@@ -12,8 +12,24 @@ import lombok.Data;
 @ConfigurationProperties(prefix = "ai")
 public class AiAnalysisProperties {
 
-    private Analysis analysis = new Analysis();
-    private Llm llm = new Llm();
+    private Analysis analysis;
+    private Llm llm;
+
+    public Analysis getAnalysis() {
+        return analysis;
+    }
+
+    public void setAnalysis(Analysis analysis) {
+        this.analysis = analysis;
+    }
+
+    public Llm getLlm() {
+        return llm;
+    }
+
+    public void setLlm(Llm llm) {
+        this.llm = llm;
+    }
 
     @Data
     public static class Analysis {
@@ -74,9 +90,9 @@ public class AiAnalysisProperties {
         public static class Deepseek {
             private String apiKey;
             private String baseUrl = "https://api.deepseek.com/v1";
-            private String model = "deepseek-chat";
+            private String model = "deepseek-reasoner";
             private int timeout = 30000;
-            private int maxTokens = 2000;
+            private int maxTokens = 3000;
             private double temperature = 0.7;
         }
 

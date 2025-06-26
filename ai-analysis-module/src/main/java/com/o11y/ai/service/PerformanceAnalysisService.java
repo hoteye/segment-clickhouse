@@ -65,12 +65,24 @@ public class PerformanceAnalysisService {
 
         try {
             LOG.info("开始执行定时性能分析");
-            PerformanceReport report = generateAnalysisReport(properties.getAnalysis().getWindow().getHours());
+            int timeRangeHours = properties.getAnalysis().getWindow().getHours();
 
-            if (report != null) {
-                reportService.saveReport(report);
-                LOG.info("定时性能分析完成，报告ID: {}", report.getReportId());
+            // 获取所有服务列表
+            List<String> services = getAllServices(timeRangeHours);
+            if (services.isEmpty()) {
+                LOG.info("未找到服务，跳过生成报告");
+                return;
             }
+
+            for (String service : services) {
+                LOG.info("开始为服务 {} 生成性能报告", service);
+                PerformanceReport report = generateAnalysisReport(timeRangeHours, service);
+                if (report != null) {
+                    reportService.saveReport(report);
+                    LOG.info("服务 {} 性能报告生成完成，报告ID: {}", service, report.getReportId());
+                }
+            }
+            LOG.info("所有服务性能报告生成完成");
 
         } catch (Exception e) {
             LOG.error("定时性能分析失败", e);
@@ -78,15 +90,46 @@ public class PerformanceAnalysisService {
     }
 
     /**
+     * 获取所有服务名称列表
+     */
+    private List<String> getAllServices(int timeRangeHours) {
+        LocalDateTime endTime = LocalDateTime.now();
+        LocalDateTime startTime = endTime.minusHours(timeRangeHours);
+        String sql = "SELECT DISTINCT service FROM events WHERE start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND service IS NOT NULL";
+
+        List<String> services = new ArrayList<>();
+        try (Connection conn = dataSource.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            stmt.setString(1, startTimeStr);
+            stmt.setString(2, endTimeStr);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String service = rs.getString("service");
+                    if (service != null && !service.isEmpty()) {
+                        services.add(service);
+                    }
+                }
+            }
+            LOG.info("获取到 {} 个服务", services.size());
+        } catch (Exception e) {
+            LOG.error("获取服务列表失败", e);
+        }
+        return services;
+    }
+
+    /**
      * 生成性能分析报告
      */
-    public PerformanceReport generateAnalysisReport(int timeRangeHours) {
+    public PerformanceReport generateAnalysisReport(int timeRangeHours, String service) {
         try {
             LOG.info("=== 开始生成性能分析报告，时间范围: {}小时 ===", timeRangeHours);
 
             // 1. 收集性能数据
             LOG.info("步骤1: 开始收集性能数据...");
-            PerformanceMetrics metrics = collectPerformanceMetrics(timeRangeHours);
+            PerformanceMetrics metrics = collectPerformanceMetrics(timeRangeHours, service);
             if (metrics == null) {
                 LOG.warn("未收集到性能数据");
                 return null;
@@ -185,7 +228,7 @@ public class PerformanceAnalysisService {
     /**
      * 收集性能指标数据
      */
-    private PerformanceMetrics collectPerformanceMetrics(int timeRangeHours) throws Exception {
+    private PerformanceMetrics collectPerformanceMetrics(int timeRangeHours, String service) throws Exception {
         LOG.info("--- 开始收集性能指标数据 ---");
         PerformanceMetrics metrics = new PerformanceMetrics();
         LocalDateTime endTime = LocalDateTime.now();
@@ -196,7 +239,7 @@ public class PerformanceAnalysisService {
         metrics.setStartTime(startTime);
         metrics.setEndTime(endTime);
         metrics.setTimeRangeHours(timeRangeHours);
-
+        metrics.setService(service);
         try (Connection conn = dataSource.getConnection()) {
             LOG.info("数据库连接已建立");
 
@@ -231,28 +274,30 @@ public class PerformanceAnalysisService {
     private void collectApplicationMetrics(Connection conn, PerformanceMetrics metrics,
             LocalDateTime startTime, LocalDateTime endTime) throws Exception {
         LOG.info("执行应用指标查询...");
+        String service = metrics.getService();
         String sql = "SELECT " +
                 "COUNT(*) as total_requests, " +
                 "AVG(end_time - start_time) as avg_response_time, " +
                 "MAX(end_time - start_time) as max_response_time, " +
                 "SUM(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) as failed_requests, " +
-                "COUNT(*) / (toUnixTimestamp(toDateTime(?)) - toUnixTimestamp(toDateTime(?))) as avg_throughput " +
+                "COUNT(*) / (toUnixTimestamp(toDateTime(?, 'Asia/Shanghai')) - toUnixTimestamp(toDateTime(?, 'Asia/Shanghai'))) as avg_throughput " +
                 "FROM events " +
-                "WHERE start_time >= toDateTime(?) AND start_time <= toDateTime(?)";
+                "WHERE start_time >= toDateTime(?, 'Asia/Shanghai') AND start_time <= toDateTime(?, 'Asia/Shanghai') AND service = ? ";
 
-        LOG.info("执行SQL: {}", sql);
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            // 格式化时间为 ClickHouse 兼容的格式（只保留到秒）
-            String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-
-            LOG.info("查询参数: startTime={}, endTime={}", startTimeStr, endTimeStr);
+            // 明确指定 Asia/Shanghai 时区，格式化时间为 ClickHouse 兼容格式
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String endTimeStr = endTime.atZone(java.time.ZoneId.systemDefault()).withZoneSameInstant(java.time.ZoneId.of("Asia/Shanghai")).format(formatter);
+            String startTimeStr = startTime.atZone(java.time.ZoneId.systemDefault()).withZoneSameInstant(java.time.ZoneId.of("Asia/Shanghai")).format(formatter);
+            LOG.info("sql: {}, startTimeStr : {}, endTimeStr : {}, service : {}", sql, startTimeStr, endTimeStr, service);
+            LOG.info("查询参数: startTime={}, endTime={}, service={}", startTimeStr, endTimeStr, service);
 
             stmt.setString(1, endTimeStr);
             stmt.setString(2, startTimeStr);
             stmt.setString(3, startTimeStr);
             stmt.setString(4, endTimeStr);
+            stmt.setString(5, service);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -262,8 +307,8 @@ public class PerformanceAnalysisService {
                     long failedRequests = rs.getLong("failed_requests");
                     double avgThroughput = rs.getDouble("avg_throughput");
 
-                    LOG.info("查询结果: 总请求数={}, 平均响应时间={}ms, 最大响应时间={}ms, 失败请求数={}, 平均吞吐量={}",
-                            totalRequests, avgResponseTime, maxResponseTime, failedRequests, avgThroughput);
+                    LOG.info("服务{}的查询结果: 总请求数={}, 平均响应时间={}ms, 最大响应时间={}ms, 失败请求数={}, 平均吞吐量={}",
+                            service, totalRequests, avgResponseTime, maxResponseTime, failedRequests, avgThroughput);
 
                     metrics.setTotalRequests(totalRequests);
                     metrics.setAvgResponseTime(avgResponseTime);
@@ -287,17 +332,86 @@ public class PerformanceAnalysisService {
     }
 
     /**
-     * 收集 JVM 指标（从 events 表的 tag 字段或其他表）
+     * 收集 JVM 指标（从 events 表的 tag_jvm_ 和 tag_thread_ 相关字段）
      */
     private void collectJvmMetrics(Connection conn, PerformanceMetrics metrics,
             LocalDateTime startTime, LocalDateTime endTime) throws Exception {
-        // 这里可以从 events 表或专门的 JVM metrics 表收集数据
-        // 由于当前表结构限制，这里设置一些默认值
-        metrics.setAvgHeapUsed(512 * 1024 * 1024); // 512MB
-        metrics.setMaxHeapUsed(1024 * 1024 * 1024); // 1GB
-        metrics.setAvgThreadCount(100);
-        metrics.setAvgCpuUsage(0.5); // 50%
-        metrics.setTotalGcTime(1000); // 1s
+        String service = metrics.getService();
+        String sql = "SELECT " +
+                "MAX(tag_jvm_heap_used_type_Int64 / tag_jvm_heap_max_type_Int64) as max_heap_used_ratio, " +
+                "AVG(tag_jvm_heap_used_type_Int64) as avg_heap_used, " +
+                "MAX(tag_jvm_heap_used_type_Int64) as max_heap_used, " +
+                "AVG(tag_jvm_nonheap_used_type_Int64) as avg_nonheap_used, " +
+                "MAX(tag_jvm_nonheap_used_type_Int64) as max_nonheap_used, " +
+                "AVG(tag_thread_count_type_Int64) as avg_thread_count, " +
+                "MAX(tag_thread_peak_count_type_Int64) as max_thread_peak_count, " +
+                "AVG(tag_thread_daemon_count_type_Int64) as avg_thread_daemon_count, " +
+                "MAX(tag_thread_total_started_count_type_Int64) as max_thread_total_started_count, " +
+                "AVG(tag_jvm_heap_committed_type_Int64) as avg_heap_committed, " +
+                "AVG(tag_jvm_heap_init_type_Int64) as avg_heap_init, " +
+                "AVG(tag_jvm_heap_max_type_Int64) as avg_heap_max, " +
+                "AVG(tag_jvm_nonheap_committed_type_Int64) as avg_nonheap_committed, " +
+                "AVG(tag_jvm_nonheap_init_type_Int64) as avg_nonheap_init, " +
+                "AVG(tag_jvm_nonheap_max_type_Int64) as avg_nonheap_max " +
+                "FROM events " +
+                "WHERE start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND service = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            stmt.setString(1, startTimeStr);
+            stmt.setString(2, endTimeStr);
+            if (service != null)
+                stmt.setString(3, service);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    metrics.setMaxHeapUsedRatio(rs.getDouble("max_heap_used_ratio"));
+                    metrics.setAvgHeapUsed(rs.getDouble("avg_heap_used"));
+                    metrics.setMaxHeapUsed(rs.getDouble("max_heap_used"));
+                    metrics.setAvgNonHeapUsed(rs.getDouble("avg_nonheap_used"));
+                    metrics.setMaxNonHeapUsed(rs.getDouble("max_nonheap_used"));
+                    metrics.setAvgThreadCount(rs.getInt("avg_thread_count"));
+                    metrics.setMaxThreadPeakCount(rs.getInt("max_thread_peak_count"));
+                    metrics.setThreadDaemonCount(rs.getInt("avg_thread_daemon_count"));
+                    metrics.setThreadTotalStartedCount(rs.getInt("max_thread_total_started_count"));
+                    metrics.setHeapCommitted((long) rs.getDouble("avg_heap_committed"));
+                    metrics.setHeapInit((long) rs.getDouble("avg_heap_init"));
+                    metrics.setHeapMax((long) rs.getDouble("avg_heap_max"));
+                    metrics.setNonHeapCommitted((long) rs.getDouble("avg_nonheap_committed"));
+                    metrics.setNonHeapInit((long) rs.getDouble("avg_nonheap_init"));
+                    metrics.setNonHeapMax((long) rs.getDouble("avg_nonheap_max"));
+                    LOG.info("JVM指标收集完成: 最大堆内存使用率={} %, 平均堆内存={} Mb, 最大堆内存={} Mb, " +
+                            "平均非堆内存={} Mb, 最大非堆内存={} Mb, 平均线程数={}, 最大线程峰值数={}, " +
+                            "守护线程数={}, 总线程启动数={}, 堆已提交={} Mb, 堆初始大小={} Mb, 堆最大大小={} Mb, " +
+                            "非堆已提交={} Mb, 非堆初始大小={} Mb, 非堆最大大小={} Mb",
+                            metrics.getMaxHeapUsedRatio() * 100, metrics.getAvgHeapUsed() / 1024 / 1024,
+                            metrics.getMaxHeapUsed() / 1024 / 1024,
+                            metrics.getAvgNonHeapUsed() / 1024 / 1024, metrics.getMaxNonHeapUsed() / 1024 / 1024,
+                            metrics.getAvgThreadCount(), metrics.getMaxThreadPeakCount(),
+                            metrics.getThreadDaemonCount(), metrics.getThreadTotalStartedCount(),
+                            metrics.getHeapCommitted() / 1024 / 1024, metrics.getHeapInit() / 1024 / 1024,
+                            metrics.getHeapMax() / 1024 / 1024,
+                            metrics.getNonHeapCommitted() / 1024 / 1024, metrics.getNonHeapInit() / 1024 / 1024,
+                            metrics.getNonHeapMax() / 1024 / 1024);
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("收集JVM指标失败，使用默认值", e);
+            metrics.setMaxHeapUsedRatio(0.8); // 80%
+            metrics.setAvgHeapUsed(512 * 1024 * 1024); // 512MB
+            metrics.setMaxHeapUsed(1024 * 1024 * 1024); // 1GB
+            metrics.setAvgNonHeapUsed(128 * 1024 * 1024); // 128MB
+            metrics.setMaxNonHeapUsed(256 * 1024 * 1024); // 256MB
+            metrics.setAvgThreadCount(100);
+            metrics.setMaxThreadPeakCount(120);
+            metrics.setThreadDaemonCount(80);
+            metrics.setThreadTotalStartedCount(200);
+            metrics.setHeapCommitted(1024 * 1024 * 1024);
+            metrics.setHeapInit(512 * 1024 * 1024);
+            metrics.setHeapMax(2048 * 1024 * 1024);
+            metrics.setNonHeapCommitted(256 * 1024 * 1024);
+            metrics.setNonHeapInit(128 * 1024 * 1024);
+            metrics.setNonHeapMax(512 * 1024 * 1024);
+        }
     }
 
     /**
@@ -305,17 +419,19 @@ public class PerformanceAnalysisService {
      */
     private void collectDatabaseMetrics(Connection conn, PerformanceMetrics metrics,
             LocalDateTime startTime, LocalDateTime endTime) throws Exception {
+        String service = metrics.getService();
         String sql = "SELECT " +
                 "COUNT(*) as total_queries, " +
                 "AVG(end_time - start_time) as avg_query_duration, " +
                 "SUM(CASE WHEN end_time - start_time > 1000 THEN 1 ELSE 0 END) as slow_queries " +
                 "FROM events " +
                 "WHERE start_time >= ? AND start_time <= ? " +
-                "AND span_layer = 'Database'";
+                "AND span_layer = 'Database' AND service = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, startTime);
             stmt.setObject(2, endTime);
+            stmt.setString(3, service);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -331,14 +447,57 @@ public class PerformanceAnalysisService {
     }
 
     /**
-     * 收集系统指标
+     * 收集系统指标（从 events 表的系统相关字段）
      */
     private void collectSystemMetrics(Connection conn, PerformanceMetrics metrics,
             LocalDateTime startTime, LocalDateTime endTime) throws Exception {
-        // 设置一些默认的系统指标
-        metrics.setAvgSystemCpuUsage(0.6); // 60%
-        metrics.setAvgMemoryUsage(0.7); // 70%
-        metrics.setAvgDiskUsage(0.8); // 80%
+        String service = metrics.getService();
+        String sql = "SELECT " +
+                "AVG(tag_Available_Memory_type_Int64) as avg_available_memory, " +
+                "AVG(tag_Total_Memory_type_Int64) as avg_total_memory, " +
+                "any(tag_Processor_Name) as processor_name, " +
+                "any(tag_os_arch) as os_arch, " +
+                "any(tag_os_name) as os_name, " +
+                "any(tag_os_version) as os_version " +
+                "FROM events " +
+                "WHERE start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND service = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            stmt.setString(1, startTimeStr);
+            stmt.setString(2, endTimeStr);
+            stmt.setString(3, service);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    long availableMemory = rs.getLong("avg_available_memory");
+                    long totalMemory = rs.getLong("avg_total_memory");
+                    String processorName = rs.getString("processor_name");
+                    String osArch = rs.getString("os_arch");
+                    String osName = rs.getString("os_name");
+                    String osVersion = rs.getString("os_version");
+                    // 这里可将采集到的系统指标存入 metrics 的自定义字段
+                    Map<String, Object> custom = metrics.getCustomMetrics();
+                    if (custom == null)
+                        custom = new HashMap<>();
+                    custom.put("availableMemory", availableMemory);
+                    custom.put("totalMemory", totalMemory);
+                    custom.put("processorName", processorName);
+                    custom.put("osArch", osArch);
+                    custom.put("osName", osName);
+                    custom.put("osVersion", osVersion);
+                    metrics.setCustomMetrics(custom);
+                    // 也可根据需要设置 avgMemoryUsage、avgSystemCpuUsage 等
+                    if (totalMemory > 0) {
+                        metrics.setAvgMemoryUsage(1.0 - (availableMemory * 1.0 / totalMemory));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("收集系统指标失败，使用默认值", e);
+            metrics.setAvgSystemCpuUsage(0.6); // 60%
+            metrics.setAvgMemoryUsage(0.7); // 70%
+            metrics.setAvgDiskUsage(0.8); // 80%
+        }
     }
 
     /**
@@ -434,11 +593,12 @@ public class PerformanceAnalysisService {
     /**
      * 生成优化建议
      */
-    public List<OptimizationSuggestion> generateOptimizationSuggestions(int timeRangeHours) throws Exception {
-        LOG.info("开始生成优化建议，时间范围: {}小时", timeRangeHours);
+    public List<OptimizationSuggestion> generateOptimizationSuggestions(int timeRangeHoursm, String service)
+            throws Exception {
+        LOG.info("开始为服务 {} 生成优化建议，时间范围: {}小时", service, timeRangeHoursm);
         try {
             // 1. 收集性能数据
-            PerformanceMetrics metrics = collectPerformanceMetrics(timeRangeHours);
+            PerformanceMetrics metrics = collectPerformanceMetrics(timeRangeHoursm, service);
             List<PerformanceAnomaly> anomalies = detectAnomalies(metrics);
 
             // 2. 使用 LLM 生成优化建议
@@ -576,7 +736,7 @@ public class PerformanceAnalysisService {
         List<String> errorStacks = new ArrayList<>();
         LocalDateTime endTime = LocalDateTime.now();
         LocalDateTime startTime = endTime.minusHours(timeRangeHours);
-        String sql = "SELECT log_stack FROM events WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND log_stack IS NOT NULL LIMIT 20";
+        String sql = "SELECT log_stack FROM events WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND log_stack IS NOT NULL LIMIT 40";
         try (Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));

@@ -164,6 +164,8 @@ public class LLMAnalysisService {
         StringBuilder prompt = new StringBuilder();
 
         prompt.append("你是一个专业的应用性能分析专家。请分析以下性能数据并提供洞察:\\n\\n");
+        // 增加报告对象 service
+        prompt.append(String.format("### 报告对象: %s\\n", metrics.getService()));
 
         // 基础指标
         prompt.append("## 基础性能指标\\n");
@@ -177,6 +179,7 @@ public class LLMAnalysisService {
         prompt.append("\\n## JVM 性能指标\\n");
         prompt.append(String.format("- 平均堆内存使用: %.2f MB\\n", metrics.getAvgHeapUsed() / 1024 / 1024));
         prompt.append(String.format("- 最大堆内存使用: %.2f MB\\n", metrics.getMaxHeapUsed() / 1024 / 1024));
+        prompt.append(String.format("- 最大堆内存使用率: %.2f%%\\n", metrics.getMaxHeapUsedRatio() * 100));
         prompt.append(String.format("- 平均线程数: %d\\n", metrics.getAvgThreadCount()));
         prompt.append(String.format("- 平均CPU使用率: %.2f%%\\n", metrics.getAvgCpuUsage() * 100));
         prompt.append(String.format("- GC总时间: %d ms\\n", metrics.getTotalGcTime()));
@@ -204,6 +207,7 @@ public class LLMAnalysisService {
         prompt.append("2. 主要瓶颈和问题分析\\n");
         prompt.append("3. 性能趋势判断\\n");
         prompt.append("4. 关键风险点识别\\n");
+        prompt.append("5. 如果堆内存使用率超过90%，必须明确警告OOM风险\\n");
         prompt.append("请用中文回答，语言专业且易懂。");
 
         return prompt.toString();
@@ -1273,34 +1277,37 @@ public class LLMAnalysisService {
      */
     private List<OptimizationSuggestion> parseOptimizationSuggestionsToObjects(String jsonResponse) {
         List<OptimizationSuggestion> suggestions = new ArrayList<>();
-
         try {
-            // 尝试提取 JSON 部分
-            String jsonPart = extractJsonFromResponse(jsonResponse);
-            JsonNode jsonArray = objectMapper.readTree(jsonPart);
+            // 只提取第一个 [ ... ] 之间的内容
+            int start = jsonResponse.indexOf('[');
+            int end = jsonResponse.lastIndexOf(']');
+            if (start != -1 && end != -1 && start < end) {
+                String jsonPart = jsonResponse.substring(start, end + 1);
+                JsonNode jsonArray = objectMapper.readTree(jsonPart);
+                if (jsonArray.isArray()) {
+                    for (JsonNode item : jsonArray) {
+                        OptimizationSuggestion suggestion = new OptimizationSuggestion();
+                        suggestion.setId(UUID.randomUUID().toString());
+                        suggestion.setCategory(item.path("category").asText());
+                        suggestion.setTitle(item.path("title").asText());
+                        suggestion.setDescription(item.path("description").asText());
+                        suggestion.setPriority(item.path("priority").asText());
+                        suggestion.setImpactLevel(item.path("impactLevel").asText());
+                        suggestion.setImplementationComplexity(item.path("implementationComplexity").asText());
+                        suggestion.setActionPlan(item.path("actionPlan").asText());
+                        suggestion.setExpectedBenefit(item.path("expectedBenefit").asText(""));
+                        suggestion.setConfidenceScore(0.8); // 默认置信度
 
-            if (jsonArray.isArray()) {
-                for (JsonNode item : jsonArray) {
-                    OptimizationSuggestion suggestion = new OptimizationSuggestion();
-                    suggestion.setId(UUID.randomUUID().toString());
-                    suggestion.setCategory(item.path("category").asText());
-                    suggestion.setTitle(item.path("title").asText());
-                    suggestion.setDescription(item.path("description").asText());
-                    suggestion.setPriority(item.path("priority").asText());
-                    suggestion.setImpactLevel(item.path("impactLevel").asText());
-                    suggestion.setImplementationComplexity(item.path("implementationComplexity").asText());
-                    suggestion.setActionPlan(item.path("actionPlan").asText());
-                    suggestion.setExpectedBenefit(item.path("expectedBenefit").asText(""));
-                    suggestion.setConfidenceScore(0.8); // 默认置信度
-
-                    suggestions.add(suggestion);
+                        suggestions.add(suggestion);
+                    }
                 }
+            } else {
+                LOG.warn("未找到优化建议 JSON，返回降级建议");
             }
         } catch (Exception e) {
             LOG.error("解析优化建议JSON失败", e);
             // 返回空列表，会由调用方使用降级方案
         }
-
         return suggestions;
     }
 
