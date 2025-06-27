@@ -81,16 +81,15 @@ public class LLMAnalysisService {
             List<String> errorStacks) {
         try {
             String prompt = buildAnalysisPrompt(metrics, anomalies);
-            // 拼接堆栈信息
+            // 智能处理错误堆栈信息
             if (errorStacks != null && !errorStacks.isEmpty()) {
-                StringBuilder sb = new StringBuilder(prompt);
-                sb.append("\n\n【以下为近1小时内典型错误堆栈信息，请结合分析根因，仅关注最相关部分】\n");
-                int idx = 1;
-                for (String stack : errorStacks) {
-                    sb.append("# 错误堆栈").append(idx++).append(":\n");
-                    sb.append(stack).append("\n\n");
+                String processedErrorStacks = processErrorStacksForAI(errorStacks);
+                if (processedErrorStacks != null && !processedErrorStacks.isEmpty()) {
+                    StringBuilder sb = new StringBuilder(prompt);
+                    sb.append("\n\n【错误堆栈分析摘要】\n");
+                    sb.append(processedErrorStacks);
+                    prompt = sb.toString();
                 }
-                prompt = sb.toString();
             }
             switch (properties.getLlm().getProvider().toLowerCase()) {
                 case "openai":
@@ -110,6 +109,223 @@ public class LLMAnalysisService {
             LOG.error("LLM分析失败，使用降级分析", e);
             return generateFallbackAnalysis(metrics, anomalies);
         }
+    }
+
+    /**
+     * 智能处理错误堆栈，压缩和分类后提供给AI
+     */
+    private String processErrorStacksForAI(List<String> errorStacks) {
+        if (errorStacks == null || errorStacks.isEmpty()) {
+            return null;
+        }
+
+        LOG.info("开始处理 {} 条错误堆栈", errorStacks.size());
+
+        // 1. 错误分类统计
+        Map<String, ErrorPattern> errorPatterns = categorizeErrorStacks(errorStacks);
+
+        // 2. 生成错误摘要
+        StringBuilder summary = new StringBuilder();
+        summary.append(String.format("检测到 %d 条错误堆栈，分类统计如下：\n\n", errorStacks.size()));
+
+        // 3. 按错误类型分组展示
+        for (ErrorPattern pattern : errorPatterns.values()) {
+            summary.append(String.format("## %s (出现 %d 次)\n", pattern.getErrorType(), pattern.getCount()));
+            summary.append(String.format("- 主要错误: %s\n", pattern.getMainError()));
+            summary.append(String.format("- 影响范围: %s\n", pattern.getAffectedComponent()));
+
+            // 显示最具代表性的堆栈片段
+            if (pattern.getRepresentativeStack() != null) {
+                String truncatedStack = truncateStack(pattern.getRepresentativeStack(), 500);
+                summary.append(String.format("- 典型堆栈: %s\n", truncatedStack));
+            }
+            summary.append("\n");
+        }
+
+        // 4. 添加总体分析指导
+        summary.append("## 分析指导\n");
+        summary.append("请重点关注：\n");
+        summary.append("1. 出现频率最高的错误类型\n");
+        summary.append("2. 影响核心业务功能的错误\n");
+        summary.append("3. 可能导致系统不稳定的错误\n");
+        summary.append("4. 需要立即处理的紧急错误\n");
+
+        String result = summary.toString();
+        LOG.info("错误堆栈处理完成，压缩后长度: {} 字符", result.length());
+
+        return result;
+    }
+
+    /**
+     * 错误模式类
+     */
+    private static class ErrorPattern {
+        private String errorType;
+        private String mainError;
+        private String affectedComponent;
+        private String representativeStack;
+        private int count;
+        private List<String> allStacks;
+
+        public ErrorPattern(String errorType, String mainError, String affectedComponent, String stack) {
+            this.errorType = errorType;
+            this.mainError = mainError;
+            this.affectedComponent = affectedComponent;
+            this.representativeStack = stack;
+            this.count = 1;
+            this.allStacks = new ArrayList<>();
+            this.allStacks.add(stack);
+        }
+
+        public void incrementCount(String stack) {
+            this.count++;
+            this.allStacks.add(stack);
+        }
+
+        // Getters
+        public String getErrorType() {
+            return errorType;
+        }
+
+        public String getMainError() {
+            return mainError;
+        }
+
+        public String getAffectedComponent() {
+            return affectedComponent;
+        }
+
+        public String getRepresentativeStack() {
+            return representativeStack;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public List<String> getAllStacks() {
+            return allStacks;
+        }
+    }
+
+    /**
+     * 对错误堆栈进行分类
+     */
+    private Map<String, ErrorPattern> categorizeErrorStacks(List<String> errorStacks) {
+        Map<String, ErrorPattern> patterns = new HashMap<>();
+
+        for (String stack : errorStacks) {
+            if (stack == null || stack.trim().isEmpty()) {
+                continue;
+            }
+
+            // 提取错误类型和主要信息
+            String errorType = extractErrorType(stack);
+            String mainError = extractMainError(stack);
+            String affectedComponent = extractAffectedComponent(stack);
+
+            // 生成模式键
+            String patternKey = generatePatternKey(errorType, mainError, affectedComponent);
+
+            if (patterns.containsKey(patternKey)) {
+                patterns.get(patternKey).incrementCount(stack);
+            } else {
+                patterns.put(patternKey, new ErrorPattern(errorType, mainError, affectedComponent, stack));
+            }
+        }
+
+        return patterns;
+    }
+
+    /**
+     * 提取错误类型
+     */
+    private String extractErrorType(String stack) {
+        if (stack.contains("OutOfMemoryError")) {
+            return "内存溢出";
+        } else if (stack.contains("TimeoutException") || stack.contains("timeout")) {
+            return "超时异常";
+        } else if (stack.contains("ConnectionException") || stack.contains("connection")) {
+            return "连接异常";
+        } else if (stack.contains("NullPointerException")) {
+            return "空指针异常";
+        } else if (stack.contains("SQLException") || stack.contains("database")) {
+            return "数据库异常";
+        } else if (stack.contains("RpcException")) {
+            return "RPC调用异常";
+        } else if (stack.contains("IOException")) {
+            return "IO异常";
+        } else if (stack.contains("ClassNotFoundException")) {
+            return "类加载异常";
+        } else {
+            return "其他异常";
+        }
+    }
+
+    /**
+     * 提取主要错误信息
+     */
+    private String extractMainError(String stack) {
+        String[] lines = stack.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.contains("Exception") || line.contains("Error")) {
+                // 提取异常类名和消息
+                int colonIndex = line.indexOf(':');
+                if (colonIndex > 0) {
+                    return line.substring(0, colonIndex).trim();
+                } else {
+                    return line;
+                }
+            }
+        }
+        return "未知错误";
+    }
+
+    /**
+     * 提取受影响的组件
+     */
+    private String extractAffectedComponent(String stack) {
+        if (stack.contains("Database") || stack.contains("SQL")) {
+            return "数据库层";
+        } else if (stack.contains("RPC") || stack.contains("dubbo")) {
+            return "RPC服务层";
+        } else if (stack.contains("HTTP") || stack.contains("web")) {
+            return "Web服务层";
+        } else if (stack.contains("JVM") || stack.contains("memory")) {
+            return "JVM运行时";
+        } else if (stack.contains("thread") || stack.contains("Thread")) {
+            return "线程管理";
+        } else {
+            return "应用服务层";
+        }
+    }
+
+    /**
+     * 生成模式键
+     */
+    private String generatePatternKey(String errorType, String mainError, String affectedComponent) {
+        return errorType + "|" + mainError + "|" + affectedComponent;
+    }
+
+    /**
+     * 截断堆栈信息
+     */
+    private String truncateStack(String stack, int maxLength) {
+        if (stack == null) {
+            return "";
+        }
+
+        if (stack.length() <= maxLength) {
+            return stack;
+        }
+
+        // 保留开头和结尾的重要信息
+        int halfLength = maxLength / 2;
+        String start = stack.substring(0, halfLength);
+        String end = stack.substring(stack.length() - halfLength);
+
+        return start + "\n... [中间内容已省略] ...\n" + end;
     }
 
     /**

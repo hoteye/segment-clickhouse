@@ -753,7 +753,16 @@ public class PerformanceAnalysisService {
         List<String> errorStacks = new ArrayList<>();
         LocalDateTime endTime = LocalDateTime.now();
         LocalDateTime startTime = endTime.minusHours(timeRangeHours);
-        String sql = "SELECT log_stack FROM events WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND service = ? AND log_stack IS NOT NULL LIMIT 40";
+
+        // 优化SQL查询，按错误类型分组，避免重复
+        String sql = "SELECT log_stack, log_error_kind, COUNT(*) as error_count " +
+                "FROM events " +
+                "WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) " +
+                "AND service = ? AND log_stack IS NOT NULL " +
+                "GROUP BY log_stack, log_error_kind " +
+                "ORDER BY error_count DESC " +
+                "LIMIT 20"; // 限制返回数量，避免过多数据
+
         try (Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -761,20 +770,101 @@ public class PerformanceAnalysisService {
             stmt.setString(1, startTimeStr);
             stmt.setString(2, endTimeStr);
             stmt.setString(3, service);
+
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String stack = rs.getString("log_stack");
+                    String errorKind = rs.getString("log_error_kind");
+                    int errorCount = rs.getInt("error_count");
+
                     if (stack != null && !stack.isEmpty()) {
-                        if (stack.length() > 2000) {
-                            stack = stack.substring(0, 3000) + "... [truncated]";
+                        // 智能截断和过滤
+                        String processedStack = processStackForCollection(stack, errorKind, errorCount);
+                        if (processedStack != null) {
+                            errorStacks.add(processedStack);
                         }
-                        errorStacks.add(stack);
                     }
                 }
             }
         } catch (Exception e) {
             LOG.warn("收集 log_stack 失败", e);
         }
+
+        LOG.info("收集到 {} 条错误堆栈（已去重和过滤）", errorStacks.size());
         return errorStacks;
+    }
+
+    /**
+     * 处理堆栈信息，进行智能过滤和截断
+     */
+    private String processStackForCollection(String stack, String errorKind, int errorCount) {
+        if (stack == null || stack.trim().isEmpty()) {
+            return null;
+        }
+
+        // 1. 过滤掉过于简单的错误信息
+        if (stack.length() < 50) {
+            return null;
+        }
+
+        // 2. 过滤掉已知的无意义错误
+        if (isIgnorableError(stack, errorKind)) {
+            return null;
+        }
+
+        // 3. 智能截断
+        String truncatedStack = truncateStackForCollection(stack);
+
+        // 4. 添加错误统计信息
+        StringBuilder result = new StringBuilder();
+        result.append(String.format("【错误类型: %s, 出现次数: %d】\n",
+                errorKind != null ? errorKind : "未知", errorCount));
+        result.append(truncatedStack);
+
+        return result.toString();
+    }
+
+    /**
+     * 判断是否为可忽略的错误
+     */
+    private boolean isIgnorableError(String stack, String errorKind) {
+        String lowerStack = stack.toLowerCase();
+        String lowerKind = errorKind != null ? errorKind.toLowerCase() : "";
+
+        // 忽略一些常见的、不影响系统稳定性的错误
+        return lowerStack.contains("404") || // 页面不存在
+                lowerStack.contains("403") || // 权限不足
+                lowerStack.contains("401") || // 未认证
+                lowerStack.contains("client") && lowerStack.contains("abort") || // 客户端中断
+                lowerStack.contains("connection") && lowerStack.contains("reset") || // 连接重置
+                lowerStack.contains("broken pipe") || // 管道破裂
+                lowerStack.contains("connection refused") || // 连接被拒绝
+                lowerStack.contains("no route to host") || // 无法路由到主机
+                lowerStack.contains("network is unreachable"); // 网络不可达
+    }
+
+    /**
+     * 截断堆栈信息用于收集
+     */
+    private String truncateStackForCollection(String stack) {
+        if (stack == null) {
+            return "";
+        }
+
+        // 限制单条堆栈的最大长度
+        int maxLength = 2000;
+
+        if (stack.length() <= maxLength) {
+            return stack;
+        }
+
+        // 保留最重要的部分：开头（错误信息）和结尾（根因）
+        int startLength = 1000;
+        int endLength = 500;
+
+        String start = stack.substring(0, startLength);
+        String end = stack.substring(stack.length() - endLength);
+
+        return start + "\n... [中间堆栈信息已省略] ...\n" + end;
     }
 }
