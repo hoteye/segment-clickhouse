@@ -22,6 +22,10 @@ public class PerformanceMetrics {
     private LocalDateTime endTime;
     private int timeRangeHours;
 
+    /**
+     * 服务名称（用于分组统计和多服务分析）
+     */
+    private String service;
     // JVM 指标
     private double maxHeapUsedRatio; // 最大堆内存使用率
     private double avgHeapUsed; // 平均堆内存使用率
@@ -62,9 +66,4 @@ public class PerformanceMetrics {
 
     // 自定义指标
     private Map<String, Object> customMetrics;
-
-    /**
-     * 服务名称（用于分组统计和多服务分析）
-     */
-    private String service;
 }

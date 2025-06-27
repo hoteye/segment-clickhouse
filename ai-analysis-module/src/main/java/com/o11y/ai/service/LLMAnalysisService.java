@@ -81,7 +81,7 @@ public class LLMAnalysisService {
             List<String> errorStacks) {
         try {
             String prompt = buildAnalysisPrompt(metrics, anomalies);
-            // 拼接堆栈信息
+            // 智能处理错误堆栈信息
             if (errorStacks != null && !errorStacks.isEmpty()) {
                 StringBuilder sb = new StringBuilder(prompt);
                 sb.append("\n\n【以下为近1小时内典型错误堆栈信息，请结合分析根因，仅关注最相关部分】\n");
@@ -571,40 +571,6 @@ public class LLMAnalysisService {
         }
 
         return impact;
-    }
-
-    /**
-     * 数据特征判断方法
-     */
-    private boolean hasComplexBusinessLogic(Map<String, Object> traceData) {
-        // 检查是否涉及复杂业务流程
-        Object spans = traceData.get("spans");
-        if (spans instanceof List) {
-            return ((List<?>) spans).size() > 5; // 超过5个服务调用认为是复杂流程
-        }
-        return false;
-    }
-
-    private boolean hasCodeRelatedErrors(Map<String, Object> traceData) {
-        // 检查是否有代码相关错误
-        String errorMsg = String.valueOf(traceData.get("errorMessage"));
-        return errorMsg != null && (errorMsg.contains("NullPointerException") ||
-                errorMsg.contains("SQLException") ||
-                errorMsg.contains("ClassNotFoundException") ||
-                errorMsg.contains("OutOfMemoryError"));
-    }
-
-    private boolean hasChineseContent(Map<String, Object> traceData) {
-        // 检查是否包含中文内容
-        String content = traceData.toString();
-        return content.matches(".*[\\u4e00-\\u9fa5].*");
-    }
-
-    private boolean requiresStatisticalAnalysis(Map<String, Object> traceData) {
-        // 检查是否需要统计分析
-        return traceData.containsKey("duration") ||
-                traceData.containsKey("count") ||
-                traceData.containsKey("rate");
     }
 
     /**
