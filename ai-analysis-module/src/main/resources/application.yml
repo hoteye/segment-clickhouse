@@ -81,8 +81,8 @@ ai:
     deepseek:
       api-key: ${AI_DEEPSEEK_API_KEY:sk-af87414f0b044883a76f2a297b6eaf86}
       base-url: ${AI_DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
-      model: ${AI_DEEPSEEK_MODEL:deepseek-reasoner}
-      timeout: 15000    # 减少超时时间到15秒
+      model: ${AI_DEEPSEEK_MODEL:deepseek-chat}  # 改为更快的chat模型
+      timeout: 80000    # 增加超时时间到30秒
       max-tokens: 3000
       temperature: 0.7
     

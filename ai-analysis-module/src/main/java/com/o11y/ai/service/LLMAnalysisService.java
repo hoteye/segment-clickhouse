@@ -44,7 +44,7 @@ public class LLMAnalysisService {
 
     public LLMAnalysisService() {
         this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30))
+                .connectTimeout(Duration.ofSeconds(10)) // 连接超时缩短到10秒
                 .build();
     }
 
@@ -326,6 +326,10 @@ public class LLMAnalysisService {
                 Map.of("role", "user", "content", prompt)));
         requestBody.put("max_tokens", config.getMaxTokens());
         requestBody.put("temperature", config.getTemperature());
+
+        long startTime = System.currentTimeMillis();
+        LOG.info("开始调用DeepSeek API，模型: {}, 超时设置: {}ms", config.getModel(), config.getTimeout());
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(config.getBaseUrl() + "/chat/completions"))
                 .header("Content-Type", "application/json")
@@ -334,14 +338,23 @@ public class LLMAnalysisService {
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestBody)))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request,
-                HttpResponse.BodyHandlers.ofString(java.nio.charset.StandardCharsets.UTF_8));
+        try {
+            HttpResponse<String> response = httpClient.send(request,
+                    HttpResponse.BodyHandlers.ofString(java.nio.charset.StandardCharsets.UTF_8));
 
-        if (response.statusCode() == 200) {
-            JsonNode jsonResponse = objectMapper.readTree(response.body());
-            return jsonResponse.path("choices").get(0).path("message").path("content").asText();
-        } else {
-            throw new RuntimeException("DeepSeek API 调用失败: " + response.statusCode() + " - " + response.body());
+            long duration = System.currentTimeMillis() - startTime;
+            LOG.info("DeepSeek API调用完成，耗时: {}ms, 状态码: {}", duration, response.statusCode());
+
+            if (response.statusCode() == 200) {
+                JsonNode jsonResponse = objectMapper.readTree(response.body());
+                return jsonResponse.path("choices").get(0).path("message").path("content").asText();
+            } else {
+                throw new RuntimeException("DeepSeek API 调用失败: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (java.net.http.HttpTimeoutException e) {
+            long duration = System.currentTimeMillis() - startTime;
+            LOG.error("DeepSeek API调用超时，耗时: {}ms, 配置超时: {}ms", duration, config.getTimeout());
+            throw new RuntimeException("DeepSeek API 调用超时 (" + duration + "ms)", e);
         }
     }
 

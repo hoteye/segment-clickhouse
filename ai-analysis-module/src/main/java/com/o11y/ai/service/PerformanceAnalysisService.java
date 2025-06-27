@@ -124,8 +124,12 @@ public class PerformanceAnalysisService {
      * 生成性能分析报告
      */
     public PerformanceReport generateAnalysisReport(int timeRangeHours, String service) {
+        long startTime = System.currentTimeMillis();
+        LOG.info("=== 开始生成性能分析报告 ===");
+        LOG.info("开始时间: {}", java.time.LocalDateTime.now());
+        LOG.info("参数: 时间范围={}小时, 服务={}", timeRangeHours, service);
+
         try {
-            LOG.info("=== 开始生成性能分析报告，时间范围: {}小时 ===", timeRangeHours);
 
             // 1. 收集性能数据
             LOG.info("步骤1: 开始收集性能数据...");
@@ -216,10 +220,20 @@ public class PerformanceAnalysisService {
                 LOG.error("步骤7失败: 保存报告到 ClickHouse 失败", e);
             }
 
-            LOG.info("=== 性能分析报告生成完成，报告ID: {} ===", report.getReportId());
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            LOG.info("=== 性能分析报告生成完成 ===");
+            LOG.info("结束时间: {}", java.time.LocalDateTime.now());
+            LOG.info("总耗时: {}ms ({}秒)", duration, duration / 1000.0);
+            LOG.info("报告ID: {}", report.getReportId());
             return report;
 
         } catch (Exception e) {
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            LOG.error("=== 性能分析报告生成失败 ===");
+            LOG.error("结束时间: {}", java.time.LocalDateTime.now());
+            LOG.error("失败耗时: {}ms ({}秒)", duration, duration / 1000.0);
             LOG.error("生成性能分析报告失败", e);
             throw new RuntimeException("性能分析报告生成失败", e);
         }
@@ -277,20 +291,23 @@ public class PerformanceAnalysisService {
         String service = metrics.getService();
         String sql = "SELECT " +
                 "COUNT(*) as total_requests, " +
-                "AVG(end_time - start_time) as avg_response_time, " +
-                "MAX(end_time - start_time) as max_response_time, " +
+                "AVG(end_time - start_time) * 1000 as avg_response_time, " +
+                "MAX(end_time - start_time) * 1000 as max_response_time, " +
                 "SUM(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) as failed_requests, " +
-                "COUNT(*) / (toUnixTimestamp(toDateTime(?, 'Asia/Shanghai')) - toUnixTimestamp(toDateTime(?, 'Asia/Shanghai'))) as avg_throughput " +
+                "COUNT(*) / (toUnixTimestamp(toDateTime(?, 'Asia/Shanghai')) - toUnixTimestamp(toDateTime(?, 'Asia/Shanghai'))) as avg_throughput "
+                +
                 "FROM events " +
                 "WHERE start_time >= toDateTime(?, 'Asia/Shanghai') AND start_time <= toDateTime(?, 'Asia/Shanghai') AND service = ? ";
-
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             // 明确指定 Asia/Shanghai 时区，格式化时间为 ClickHouse 兼容格式
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            String endTimeStr = endTime.atZone(java.time.ZoneId.systemDefault()).withZoneSameInstant(java.time.ZoneId.of("Asia/Shanghai")).format(formatter);
-            String startTimeStr = startTime.atZone(java.time.ZoneId.systemDefault()).withZoneSameInstant(java.time.ZoneId.of("Asia/Shanghai")).format(formatter);
-            LOG.info("sql: {}, startTimeStr : {}, endTimeStr : {}, service : {}", sql, startTimeStr, endTimeStr, service);
+            String endTimeStr = endTime.atZone(java.time.ZoneId.systemDefault())
+                    .withZoneSameInstant(java.time.ZoneId.of("Asia/Shanghai")).format(formatter);
+            String startTimeStr = startTime.atZone(java.time.ZoneId.systemDefault())
+                    .withZoneSameInstant(java.time.ZoneId.of("Asia/Shanghai")).format(formatter);
+            LOG.info("sql: {}, startTimeStr : {}, endTimeStr : {}, service : {}", sql, startTimeStr, endTimeStr,
+                    service);
             LOG.info("查询参数: startTime={}, endTime={}, service={}", startTimeStr, endTimeStr, service);
 
             stmt.setString(1, endTimeStr);
@@ -422,8 +439,8 @@ public class PerformanceAnalysisService {
         String service = metrics.getService();
         String sql = "SELECT " +
                 "COUNT(*) as total_queries, " +
-                "AVG(end_time - start_time) as avg_query_duration, " +
-                "SUM(CASE WHEN end_time - start_time > 1000 THEN 1 ELSE 0 END) as slow_queries " +
+                "AVG(end_time - start_time) * 1000 as avg_query_duration, " +
+                "SUM(CASE WHEN (end_time - start_time) * 1000 > 1000 THEN 1 ELSE 0 END) as slow_queries " +
                 "FROM events " +
                 "WHERE start_time >= ? AND start_time <= ? " +
                 "AND span_layer = 'Database' AND service = ?";
