@@ -142,7 +142,7 @@ public class PerformanceAnalysisService {
                     metrics.getTotalRequests(), metrics.getAvgResponseTime());
 
             // 1.1 收集错误堆栈
-            List<String> errorStacks = collectErrorStacks(timeRangeHours);
+            List<String> errorStacks = collectErrorStacks(timeRangeHours, service);
             LOG.info("步骤1.1: 收集到 {} 条错误堆栈", errorStacks.size());
 
             // 2. 异常检测
@@ -749,17 +749,18 @@ public class PerformanceAnalysisService {
     /**
      * 收集错误堆栈信息
      */
-    private List<String> collectErrorStacks(int timeRangeHours) {
+    private List<String> collectErrorStacks(int timeRangeHours, String service) {
         List<String> errorStacks = new ArrayList<>();
         LocalDateTime endTime = LocalDateTime.now();
         LocalDateTime startTime = endTime.minusHours(timeRangeHours);
-        String sql = "SELECT log_stack FROM events WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND log_stack IS NOT NULL LIMIT 40";
+        String sql = "SELECT log_stack FROM events WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND service = ? AND log_stack IS NOT NULL LIMIT 40";
         try (Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             String endTimeStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             stmt.setString(1, startTimeStr);
             stmt.setString(2, endTimeStr);
+            stmt.setString(3, service);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     String stack = rs.getString("log_stack");

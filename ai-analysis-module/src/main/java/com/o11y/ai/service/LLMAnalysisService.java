@@ -207,7 +207,7 @@ public class LLMAnalysisService {
         prompt.append("2. 主要瓶颈和问题分析\\n");
         prompt.append("3. 性能趋势判断\\n");
         prompt.append("4. 关键风险点识别\\n");
-        prompt.append("5. 如果堆内存使用率超过90%，必须明确警告OOM风险\\n");
+        prompt.append("5. 如果堆内存使用率超过90%，必须明确警告内存不足风险\\n");
         prompt.append("请用中文回答，语言专业且易懂。");
 
         return prompt.toString();
