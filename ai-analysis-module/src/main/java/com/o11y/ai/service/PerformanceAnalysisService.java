@@ -753,7 +753,16 @@ public class PerformanceAnalysisService {
         List<String> errorStacks = new ArrayList<>();
         LocalDateTime endTime = LocalDateTime.now();
         LocalDateTime startTime = endTime.minusHours(timeRangeHours);
-        String sql = "SELECT log_stack FROM events WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND service = ? AND log_stack IS NOT NULL LIMIT 40";
+
+        // 按log_stack分组，统计每种堆栈的出现次数
+        String sql = "SELECT substr(log_stack, 1, 1500) as stack_prefix, COUNT(*) as error_count " +
+                "FROM events " +
+                "WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) " +
+                "AND service = ? AND log_stack IS NOT NULL " +
+                "GROUP BY substr(log_stack, 1, 1500) " +
+                "ORDER BY error_count DESC " +
+                "LIMIT 40";
+
         try (Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             String startTimeStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -761,20 +770,23 @@ public class PerformanceAnalysisService {
             stmt.setString(1, startTimeStr);
             stmt.setString(2, endTimeStr);
             stmt.setString(3, service);
+
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    String stack = rs.getString("log_stack");
+                    String stack = rs.getString("stack_prefix");
+                    int errorCount = rs.getInt("error_count");
                     if (stack != null && !stack.isEmpty()) {
-                        if (stack.length() > 2000) {
-                            stack = stack.substring(0, 3000) + "... [truncated]";
-                        }
-                        errorStacks.add(stack);
+                        // 添加错误次数信息到堆栈前面
+                        String stackWithCount = String.format("【出现%d次】\n%s", errorCount, stack);
+                        errorStacks.add(stackWithCount);
                     }
                 }
             }
         } catch (Exception e) {
             LOG.warn("收集 log_stack 失败", e);
         }
+
+        LOG.info("收集到 {} 种不同的错误堆栈", errorStacks.size());
         return errorStacks;
     }
 }

@@ -92,6 +92,14 @@ public class LLMAnalysisService {
                 }
                 prompt = sb.toString();
             }
+
+            // 打印提示词到日志
+            LOG.info("=== AI分析提示词开始 ===");
+            LOG.info("提示词长度: {} 字符", prompt.length());
+            LOG.info("完整提示词内容:");
+            LOG.info(prompt);
+            LOG.info("=== AI分析提示词结束 ===");
+
             switch (properties.getLlm().getProvider().toLowerCase()) {
                 case "openai":
                     return callOpenAI(prompt);
@@ -121,6 +129,14 @@ public class LLMAnalysisService {
 
         try {
             String prompt = buildOptimizationPrompt(metrics, anomalies);
+
+            // 打印优化建议提示词到日志
+            LOG.info("=== 优化建议提示词开始 ===");
+            LOG.info("提示词长度: {} 字符", prompt.length());
+            LOG.info("完整提示词内容:");
+            LOG.info(prompt);
+            LOG.info("=== 优化建议提示词结束 ===");
+
             String response = null;
             switch (properties.getLlm().getProvider().toLowerCase()) {
                 case "openai":
@@ -207,7 +223,7 @@ public class LLMAnalysisService {
         prompt.append("2. 主要瓶颈和问题分析\\n");
         prompt.append("3. 性能趋势判断\\n");
         prompt.append("4. 关键风险点识别\\n");
-        prompt.append("5. 如果堆内存使用率超过90%，必须明确警告内存不足风险\\n");
+        prompt.append("5. 重点关注指标和建议\\n");
         prompt.append("请用中文回答，语言专业且易懂。");
 
         return prompt.toString();
