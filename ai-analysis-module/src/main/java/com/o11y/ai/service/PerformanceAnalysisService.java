@@ -754,14 +754,18 @@ public class PerformanceAnalysisService {
         LocalDateTime endTime = LocalDateTime.now();
         LocalDateTime startTime = endTime.minusHours(timeRangeHours);
 
+        LOG.info("开始收集服务 {} 在 {} 到 {} 期间的错误堆栈",
+                service, startTime, endTime);
+
         // 优化SQL查询，按错误类型分组，避免重复
         String sql = "SELECT log_stack, log_error_kind, COUNT(*) as error_count " +
                 "FROM events " +
                 "WHERE is_error=1 AND start_time >= toDateTime(?) AND start_time <= toDateTime(?) " +
                 "AND service = ? AND log_stack IS NOT NULL " +
                 "GROUP BY log_stack, log_error_kind " +
-                "ORDER BY error_count DESC " +
-                "LIMIT 20"; // 限制返回数量，避免过多数据
+                "ORDER BY error_count DESC ";
+
+        LOG.info("执行SQL查询: {}", sql);
 
         try (Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -771,20 +775,34 @@ public class PerformanceAnalysisService {
             stmt.setString(2, endTimeStr);
             stmt.setString(3, service);
 
+            LOG.info("查询参数: startTime={}, endTime={}, service={}", startTimeStr, endTimeStr, service);
+
             try (ResultSet rs = stmt.executeQuery()) {
+                int processedCount = 0;
+                int filteredCount = 0;
+
                 while (rs.next()) {
                     String stack = rs.getString("log_stack");
                     String errorKind = rs.getString("log_error_kind");
                     int errorCount = rs.getInt("error_count");
+
+                    processedCount++;
 
                     if (stack != null && !stack.isEmpty()) {
                         // 智能截断和过滤
                         String processedStack = processStackForCollection(stack, errorKind, errorCount);
                         if (processedStack != null) {
                             errorStacks.add(processedStack);
+                            LOG.debug("添加错误堆栈 {}: 类型={}, 次数={}", processedCount, errorKind, errorCount);
+                        } else {
+                            filteredCount++;
+                            LOG.debug("过滤错误堆栈 {}: 类型={}, 次数={}", processedCount, errorKind, errorCount);
                         }
                     }
                 }
+
+                LOG.info("错误堆栈收集完成: 处理{}条, 过滤{}条, 保留{}条",
+                        processedCount, filteredCount, errorStacks.size());
             }
         } catch (Exception e) {
             LOG.warn("收集 log_stack 失败", e);
@@ -799,16 +817,19 @@ public class PerformanceAnalysisService {
      */
     private String processStackForCollection(String stack, String errorKind, int errorCount) {
         if (stack == null || stack.trim().isEmpty()) {
+            LOG.debug("跳过空堆栈");
             return null;
         }
 
         // 1. 过滤掉过于简单的错误信息
         if (stack.length() < 50) {
+            LOG.debug("过滤过短堆栈: 长度={}", stack.length());
             return null;
         }
 
         // 2. 过滤掉已知的无意义错误
         if (isIgnorableError(stack, errorKind)) {
+            LOG.debug("过滤可忽略错误: 类型={}, 次数={}", errorKind, errorCount);
             return null;
         }
 
@@ -820,6 +841,9 @@ public class PerformanceAnalysisService {
         result.append(String.format("【错误类型: %s, 出现次数: %d】\n",
                 errorKind != null ? errorKind : "未知", errorCount));
         result.append(truncatedStack);
+
+        LOG.debug("处理堆栈成功: 原始长度={}, 处理后长度={}, 类型={}, 次数={}",
+                stack.length(), result.length(), errorKind, errorCount);
 
         return result.toString();
     }

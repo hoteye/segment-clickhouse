@@ -91,6 +91,13 @@ public class LLMAnalysisService {
                     prompt = sb.toString();
                 }
             }
+
+            // 打印完整提示词到日志
+            LOG.info("=== AI分析提示词开始 ===");
+            LOG.info("提示词长度: {} 字符", prompt.length());
+            LOG.info("提示词内容:\n{}", prompt);
+            LOG.info("=== AI分析提示词结束 ===");
+
             switch (properties.getLlm().getProvider().toLowerCase()) {
                 case "openai":
                     return callOpenAI(prompt);
@@ -124,6 +131,8 @@ public class LLMAnalysisService {
         // 1. 错误分类统计
         Map<String, ErrorPattern> errorPatterns = categorizeErrorStacks(errorStacks);
 
+        LOG.info("错误分类完成，共识别出 {} 种错误模式", errorPatterns.size());
+
         // 2. 生成错误摘要
         StringBuilder summary = new StringBuilder();
         summary.append(String.format("检测到 %d 条错误堆栈，分类统计如下：\n\n", errorStacks.size()));
@@ -140,6 +149,11 @@ public class LLMAnalysisService {
                 summary.append(String.format("- 典型堆栈: %s\n", truncatedStack));
             }
             summary.append("\n");
+
+            // 打印每种错误模式的详细信息到日志
+            LOG.info("错误模式: {} - 出现{}次 - 主要错误: {} - 影响范围: {}",
+                    pattern.getErrorType(), pattern.getCount(),
+                    pattern.getMainError(), pattern.getAffectedComponent());
         }
 
         // 4. 添加总体分析指导
@@ -214,8 +228,12 @@ public class LLMAnalysisService {
     private Map<String, ErrorPattern> categorizeErrorStacks(List<String> errorStacks) {
         Map<String, ErrorPattern> patterns = new HashMap<>();
 
-        for (String stack : errorStacks) {
+        LOG.info("开始对 {} 条错误堆栈进行分类", errorStacks.size());
+
+        for (int i = 0; i < errorStacks.size(); i++) {
+            String stack = errorStacks.get(i);
             if (stack == null || stack.trim().isEmpty()) {
+                LOG.debug("跳过第 {} 条空堆栈", i + 1);
                 continue;
             }
 
@@ -229,11 +247,14 @@ public class LLMAnalysisService {
 
             if (patterns.containsKey(patternKey)) {
                 patterns.get(patternKey).incrementCount(stack);
+                LOG.debug("第 {} 条堆栈匹配现有模式: {}", i + 1, errorType);
             } else {
                 patterns.put(patternKey, new ErrorPattern(errorType, mainError, affectedComponent, stack));
+                LOG.debug("第 {} 条堆栈创建新模式: {}", i + 1, errorType);
             }
         }
 
+        LOG.info("错误分类完成，共识别出 {} 种错误模式", patterns.size());
         return patterns;
     }
 
