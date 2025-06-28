@@ -21,6 +21,9 @@ batch:
 
 add_columns_interval: 80000  # Execute addColumns method every add_columns_interval milliseconds
 
+# 小时级规则下发配置
+hourly_rule_publish_interval: 3600000  # 小时级规则下发检查间隔（毫秒）
+
 flink:
   parallelism: 3
   checkpoint_interval: 120000      # 单位：毫秒

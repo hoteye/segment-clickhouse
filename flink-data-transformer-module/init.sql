@@ -143,3 +143,40 @@ CREATE TABLE IF NOT EXISTS flink_operator_agg_result (
     success_count Nullable(Int64)         -- 成功调用次数
 ) ENGINE = MergeTree()
 ORDER BY (window_start);
+
+-- 小时级动态阈值规则表
+-- 新设计：每个规则一条记录，不使用JSON存储
+-- 主键：(hour_of_day, service, operator_name)
+CREATE TABLE IF NOT EXISTS hourly_alarm_rules (
+    hour_of_day UInt8,                    -- 小时序号 (0-23)
+    service String,                       -- 服务名
+    operator_name String,                 -- 操作员名
+    operator_class String,                -- 操作员类
+    
+    -- 阈值字段（参考DynamicThresholdGenerator）
+    avg_duration_low Float64,             -- 平均延迟低阈值
+    avg_duration_mid Float64,             -- 平均延迟中阈值
+    avg_duration_high Float64,            -- 平均延迟高阈值
+    max_duration_low Float64,             -- 最大延迟低阈值
+    max_duration_mid Float64,             -- 最大延迟中阈值
+    max_duration_high Float64,            -- 最大延迟高阈值
+    success_rate_low Float64,             -- 成功率低阈值
+    success_rate_mid Float64,             -- 成功率中阈值
+    success_rate_high Float64,            -- 成功率高阈值
+    traffic_volume_low Float64,           -- 交易量低阈值
+    traffic_volume_mid Float64,           -- 交易量中阈值
+    traffic_volume_high Float64,          -- 交易量高阈值
+    alarm_template String,                -- 告警模板
+    
+    -- 数据来源信息
+    analysis_days UInt8,                  -- 分析的历史天数
+    sample_count UInt32,                  -- 该规则的样本数量
+    
+    -- 元数据
+    generated_time DateTime DEFAULT now(), -- 规则生成时间
+    last_updated DateTime DEFAULT now(),   -- 最后更新时间
+    version UInt32 DEFAULT 1,             -- 规则版本号
+    
+    PRIMARY KEY (hour_of_day, service, operator_name)
+) ENGINE = MergeTree()
+ORDER BY (hour_of_day, service, operator_name);

@@ -8,6 +8,7 @@ import com.o11y.stream.sink.AlarmGatewaySink;
 import com.o11y.stream.sink.AggResultClickHouseSink;
 import com.o11y.stream.sink.SimpleClickHouseSink;
 import com.o11y.stream.task.NewKeyTableSyncProcessFunction;
+import com.o11y.stream.task.HourlyRulePublishProcessFunction;
 import com.o11y.infrastructure.database.DatabaseService;
 import com.o11y.stream.source.SegmentDeserializationSchema;
 import com.o11y.shared.util.OperatorParamLoader;
@@ -110,6 +111,7 @@ public class FlinkService {
                 setupDatabaseService();
                 cleanNewKeyTable();
                 startNewKeySyncTask();
+                startHourlyRulePublishTask();
                 // 规则流广播和状态描述符
                 MapStateDescriptor<String, Map<String, AlarmRule>> ruleStateDescriptor = new MapStateDescriptor<>(
                                 "alarmRules",
@@ -405,6 +407,57 @@ public class FlinkService {
                                 .addSink(new org.apache.flink.streaming.api.functions.sink.DiscardingSink<>())
                                 .name("DiscardingSink-NewKeyTableSyncProcessFunction");
                 LOG.warn("NewKeyTableSyncProcessFunction started as Flink operator");
+        }
+
+        /**
+         * 启动小时级规则下发任务
+         * 
+         * <p>
+         * 基于Flink定时机制，每小时整点自动从hourly_alarm_rules表中读取当前小时的规则，
+         * 并下发到Kafka实现热更新。
+         * 
+         * <p>
+         * <strong>配置要求：</strong>
+         * <ul>
+         * <li>hourly_rule_publish_interval: 检查间隔配置（毫秒）</li>
+         * <li>kafka.alarm_rule_topic: Kafka主题配置</li>
+         * <li>clickhouse.*: ClickHouse连接配置</li>
+         * </ul>
+         * 
+         * <p>
+         * <strong>工作原理：</strong>
+         * <ol>
+         * <li>使用InfiniteSource产生触发信号</li>
+         * <li>通过keyBy确保单实例处理</li>
+         * <li>HourlyRulePublishProcessFunction处理定时逻辑</li>
+         * <li>每小时整点从hourly_alarm_rules表读取规则</li>
+         * <li>反序列化JSON为Map<String, AlarmRule></li>
+         * <li>推送到Kafka的alarm_rule_topic</li>
+         * </ol>
+         */
+        private void startHourlyRulePublishTask() {
+                // 从配置中读取检查间隔，默认1分钟（测试用）
+                long checkInterval = ((Number) config.get("hourly_rule_publish_interval")).longValue();
+                // 从配置中读取Kafka主题，默认为alarm_rule_topic
+                String kafkaTopicName = kafkaConfig.getOrDefault("alarm_rule_topic", "alarm_rule_topic");
+
+                env.addSource(new InfiniteSource())
+                                .keyBy(x -> x)
+                                .process(new HourlyRulePublishProcessFunction(
+                                                clickhouseConfig.get("url"),
+                                                clickhouseConfig.get("schema_name"),
+                                                clickhouseConfig.get("username"),
+                                                clickhouseConfig.get("password"),
+                                                kafkaConfig.get("bootstrap_servers"),
+                                                kafkaTopicName,
+                                                checkInterval))
+                                .setParallelism(1)
+                                .name("HourlyRulePublishProcessFunction")
+                                .addSink(new org.apache.flink.streaming.api.functions.sink.DiscardingSink<>())
+                                .name("DiscardingSink-HourlyRulePublishProcessFunction");
+
+                LOG.warn("HourlyRulePublishProcessFunction started as Flink operator, topic: {}, interval: {} ms",
+                                kafkaTopicName, checkInterval);
         }
 
         /**
