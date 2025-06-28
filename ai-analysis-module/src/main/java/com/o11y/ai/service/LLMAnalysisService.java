@@ -34,14 +34,6 @@ public class LLMAnalysisService {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // 模型能力映射
-    private static final Map<String, String> MODEL_CAPABILITIES = Map.of(
-            "deepseek-chat", "通用分析、中文理解、业务诊断",
-            "deepseek-coder", "代码分析、技术问题定位",
-            "deepseek-math", "数据计算、统计分析、异常检测",
-            "claude-3-5-sonnet", "复杂推理、根因分析",
-            "gpt-4o", "综合分析、多模态支持");
-
     public LLMAnalysisService() {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10)) // 连接超时缩短到10秒
@@ -406,15 +398,12 @@ public class LLMAnalysisService {
      * 多模型调用 - 支持降级
      */
     private String callLLMWithFallback(String prompt, String... preferredModels) throws Exception {
-        Exception lastException = null;
-
         for (String model : preferredModels) {
             try {
                 LOG.info("尝试使用模型: {}", model);
                 return callSpecificModel(prompt, model);
             } catch (Exception e) {
                 LOG.warn("模型 {} 调用失败: {}", model, e.getMessage());
-                lastException = e;
             }
         }
 
@@ -1304,21 +1293,6 @@ public class LLMAnalysisService {
             // 返回空列表，会由调用方使用降级方案
         }
         return suggestions;
-    }
-
-    /**
-     * 从响应中提取 JSON 部分
-     */
-    private String extractJsonFromResponse(String response) {
-        // 简单的 JSON 提取逻辑
-        int start = response.indexOf('[');
-        int end = response.lastIndexOf(']');
-
-        if (start != -1 && end != -1 && start < end) {
-            return response.substring(start, end + 1);
-        }
-
-        return response;
     }
 
     // 添加缺失的辅助方法
