@@ -172,23 +172,16 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
 
             // 检查状态值（添加调试日志）
             Integer lastHour = lastExecutedHour.value();
-            LOG.info("定时器触发 - 当前时间: {}时, 上次执行时间: {}, 检查间隔: {}ms",
-                    currentHour, lastHour, checkIntervalMs);
 
             // 检查是否已经执行过（避免在同一小时内重复执行）
             if (lastHour != null && lastHour == currentHour) {
-                LOG.info("Hour {} already processed, skipping (检查间隔: {}ms)", currentHour, checkIntervalMs);
                 // 注册下一个检查时间的定时器
                 long nextCheckTime = calculateNextCheckTime();
                 ctx.timerService().registerProcessingTimeTimer(nextCheckTime);
-                LOG.info("已注册下一个检查时间: {}",
-                        LocalDateTime.ofInstant(
-                                java.time.Instant.ofEpochMilli(nextCheckTime),
-                                java.time.ZoneId.systemDefault()));
                 return;
             }
 
-            LOG.info("=== 开始执行小时级规则下发任务，当前时间: {}时 ===", currentHour);
+            LOG.info("开始执行小时级规则下发任务，当前时间: {}时", currentHour);
 
             // 从数据库读取当前小时的规则
             Map<String, AlarmRule> ruleMap = loadHourlyRules(currentHour);
@@ -196,30 +189,24 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
             if (!ruleMap.isEmpty()) {
                 // 下发规则到Kafka
                 publishRulesToKafka(ruleMap, currentHour);
-                LOG.info("成功下发 {}时 的规则到Kafka，规则数量: {}", currentHour, ruleMap.size());
+                LOG.info("成功下发{}时的规则到Kafka，规则数量: {}", currentHour, ruleMap.size());
 
-                // 输出处理结果（可选）
-                out.collect(String.format("Published %d rules for hour %d", ruleMap.size(), currentHour));
+                // 更新状态
+                lastExecutedHour.update(currentHour);
             } else {
-                LOG.warn("{}时 没有找到任何规则，请检查hourly_alarm_rules表", currentHour);
+                LOG.warn("{}时没有找到规则数据", currentHour);
             }
 
-            // 更新状态（添加调试日志）
-            lastExecutedHour.update(currentHour);
-            LOG.info("已更新状态: lastExecutedHour = {}", currentHour);
-
-            LOG.info("=== {}时 规则下发任务执行完成 ===", currentHour);
-
-        } catch (Exception e) {
-            LOG.error("执行小时级规则下发任务失败: {}", e.getMessage(), e);
-        } finally {
             // 注册下一个检查时间的定时器
             long nextCheckTime = calculateNextCheckTime();
             ctx.timerService().registerProcessingTimeTimer(nextCheckTime);
-            LOG.info("已注册下一个检查定时器，下次检查时间: {}",
-                    LocalDateTime.ofInstant(
-                            java.time.Instant.ofEpochMilli(nextCheckTime),
-                            java.time.ZoneId.systemDefault()));
+
+        } catch (Exception e) {
+            LOG.error("小时级规则下发任务执行失败: {}", e.getMessage(), e);
+
+            // 即使出现异常，也要注册下一个定时器，确保任务继续执行
+            long nextCheckTime = calculateNextCheckTime();
+            ctx.timerService().registerProcessingTimeTimer(nextCheckTime);
         }
     }
 
@@ -232,20 +219,18 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
     private Map<String, AlarmRule> loadHourlyRules(int hourOfDay) throws Exception {
         Map<String, AlarmRule> ruleMap = new HashMap<>();
 
-        Connection conn = databaseService.getConnection();
-        // 使用新的表结构，从各个字段构造AlarmRule对象
         String sql = "SELECT service, operator_name, operator_class, " +
                 "avg_duration_low, avg_duration_mid, avg_duration_high, " +
                 "max_duration_low, max_duration_mid, max_duration_high, " +
                 "success_rate_low, success_rate_mid, success_rate_high, " +
                 "traffic_volume_low, traffic_volume_mid, traffic_volume_high, " +
-                "alarm_template FROM hourly_alarm_rules WHERE hour_of_day = ?";
+                "alarm_template " +
+                "FROM hourly_alarm_rules " +
+                "WHERE hour_of_day = ?";
 
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = databaseService.getConnection().prepareStatement(sql)) {
             ps.setInt(1, hourOfDay);
-
             try (ResultSet rs = ps.executeQuery()) {
-                int ruleCount = 0;
                 while (rs.next()) {
                     AlarmRule rule = new AlarmRule();
                     rule.service = rs.getString("service");
@@ -267,13 +252,6 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
 
                     String ruleKey = rule.combine();
                     ruleMap.put(ruleKey, rule);
-                    ruleCount++;
-                }
-
-                if (ruleCount > 0) {
-                    LOG.debug("从数据库读取到 {}时 的规则，规则数量: {}", hourOfDay, ruleCount);
-                } else {
-                    LOG.debug("数据库中没有找到 {}时 的规则", hourOfDay);
                 }
             }
         }
@@ -288,22 +266,11 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
      * @param hourOfDay 小时序号
      */
     private void publishRulesToKafka(Map<String, AlarmRule> ruleMap, int hourOfDay) throws Exception {
-        String json = objectMapper.writeValueAsString(ruleMap);
+        String ruleMapJson = objectMapper.writeValueAsString(ruleMap);
         String key = "hourly_rules_" + String.format("%02d", hourOfDay);
 
-        ProducerRecord<String, String> record = new ProducerRecord<>(kafkaTopicName, key, json);
-
-        kafkaProducer.send(record, (metadata, exception) -> {
-            if (exception != null) {
-                LOG.error("Failed to send rules to Kafka for hour {}: {}", hourOfDay, exception.getMessage());
-            } else {
-                LOG.debug("Successfully sent rules to Kafka for hour {}, offset: {}",
-                        hourOfDay, metadata.offset());
-            }
-        });
-
-        // 确保消息发送完成
-        kafkaProducer.flush();
+        ProducerRecord<String, String> record = new ProducerRecord<>(kafkaTopicName, key, ruleMapJson);
+        kafkaProducer.send(record).get();
     }
 
     /**
