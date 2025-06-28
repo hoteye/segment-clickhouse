@@ -69,17 +69,4 @@ public class KafkaTopicUtil {
         }
     }
 
-    /**
-     * 测试入口，重建测试 topic。
-     * 
-     * @param args 启动参数
-     * @throws Exception Kafka 操作异常
-     */
-    public static void main(String[] args) throws Exception {
-        String bootstrapServers = "localhost:9092";
-        String topic = "test_flink_task";
-        int partitions = 2;
-        short replicationFactor = 1;
-        recreateTopic(bootstrapServers, topic, partitions, replicationFactor);
-    }
 }

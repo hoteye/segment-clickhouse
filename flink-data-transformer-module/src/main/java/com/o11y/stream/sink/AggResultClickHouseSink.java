@@ -8,10 +8,8 @@ import org.slf4j.LoggerFactory;
 import com.o11y.domain.model.aggregation.ServiceAggResult;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.text.SimpleDateFormat;
 import java.util.Map;
 
 /**
