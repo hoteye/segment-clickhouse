@@ -49,7 +49,15 @@ public class HourlyDynamicThresholdGenerator {
         DatabaseService db = new DatabaseService(clickhouseConfig).initConnection();
         Connection conn = db.getConnection();
 
-        // 2. 一次性查询前N天所有数据，按小时分组
+        // 2. 清空整个hourly_alarm_rules表，确保没有重复阈值规则消息
+        LOG.info("清空hourly_alarm_rules表，确保数据一致性");
+        String clearSql = "TRUNCATE TABLE hourly_alarm_rules";
+        PreparedStatement clearPs = conn.prepareStatement(clearSql);
+        clearPs.executeUpdate();
+        clearPs.close();
+        LOG.info("hourly_alarm_rules表已清空");
+
+        // 3. 一次性查询前N天所有数据，按小时分组
         String sql = "SELECT " +
                 "toHour(window_start) as hour_of_day, " +
                 "service, " +
@@ -85,7 +93,7 @@ public class HourlyDynamicThresholdGenerator {
         ps.setInt(2, Math.max(3, analysisDays)); // 至少需要分析天数的样本
         ResultSet rs = ps.executeQuery();
 
-        // 3. 按小时组织数据：Map<hour, Map<ruleKey, AlarmRule>>
+        // 4. 按小时组织数据：Map<hour, Map<ruleKey, AlarmRule>>
         Map<Integer, Map<String, AlarmRule>> allHourlyRules = new HashMap<>();
         Map<Integer, HourlyStatistics> hourlyStats = new HashMap<>();
 
@@ -122,7 +130,7 @@ public class HourlyDynamicThresholdGenerator {
             double maxDurationP90 = rs.getDouble("max_duration_p90");
             double maxDurationP95 = rs.getDouble("max_duration_p95");
 
-            // 4. 生成该小时的动态阈值规则
+            // 5. 生成该小时的动态阈值规则
             AlarmRule rule = generateHourlyRule(
                     service, operatorName, operatorClass, hourOfDay,
                     avgDuration, maxDuration, successRate, totalCountValue,
@@ -150,7 +158,7 @@ public class HourlyDynamicThresholdGenerator {
         rs.close();
         ps.close();
 
-        // 5. 批量保存所有24小时的规则到数据库
+        // 6. 批量保存所有24小时的规则到数据库
         if (totalRules > 0) {
             LOG.info("生成{}条规则，开始保存到数据库", totalRules);
 
@@ -187,14 +195,7 @@ public class HourlyDynamicThresholdGenerator {
             double avgSuccessRate, double avgTotalCount,
             int analysisDays, int totalSampleCount) throws Exception {
 
-        // 先删除该小时的所有规则
-        String deleteSql = "DELETE FROM hourly_alarm_rules WHERE hour_of_day = ?";
-        PreparedStatement deletePs = conn.prepareStatement(deleteSql);
-        deletePs.setInt(1, hourOfDay);
-        deletePs.executeUpdate();
-        deletePs.close();
-
-        // 逐条插入规则到hourly_alarm_rules表
+        // 逐条插入规则到hourly_alarm_rules表（表已在主流程开始时清空）
         String sql = "INSERT INTO hourly_alarm_rules (" +
                 "hour_of_day, service, operator_name, operator_class, " +
                 "avg_duration_low, avg_duration_mid, avg_duration_high, " +
