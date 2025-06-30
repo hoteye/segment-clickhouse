@@ -261,15 +261,26 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
     /**
      * 将规则推送到Kafka
      * 
+     * 使用固定key配合Kafka Log Compaction策略，确保：
+     * 1. 每次发送都会覆盖之前的规则（避免重复累积）
+     * 2. 消费者启动时能获取到最新的完整规则集
+     * 3. 利用Kafka的幂等性保证消息不重复
+     * 
      * @param ruleMap   规则映射
      * @param hourOfDay 小时序号
      */
     private void publishRulesToKafka(Map<String, AlarmRule> ruleMap, int hourOfDay) throws Exception {
         String ruleMapJson = objectMapper.writeValueAsString(ruleMap);
-        String key = "hourly_rules_" + String.format("%02d", hourOfDay);
+        // 使用固定key，配合Log Compaction策略
+        String key = "global_alarm_rules";
 
         ProducerRecord<String, String> record = new ProducerRecord<>(kafkaTopicName, key, ruleMapJson);
-        kafkaProducer.send(record).get();
+
+        // 同步发送，确保消息真正发送成功
+        var result = kafkaProducer.send(record).get();
+
+        LOG.debug("规则推送到Kafka成功: topic={}, key={}, partition={}, offset={}, 规则数量={}",
+                result.topic(), key, result.partition(), result.offset(), ruleMap.size());
     }
 
     /**

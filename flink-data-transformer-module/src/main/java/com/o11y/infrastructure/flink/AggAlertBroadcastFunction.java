@@ -4,6 +4,7 @@ import com.o11y.domain.model.alarm.AlertMessage;
 import com.o11y.domain.model.aggregation.ServiceAggResult;
 import com.o11y.domain.model.alarm.AlarmRule;
 import org.apache.flink.api.common.state.MapStateDescriptor;
+
 import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
@@ -42,13 +43,23 @@ public class AggAlertBroadcastFunction
     @Override
     public void processBroadcastElement(Map<String, AlarmRule> ruleMap, Context ctx, Collector<AlertMessage> out)
             throws Exception {
+
+        if (ruleMap == null || ruleMap.isEmpty()) {
+            LOG.warn("[热更新] 收到空规则消息，跳过处理");
+            return;
+        }
+
         // 直接用固定 key "all_rules" 存储整张规则表
         ctx.getBroadcastState(ruleStateDescriptor).put("all_rules", ruleMap);
-        if (ruleMap != null && !ruleMap.isEmpty()) {
-            LOG.info("[热更新] 收到 alarm_rule_topic 新规则消息，规则总数：{}，keys：{}", ruleMap.size(), ruleMap.keySet());
-        } else {
-            LOG.info("[热更新] 收到 alarm_rule_topic 空规则消息");
-        }
+
+        LOG.info("[热更新] 规则更新成功，规则总数：{}，包含服务：{}",
+                ruleMap.size(),
+                ruleMap.keySet().stream()
+                        .map(key -> key.split("\\|")[0])
+                        .distinct()
+                        .sorted()
+                        .limit(5) // 只显示前5个服务
+                        .toArray());
     }
 
     /**

@@ -194,7 +194,7 @@ public class HourlyDynamicThresholdGenerator {
         deletePs.executeUpdate();
         deletePs.close();
 
-        // 逐条插入规则（参考DynamicThresholdGenerator的方式）
+        // 逐条插入规则到hourly_alarm_rules表
         String sql = "INSERT INTO hourly_alarm_rules (" +
                 "hour_of_day, service, operator_name, operator_class, " +
                 "avg_duration_low, avg_duration_mid, avg_duration_high, " +
