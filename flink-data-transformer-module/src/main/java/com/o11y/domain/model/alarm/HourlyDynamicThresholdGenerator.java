@@ -1,20 +1,14 @@
 package com.o11y.domain.model.alarm;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.o11y.infrastructure.database.DatabaseService;
 import com.o11y.shared.util.ConfigurationUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,8 +23,6 @@ import org.slf4j.LoggerFactory;
  */
 public class HourlyDynamicThresholdGenerator {
     private static final Logger LOG = LoggerFactory.getLogger(HourlyDynamicThresholdGenerator.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-
     // 默认分析前7天的数据
     private static final int DEFAULT_ANALYSIS_DAYS = 7;
 
@@ -214,8 +206,6 @@ public class HourlyDynamicThresholdGenerator {
                 ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now(), 1)";
 
         PreparedStatement ps = conn.prepareStatement(sql);
-        int insertCount = 0;
-
         for (AlarmRule rule : ruleMap.values()) {
             ps.setInt(1, hourOfDay);
             ps.setString(2, rule.service);
@@ -238,7 +228,6 @@ public class HourlyDynamicThresholdGenerator {
             ps.setInt(19, totalSampleCount / ruleCount); // 平均样本数
 
             ps.addBatch();
-            insertCount++;
         }
 
         ps.executeBatch();
