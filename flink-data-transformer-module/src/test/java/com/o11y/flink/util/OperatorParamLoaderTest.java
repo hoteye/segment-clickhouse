@@ -4,6 +4,7 @@ import com.o11y.shared.util.OperatorParamLoader;
 import com.o11y.infrastructure.database.DatabaseService;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -12,6 +13,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.*;
+import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -22,6 +24,8 @@ class OperatorParamLoaderTest {
     private PreparedStatement pstmt;
     private ResultSet resultSet;
     private KafkaProducer<String, String> producer;
+    private Future<RecordMetadata> mockFuture;
+    private RecordMetadata mockRecordMetadata;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -30,10 +34,16 @@ class OperatorParamLoaderTest {
         pstmt = mock(PreparedStatement.class);
         resultSet = mock(ResultSet.class);
         producer = mock(KafkaProducer.class);
+        mockFuture = mock(Future.class);
+        mockRecordMetadata = mock(RecordMetadata.class);
 
         when(dbService.getConnection()).thenReturn(connection);
         when(connection.prepareStatement(anyString())).thenReturn(pstmt);
         when(pstmt.executeQuery()).thenReturn(resultSet);
+
+        // Mock Kafka producer的send方法和Future返回值
+        when(producer.send(any(ProducerRecord.class))).thenReturn(mockFuture);
+        when(mockFuture.get()).thenReturn(mockRecordMetadata);
     }
 
     @Test
