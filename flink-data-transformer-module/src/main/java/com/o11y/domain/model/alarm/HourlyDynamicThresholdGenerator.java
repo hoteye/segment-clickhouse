@@ -174,7 +174,7 @@ public class HourlyDynamicThresholdGenerator {
                             stats.totalSuccessRate / stats.ruleCount,
                             stats.totalCount / stats.ruleCount,
                             analysisDays, stats.totalSampleCount);
-                    LOG.info("保存第{}小时规则到数据库", hour);
+                    LOG.info("保存第{}小时规则到数据库，共{}条", hour, hourRules.size());
                 }
             }
 
