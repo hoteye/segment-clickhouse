@@ -32,7 +32,6 @@ public class HourlyRulePublishProcessFunctionTest {
         String password = "123456";
         String kafkaBootstrapServers = "localhost:9092";
         String kafkaTopicName = "test-alarm-rules";
-        long checkIntervalMs = 60000L; // 1分钟检查间隔用于测试
 
         function = new HourlyRulePublishProcessFunction(
                 clickhouseUrl,
@@ -40,24 +39,29 @@ public class HourlyRulePublishProcessFunctionTest {
                 username,
                 password,
                 kafkaBootstrapServers,
-                kafkaTopicName,
-                checkIntervalMs);
+                kafkaTopicName);
     }
 
     @Test
-    @DisplayName("测试下一个检查时间计算")
-    void testCalculateNextCheckTime() throws Exception {
+    @DisplayName("测试下一个整点时间计算")
+    void testCalculateNextHourTime() throws Exception {
         // 使用反射调用私有方法
         Method method = HourlyRulePublishProcessFunction.class
-                .getDeclaredMethod("calculateNextCheckTime");
+                .getDeclaredMethod("calculateNextHourTime");
         method.setAccessible(true);
 
         long currentTime = System.currentTimeMillis();
-        long nextCheckTime = (Long) method.invoke(function);
+        long nextHourTime = (Long) method.invoke(function);
 
-        // 验证下一个检查时间应该是当前时间 + 检查间隔
-        assertTrue(nextCheckTime > currentTime, "下一个检查时间应该大于当前时间");
-        assertTrue(nextCheckTime <= currentTime + 61000L, "下一个检查时间应该在合理范围内");
+        // 验证下一个整点时间应该大于当前时间
+        assertTrue(nextHourTime > currentTime, "下一个整点时间应该大于当前时间");
+
+        // 验证时间是整点（分钟和秒都是0）
+        LocalDateTime nextHour = LocalDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(nextHourTime),
+                java.time.ZoneId.systemDefault());
+        assertEquals(0, nextHour.getMinute(), "下一个整点的分钟应该是0");
+        assertEquals(0, nextHour.getSecond(), "下一个整点的秒应该是0");
     }
 
     @Test

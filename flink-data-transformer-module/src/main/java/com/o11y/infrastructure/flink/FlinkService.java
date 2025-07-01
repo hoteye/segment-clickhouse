@@ -436,8 +436,6 @@ public class FlinkService {
          * </ol>
          */
         private void startHourlyRulePublishTask() {
-                // 从配置中读取检查间隔，默认1分钟（测试用）
-                long checkInterval = ((Number) config.get("hourly_rule_publish_interval")).longValue();
                 // 从配置中读取Kafka主题，默认为alarm_rule_topic
                 String kafkaTopicName = kafkaConfig.getOrDefault("alarm_rule_topic", "alarm_rule_topic");
 
@@ -449,15 +447,14 @@ public class FlinkService {
                                                 clickhouseConfig.get("username"),
                                                 clickhouseConfig.get("password"),
                                                 kafkaConfig.get("bootstrap_servers"),
-                                                kafkaTopicName,
-                                                checkInterval))
+                                                kafkaTopicName))
                                 .setParallelism(1)
                                 .name("HourlyRulePublishProcessFunction")
                                 .addSink(new org.apache.flink.streaming.api.functions.sink.DiscardingSink<>())
                                 .name("DiscardingSink-HourlyRulePublishProcessFunction");
 
-                LOG.warn("HourlyRulePublishProcessFunction started as Flink operator, topic: {}, interval: {} ms",
-                                kafkaTopicName, checkInterval);
+                LOG.warn("HourlyRulePublishProcessFunction started as Flink operator, topic: {}",
+                                kafkaTopicName);
         }
 
         /**

@@ -71,6 +71,10 @@ public class AggResultClickHouseSink extends RichSinkFunction<ServiceAggResult> 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
+
+        // 显式加载 ClickHouse JDBC 驱动
+        Class.forName("com.clickhouse.jdbc.ClickHouseDriver");
+
         String url = clickhouseConfig.get("url");
         String username = clickhouseConfig.get("username");
         String password = clickhouseConfig.get("password");

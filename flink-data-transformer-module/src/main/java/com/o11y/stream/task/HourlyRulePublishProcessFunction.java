@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -75,15 +76,15 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
     private final String kafkaBootstrapServers;
     private final String kafkaTopicName;
 
-    // 检查间隔（毫秒），默认1小时
-    private final long checkIntervalMs;
-
     // 状态：记录上次执行的小时，避免重复执行
     private transient ValueState<Integer> lastExecutedHour;
 
     // 数据库服务和Kafka生产者
     private transient DatabaseService databaseService;
     private transient Producer<String, String> kafkaProducer;
+
+    // ✅ 添加标志位，只注册一次
+    private boolean timerRegistered = false;
 
     /**
      * 构造函数
@@ -94,7 +95,6 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
      * @param password              数据库密码
      * @param kafkaBootstrapServers Kafka服务器地址
      * @param kafkaTopicName        Kafka主题名称
-     * @param checkIntervalMs       检查间隔（毫秒）
      */
     public HourlyRulePublishProcessFunction(
             String clickhouseUrl,
@@ -102,14 +102,12 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
             String username,
             String password,
             String kafkaBootstrapServers,
-            String kafkaTopicName,
-            long checkIntervalMs) {
+            String kafkaTopicName) {
         this.clickhouseUrl = clickhouseUrl;
         this.username = username;
         this.password = password;
         this.kafkaBootstrapServers = kafkaBootstrapServers;
         this.kafkaTopicName = kafkaTopicName;
-        this.checkIntervalMs = checkIntervalMs;
     }
 
     @Override
@@ -139,7 +137,7 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
         kafkaProps.put("linger.ms", 1);
         kafkaProducer = new KafkaProducer<>(kafkaProps);
 
-        LOG.info("HourlyRulePublishProcessFunction initialized, checkInterval: {} ms", checkIntervalMs);
+        LOG.info("HourlyRulePublishProcessFunction initialized for hourly rule publishing");
     }
 
     @Override
@@ -148,14 +146,12 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
             Context ctx,
             Collector<String> out) throws Exception {
 
-        // 注册定时器到下一个检查时间点
-        long nextCheckTime = calculateNextCheckTime();
-        ctx.timerService().registerProcessingTimeTimer(nextCheckTime);
-
-        LOG.debug("Registered timer for next check at: {}",
-                LocalDateTime.ofInstant(
-                        java.time.Instant.ofEpochMilli(nextCheckTime),
-                        java.time.ZoneId.systemDefault()));
+        if (!timerRegistered) {
+            long nextHourTime = calculateNextHourTime();
+            ctx.timerService().registerProcessingTimeTimer(nextHourTime);
+            timerRegistered = true;
+            LOG.info("Timer registered for next hour at: {}", nextHourTime);
+        }
     }
 
     @Override
@@ -174,9 +170,9 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
 
             // 检查是否已经执行过（避免在同一小时内重复执行）
             if (lastHour != null && lastHour == currentHour) {
-                // 注册下一个检查时间的定时器
-                long nextCheckTime = calculateNextCheckTime();
-                ctx.timerService().registerProcessingTimeTimer(nextCheckTime);
+                // 注册下一个整点的定时器
+                long nextHourTime = calculateNextHourTime();
+                ctx.timerService().registerProcessingTimeTimer(nextHourTime);
                 return;
             }
 
@@ -196,16 +192,16 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
                 LOG.warn("{}时没有找到规则数据", currentHour);
             }
 
-            // 注册下一个检查时间的定时器
-            long nextCheckTime = calculateNextCheckTime();
-            ctx.timerService().registerProcessingTimeTimer(nextCheckTime);
+            // 注册下一个整点的定时器
+            long nextHourTime = calculateNextHourTime();
+            ctx.timerService().registerProcessingTimeTimer(nextHourTime);
 
         } catch (Exception e) {
             LOG.error("小时级规则下发任务执行失败: {}", e.getMessage(), e);
 
-            // 即使出现异常，也要注册下一个定时器，确保任务继续执行
-            long nextCheckTime = calculateNextCheckTime();
-            ctx.timerService().registerProcessingTimeTimer(nextCheckTime);
+            // 即使出现异常，也要注册下一个整点定时器，确保任务继续执行
+            long nextHourTime = calculateNextHourTime();
+            ctx.timerService().registerProcessingTimeTimer(nextHourTime);
         }
     }
 
@@ -284,13 +280,16 @@ public class HourlyRulePublishProcessFunction extends KeyedProcessFunction<Strin
     }
 
     /**
-     * 计算下一个检查时间点
-     * 使用配置的检查间隔（支持测试时的1分钟间隔）
-     * 
-     * @return 下一个检查时间的时间戳（毫秒）
+     * 计算下一个整点时间
+     * 确保在每小时的整点触发（如12:00, 13:00, 14:00...）
      */
-    private long calculateNextCheckTime() {
-        return System.currentTimeMillis() + checkIntervalMs;
+    private long calculateNextHourTime() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nextHour = now.plusHours(1)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+        return nextHour.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
     @Override

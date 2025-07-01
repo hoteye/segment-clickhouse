@@ -176,6 +176,9 @@ public class DatabaseService {
                     logger.info("Closed existing database connection.");
                 }
 
+                // 显式加载 ClickHouse JDBC 驱动
+                Class.forName("com.clickhouse.jdbc.ClickHouseDriver");
+
                 // 建立新的数据库连接
                 connection = DriverManager.getConnection(clickhouseUrl, username, password);
 
@@ -184,7 +187,7 @@ public class DatabaseService {
 
                 logger.info("Database connection initialized successfully.");
                 break; // 连接成功，退出重试循环
-            } catch (SQLException e) {
+            } catch (SQLException | ClassNotFoundException e) {
                 retry++;
                 logger.error("Failed to connect to ClickHouse: {}. Retrying in 3s... (attempt {}/{})",
                         e.getMessage(), retry, maxRetry, e);
