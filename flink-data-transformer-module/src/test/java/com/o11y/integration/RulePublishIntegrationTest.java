@@ -5,7 +5,6 @@ import com.o11y.domain.model.alarm.AlarmRule;
 import com.o11y.domain.model.alarm.HourlyDynamicThresholdGenerator;
 import com.o11y.stream.task.HourlyRulePublishProcessFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.apache.flink.streaming.util.ProcessFunctionTestHarnesses;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -15,8 +14,6 @@ import org.junit.jupiter.api.*;
 
 import java.sql.Statement;
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
