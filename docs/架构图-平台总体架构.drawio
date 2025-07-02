@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="draw.io" etag="xxx" version="22.1.11" type="device">
+  <diagram name="Segment Alarm ClickHouse 平台架构" id="platform-architecture">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- 主平台框架 -->
+        <mxCell id="main-platform" value="Segment Alarm ClickHouse 平台" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=16;fontStyle=1;verticalAlign=top;spacingTop=20;" parent="1" vertex="1">
+          <mxGeometry x="40" y="40" width="740" height="400" as="geometry" />
+        </mxCell>
+        
+        <!-- Flink数据转换模块 -->
+        <mxCell id="flink-module" value="Flink数据转换&#xa;·实时流处理&#xa;·异常检测&#xa;·数据聚合" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="80" y="100" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- AI智能分析模块 -->
+        <mxCell id="ai-module" value="AI智能分析&#xa;·多LLM引擎&#xa;·根因分析&#xa;·预测分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="300" y="100" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 决策支持层模块 -->
+        <mxCell id="decision-module" value="决策支持层&#xa;·智能告警&#xa;·优化建议&#xa;·自动化运维" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="520" y="100" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 连接箭头 -->
+        <mxCell id="arrow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" source="flink-module" target="ai-module" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="arrow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" source="ai-module" target="decision-module" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- 基础设施层 -->
+        <mxCell id="infrastructure" value="Kafka消息队列 + ClickHouse数据库 + Protobuf序列化" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="80" y="260" width="600" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- 流处理引擎 -->
+        <mxCell id="flink-engine" value="Apache Flink 1.17.2 流处理引擎" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="80" y="340" width="600" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据流箭头 -->
+        <mxCell id="data-flow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;dashed=1;" parent="1" source="flink-module" target="infrastructure" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="data-flow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;dashed=1;" parent="1" source="ai-module" target="infrastructure" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="data-flow3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;dashed=1;" parent="1" source="decision-module" target="infrastructure" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="engine-flow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#ffe6cc;strokeColor=#d79b00;dashed=1;" parent="1" source="infrastructure" target="flink-engine" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

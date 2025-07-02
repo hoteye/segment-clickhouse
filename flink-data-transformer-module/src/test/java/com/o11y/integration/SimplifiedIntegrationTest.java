@@ -514,14 +514,7 @@ class SimplifiedIntegrationTest {
      * Mock实现，使用H2数据库
      */
     private static class MockHourlyDynamicThresholdGenerator extends HourlyDynamicThresholdGenerator {
-        private final Connection mockConnection;
-
         public MockHourlyDynamicThresholdGenerator(Connection connection) {
-            this.mockConnection = connection;
-        }
-
-        protected Connection getClickHouseConnection() throws SQLException {
-            return mockConnection;
         }
     }
 }

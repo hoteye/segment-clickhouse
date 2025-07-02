@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="draw.io" etag="xxx" version="22.1.11" type="device">
+  <diagram name="智能可观测性平台总览" id="comprehensive-overview">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- 标题 -->
+        <mxCell id="main-title" value="数据中心智能可观测性平台总览架构" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="400" y="20" width="360" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据源层 -->
+        <mxCell id="data-source-layer" value="数据源层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#666666;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="40" y="80" width="1080" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="skywalking-agent" value="SkyWalking Agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="80" y="110" width="120" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="app-logs" value="应用日志" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="220" y="110" width="120" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="system-metrics" value="系统指标" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="360" y="110" width="120" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="business-data" value="业务数据" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="500" y="110" width="120" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据采集层 -->
+        <mxCell id="collection-layer" value="数据采集与处理层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="40" y="200" width="1080" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="kafka-queue" value="Kafka消息队列&#xa;·高吞吐量&#xa;·可靠传输" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="80" y="240" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="flink-processing" value="Flink流处理&#xa;·实时计算&#xa;·异常检测&#xa;·数据聚合" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="280" y="230" width="140" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="protobuf-serialization" value="Protobuf序列化&#xa;·高效传输&#xa;·结构化数据" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="480" y="240" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 存储层 -->
+        <mxCell id="storage-layer" value="数据存储层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="40" y="360" width="1080" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="clickhouse-olap" value="ClickHouse OLAP&#xa;·列式存储&#xa;·高性能分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f8ff;strokeColor=#4682b4;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="80" y="390" width="150" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="elasticsearch" value="Elasticsearch&#xa;·全文检索&#xa;·日志分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f8ff;strokeColor=#4682b4;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="280" y="390" width="150" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="redis-cache" value="Redis缓存&#xa;·高速访问&#xa;·临时存储" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f8ff;strokeColor=#4682b4;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="480" y="390" width="150" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- AI分析层 -->
+        <mxCell id="ai-layer" value="AI智能分析层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#4caf50;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="40" y="480" width="1080" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="llm-engines" value="多LLM引擎&#xa;·GPT-4&#xa;·Claude&#xa;·DeepSeek" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="80" y="520" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="pattern-recognition" value="模式识别&#xa;·异常检测&#xa;·趋势分析&#xa;·关联分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="280" y="510" width="140" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="root-cause-analysis" value="根因分析&#xa;·代码分析&#xa;·调用链追踪&#xa;·依赖分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="480" y="510" width="140" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="predictive-analysis" value="预测分析&#xa;·性能预测&#xa;·容量规划&#xa;·故障预警" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="680" y="510" width="140" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- 应用层 -->
+        <mxCell id="application-layer" value="智能应用层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="40" y="640" width="1080" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="intelligent-alerts" value="智能告警&#xa;·动态阈值&#xa;·分级告警&#xa;·自动升级" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="80" y="680" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="auto-remediation" value="自动化运维&#xa;·自愈策略&#xa;·优化建议&#xa;·问题修复" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="280" y="680" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="dashboard" value="可视化大屏&#xa;·实时监控&#xa;·趋势分析&#xa;·决策支持" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="480" y="680" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="knowledge-base" value="知识库系统&#xa;·经验沉淀&#xa;·最佳实践&#xa;·智能推荐" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="680" y="680" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="cost-optimization" value="成本优化&#xa;·资源分析&#xa;·效率提升&#xa;·ROI计算" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=top;spacingTop=5;" parent="1" vertex="1">
+          <mxGeometry x="880" y="680" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据流箭头 -->
+        <mxCell id="flow-data-to-collection" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#333333;strokeColor=#333333;" parent="1" source="data-source-layer" target="collection-layer" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="flow-collection-to-storage" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#333333;strokeColor=#333333;" parent="1" source="collection-layer" target="storage-layer" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="flow-storage-to-ai" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#333333;strokeColor=#333333;" parent="1" source="storage-layer" target="ai-layer" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="flow-ai-to-application" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#333333;strokeColor=#333333;" parent="1" source="ai-layer" target="application-layer" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- 反馈回路 -->
+        <mxCell id="feedback-loop" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#ff6b6b;strokeColor=#ff6b6b;dashed=1;curved=1;" parent="1" source="knowledge-base" target="llm-engines" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="950" y="710" />
+              <mxPoint x="950" y="550" />
+              <mxPoint x="220" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="feedback-label" value="知识反馈循环" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=2;fontColor=#ff6b6b;" parent="1" vertex="1">
+          <mxGeometry x="970" y="620" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- 核心价值标签 -->
+        <mxCell id="value-tag-1" value="实时性" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4caf50;strokeColor=#ffffff;fontSize=10;fontStyle=1;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="700" y="240" width="60" height="25" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="value-tag-2" value="智能化" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2196f3;strokeColor=#ffffff;fontSize=10;fontStyle=1;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="880" y="520" width="60" height="25" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="value-tag-3" value="自动化" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff9800;strokeColor=#ffffff;fontSize=10;fontStyle=1;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="880" y="390" width="60" height="25" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="value-tag-4" value="经济性" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9c27b0;strokeColor=#ffffff;fontSize=10;fontStyle=1;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="690" width="60" height="25" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

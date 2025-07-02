@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="draw.io" etag="xxx" version="22.1.11" type="device">
+  <diagram name="全链路监控架构" id="full-chain-monitoring">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- 用户请求全链路标题 -->
+        <mxCell id="title" value="用户请求全链路监控" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="300" y="40" width="200" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- 前端应用 -->
+        <mxCell id="frontend" value="前端应用" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="80" y="100" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- API网关 -->
+        <mxCell id="api-gateway" value="API网关" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="260" y="100" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- 微服务群 -->
+        <mxCell id="microservices" value="微服务群" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="440" y="100" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- 数据存储 -->
+        <mxCell id="data-storage" value="数据存储" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="620" y="100" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- 业务流程箭头 -->
+        <mxCell id="flow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" source="frontend" target="api-gateway" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="flow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" source="api-gateway" target="microservices" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="flow3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" source="microservices" target="data-storage" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- 监控层 -->
+        <mxCell id="monitor1" value="用户体验监控" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1ecf1;strokeColor=#bee5eb;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="90" y="220" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="monitor2" value="路由性能监控" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1ecf1;strokeColor=#bee5eb;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="270" y="220" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="monitor3" value="服务健康监控" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1ecf1;strokeColor=#bee5eb;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="450" y="220" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="monitor4" value="存储性能监控" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1ecf1;strokeColor=#bee5eb;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="630" y="220" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- 监控连接线 -->
+        <mxCell id="monitor-flow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d1ecf1;strokeColor=#bee5eb;dashed=1;" parent="1" source="frontend" target="monitor1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="monitor-flow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d1ecf1;strokeColor=#bee5eb;dashed=1;" parent="1" source="api-gateway" target="monitor2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="monitor-flow3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d1ecf1;strokeColor=#bee5eb;dashed=1;" parent="1" source="microservices" target="monitor3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="monitor-flow4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d1ecf1;strokeColor=#bee5eb;dashed=1;" parent="1" source="data-storage" target="monitor4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- 智能分析层 -->
+        <mxCell id="intelligent-analysis" value="智能关联分析和根因自动定位" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4edda;strokeColor=#28a745;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="150" y="320" width="500" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 汇聚箭头 -->
+        <mxCell id="analysis-flow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#d4edda;strokeColor=#28a745;" parent="1" source="monitor1" target="intelligent-analysis" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="analysis-flow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#d4edda;strokeColor=#28a745;" parent="1" source="monitor2" target="intelligent-analysis" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="analysis-flow3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#d4edda;strokeColor=#28a745;" parent="1" source="monitor3" target="intelligent-analysis" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="analysis-flow4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#d4edda;strokeColor=#28a745;" parent="1" source="monitor4" target="intelligent-analysis" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

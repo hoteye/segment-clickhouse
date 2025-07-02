@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="draw.io" etag="xxx" version="22.1.11" type="device">
+  <diagram name="知识库建设体系" id="knowledge-base-system">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- 标题 -->
+        <mxCell id="title" value="知识库建设体系" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="320" y="40" width="160" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- 专家经验库 -->
+        <mxCell id="expert-knowledge" value="专家经验库&#xa;·故障处理&#xa;·优化技巧&#xa;·架构决策" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="80" y="100" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 最佳实践库 -->
+        <mxCell id="best-practices" value="最佳实践库&#xa;·配置模板&#xa;·操作手册&#xa;·安全规范" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="320" y="100" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 案例分析库 -->
+        <mxCell id="case-analysis" value="案例分析库&#xa;·典型故障&#xa;·解决方案&#xa;·经验总结" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=10;" parent="1" vertex="1">
+          <mxGeometry x="560" y="100" width="160" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 知识流程箭头 -->
+        <mxCell id="knowledge-flow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" source="expert-knowledge" target="best-practices" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="knowledge-flow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" source="best-practices" target="case-analysis" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- AI智能系统 -->
+        <mxCell id="ai-system" value="AI智能知识检索和推荐系统" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="150" y="280" width="500" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 汇聚箭头 -->
+        <mxCell id="ai-flow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" source="expert-knowledge" target="ai-system" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ai-flow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" source="best-practices" target="ai-system" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ai-flow3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" source="case-analysis" target="ai-system" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- 应用场景 -->
+        <mxCell id="application1" value="技术分享" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4edda;strokeColor=#28a745;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="120" y="400" width="80" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="application2" value="导师制培养" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4edda;strokeColor=#28a745;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="260" y="400" width="80" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="application3" value="项目实战" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4edda;strokeColor=#28a745;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="400" y="400" width="80" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="application4" value="开源贡献" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4edda;strokeColor=#28a745;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="540" y="400" width="80" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- 应用连接线 -->
+        <mxCell id="app-flow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d4edda;strokeColor=#28a745;dashed=1;" parent="1" source="ai-system" target="application1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="app-flow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d4edda;strokeColor=#28a745;dashed=1;" parent="1" source="ai-system" target="application2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="app-flow3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d4edda;strokeColor=#28a745;dashed=1;" parent="1" source="ai-system" target="application3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="app-flow4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fillColor=#d4edda;strokeColor=#28a745;dashed=1;" parent="1" source="ai-system" target="application4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- 反馈循环 -->
+        <mxCell id="feedback-loop" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fillColor=#ffeaa7;strokeColor=#fdcb6e;dashed=1;curved=1;" parent="1" source="application3" target="expert-knowledge" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="440" y="480" />
+              <mxPoint x="60" y="480" />
+              <mxPoint x="60" y="160" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="feedback-label" value="持续反馈改进" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=2;fontColor=#e17055;" parent="1" vertex="1">
+          <mxGeometry x="20" y="320" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
