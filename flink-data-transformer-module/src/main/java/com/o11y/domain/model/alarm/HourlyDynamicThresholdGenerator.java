@@ -23,8 +23,8 @@ import org.slf4j.LoggerFactory;
  */
 public class HourlyDynamicThresholdGenerator {
     private static final Logger LOG = LoggerFactory.getLogger(HourlyDynamicThresholdGenerator.class);
-    // 默认分析前7天的数据
-    private static final int DEFAULT_ANALYSIS_DAYS = 7;
+
+    private static final int DEFAULT_ANALYSIS_DAYS = 10;
 
     public static void main(String[] args) throws Exception {
         HourlyDynamicThresholdGenerator generator = new HourlyDynamicThresholdGenerator();
@@ -90,7 +90,7 @@ public class HourlyDynamicThresholdGenerator {
 
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, analysisDays);
-        ps.setInt(2, Math.max(3, analysisDays)); // 至少需要分析天数的样本
+        ps.setInt(2, 3); // 至少需要10条样本
         ResultSet rs = ps.executeQuery();
 
         // 4. 按小时组织数据：Map<hour, Map<ruleKey, AlarmRule>>
@@ -129,7 +129,10 @@ public class HourlyDynamicThresholdGenerator {
             double maxDurationP75 = rs.getDouble("max_duration_p75");
             double maxDurationP90 = rs.getDouble("max_duration_p90");
             double maxDurationP95 = rs.getDouble("max_duration_p95");
-
+            // 打印 sample_count 和 service 和 operator_name 和 hour_of_day
+            LOG.info("sample_count: {}, service: {}, operator_name: {}, hour_of_day: {}", sampleCount,
+                    service.substring(0, Math.min(service.length(), 10)),
+                    operatorName.substring(0, Math.min(operatorName.length(), 10)), hourOfDay);
             // 5. 生成该小时的动态阈值规则
             AlarmRule rule = generateHourlyRule(
                     service, operatorName, operatorClass, hourOfDay,

@@ -65,9 +65,6 @@ public class HourlyRuleScheduler {
         try {
             long startTime = System.currentTimeMillis();
 
-            // 先清空整个 hourly_alarm_rules 表，确保数据一致性
-            generator.clearAllHourlyRules();
-
             // 调用核心生成逻辑
             generator.generateAllHourlyRulesOnce(analysisDays);
 
