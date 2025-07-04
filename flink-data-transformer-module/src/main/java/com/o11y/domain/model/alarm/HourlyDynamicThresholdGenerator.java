@@ -230,7 +230,7 @@ public class HourlyDynamicThresholdGenerator {
             ps.setDouble(16, rule.trafficVolumeHigh);
             ps.setString(17, rule.alarmTemplate);
             ps.setInt(18, analysisDays);
-            ps.setInt(19, rule.sampleCount); // 使用真实的样本数
+            ps.setInt(19, rule.sampleCount);
 
             ps.addBatch();
         }
@@ -303,7 +303,6 @@ public class HourlyDynamicThresholdGenerator {
 
         rule.alarmTemplate = String.format("服务%s算子%s在%d时动态阈值告警(基于前%d天数据)",
                 service, operatorName, hourOfDay, analysisDays);
-        // 设置真实的样本数量
         rule.sampleCount = sampleCount;
 
         return rule;

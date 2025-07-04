@@ -40,8 +40,7 @@ public class HourlyRuleScheduler {
 
     private final HourlyDynamicThresholdGenerator generator = new HourlyDynamicThresholdGenerator();
 
-    // 默认分析前7天的数据
-    private static final int DEFAULT_ANALYSIS_DAYS = 7;
+    private static final int DEFAULT_ANALYSIS_DAYS = 10;
 
     public static void main(String[] args) {
         HourlyRuleScheduler scheduler = new HourlyRuleScheduler();
