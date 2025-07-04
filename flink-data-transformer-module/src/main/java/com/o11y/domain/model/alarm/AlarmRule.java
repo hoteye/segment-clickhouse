@@ -28,6 +28,8 @@ public class AlarmRule {
     public Double avgDurationLow;
     // 告警模板，支持占位符替换
     public String alarmTemplate;
+    // 样本数量，用于记录生成该规则时使用的数据样本数
+    public Integer sampleCount;
 
     public AlarmRule() {
     }
@@ -55,6 +57,7 @@ public class AlarmRule {
                 ", avgDurationMid=" + avgDurationMid +
                 ", avgDurationLow=" + avgDurationLow +
                 ", alarmTemplate='" + alarmTemplate + '\'' +
+                ", sampleCount=" + sampleCount +
                 '}';
     }
 }
