@@ -69,7 +69,6 @@ public class EventsBasedThresholdGenerator {
                 "toHour(start_time) as hour_of_day, " +
                 "service, " +
                 "operation_name as operator_name, " +
-                "span_layer as operator_class, " +
                 // 计算响应时间（毫秒）
                 "avg(toInt64(end_time - start_time) * 1000) as avg_duration, " +
                 "max(toInt64(end_time - start_time) * 1000) as max_duration, " +
@@ -95,7 +94,7 @@ public class EventsBasedThresholdGenerator {
                 "AND is_error = 0 " + // 只统计成功的请求
                 "AND toInt64(end_time - start_time) * 1000 < ? " + // 过滤异常长的响应时间
                 "AND toInt64(end_time - start_time) * 1000 > 0 " + // 过滤负数或0的响应时间
-                "GROUP BY hour_of_day, service, operator_name, operator_class " +
+                "GROUP BY hour_of_day, service, operator_name " +
                 "HAVING total_count >= ? " +
                 "ORDER BY hour_of_day, service, operator_name";
 
@@ -120,7 +119,7 @@ public class EventsBasedThresholdGenerator {
             int hourOfDay = rs.getInt("hour_of_day");
             String service = rs.getString("service");
             String operatorName = rs.getString("operator_name");
-            String operatorClass = rs.getString("operator_class");
+            String operatorClass = "EventsBasedThresholdGenerator.class";
 
             double avgDuration = rs.getDouble("avg_duration");
             double maxDuration = rs.getDouble("max_duration");
