@@ -1,4 +1,5 @@
 kafka:
+  # 主Kafka源配置 - 用于阈值热更新、告警规则等控制消息
   bootstrap_servers: "192.168.100.6:9092"
   group_id: "skywalking-segments-consumer-group-myself"
   topic: "topic-dics-long-skywalking-segments"
@@ -7,6 +8,41 @@ kafka:
   alarm_rule_group_id: "alarm-rule-consumer-group"
   auto_offset_reset: "earliest"
   poll_interval_ms: 200   # Poll interval in milliseconds (added for dynamic control)
+  
+  # 多Kafka源配置 - 用于消费不同生产环境的segmentObject数据
+  data_sources:
+    # 生产环境Kafka源1
+    prod_source_1:
+      bootstrap_servers: "192.168.100.6:9092"
+      topic: "prod-segments-topic-1"
+      group_id: "prod-segments-consumer-group-1"
+      auto_offset_reset: "earliest"
+      poll_interval_ms: 200
+      source_name: "prod_source_1"
+      description: "生产环境数据源1"
+      enabled: false  # 暂时禁用，等实际数据源准备好后再启用
+    
+    # 生产环境Kafka源2
+    prod_source_2:
+      bootstrap_servers: "192.168.100.6:9092"
+      topic: "prod-segments-topic-2"
+      group_id: "prod-segments-consumer-group-2"
+      auto_offset_reset: "earliest"
+      poll_interval_ms: 200
+      source_name: "prod_source_2"
+      description: "生产环境数据源2"
+      enabled: false  # 暂时禁用，等实际数据源准备好后再启用
+    
+    # 生产环境Kafka源3
+    prod_source_3:
+      bootstrap_servers: "192.168.100.6:9092"
+      topic: "prod-segments-topic-3"
+      group_id: "prod-segments-consumer-group-3"
+      auto_offset_reset: "earliest"
+      poll_interval_ms: 200
+      source_name: "prod_source_3"
+      description: "生产环境数据源3"
+      enabled: false  # 暂时禁用，等实际数据源准备好后再启用
 
 clickhouse:
   schema_name: default       # Database schema name

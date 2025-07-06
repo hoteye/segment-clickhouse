@@ -31,7 +31,7 @@ class EventsBasedThresholdGeneratorTest extends BaseIntegrationTest {
         // 清空规则表
         try {
             Statement stmt = clickhouseConnection.createStatement();
-            stmt.execute("TRUNCATE TABLE hourly_alarm_rules");
+            stmt.execute("TRUNCATE TABLE integration.hourly_alarm_rules");
             LOG.info("测试用例准备完成");
         } catch (Exception e) {
             LOG.error("清空规则表失败", e);
@@ -95,7 +95,7 @@ class EventsBasedThresholdGeneratorTest extends BaseIntegrationTest {
      */
     private void verifyEventsDataExists() throws Exception {
         Statement stmt = clickhouseConnection.createStatement();
-        var rs = stmt.executeQuery("SELECT count(*) FROM events");
+        var rs = stmt.executeQuery("SELECT count(*) FROM integration.events");
         assertThat(rs.next()).isTrue();
         long count = rs.getLong(1);
         assertThat(count).isGreaterThan(0);
@@ -143,7 +143,7 @@ class EventsBasedThresholdGeneratorTest extends BaseIntegrationTest {
                         "max_duration_low, max_duration_mid, max_duration_high, " +
                         "success_rate_low, success_rate_mid, success_rate_high, " +
                         "traffic_volume_low, traffic_volume_mid, traffic_volume_high, " +
-                        "alarm_template FROM hourly_alarm_rules");
+                        "alarm_template FROM integration.hourly_alarm_rules");
 
         List<AlarmRule> rules = new java.util.ArrayList<>();
         while (rs.next()) {

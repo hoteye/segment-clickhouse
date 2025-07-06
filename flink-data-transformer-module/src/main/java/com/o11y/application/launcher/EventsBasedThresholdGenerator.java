@@ -69,7 +69,7 @@ public class EventsBasedThresholdGenerator {
 
         // 3. 清空整个hourly_alarm_rules表
         LOG.info("清空hourly_alarm_rules表，确保数据一致性");
-        String clearSql = "TRUNCATE TABLE hourly_alarm_rules";
+        String clearSql = "TRUNCATE TABLE integration.hourly_alarm_rules";
         PreparedStatement clearPs = conn.prepareStatement(clearSql);
         clearPs.executeUpdate();
         clearPs.close();
@@ -96,7 +96,7 @@ public class EventsBasedThresholdGenerator {
                 "count(*) - sum(is_error) as success_count, " +
                 // 标准差
                 "stddevSamp((end_time - start_time) * 1000) as duration_std " +
-                "FROM events " +
+                "FROM integration.events " +
                 "WHERE start_time >= now() - INTERVAL ? DAY " +
                 "AND start_time < now() " +
                 "AND service IS NOT NULL " +
@@ -233,26 +233,36 @@ public class EventsBasedThresholdGenerator {
         // LOW: 基于P75，轻微异常
         // MID: 基于P90，中度异常
         // HIGH: 基于P95或P99，严重异常
-        rule.avgDurationLow = Math.max(
+        double avgDurationLowBase = Math.max(
                 durationP75 * factor.avgDurationFactor,
                 avgDuration * getAvgDurationMultiplier("low"));
-        rule.avgDurationMid = Math.max(
+        double avgDurationMidBase = Math.max(
                 durationP90 * factor.avgDurationFactor,
                 avgDuration * getAvgDurationMultiplier("mid"));
-        rule.avgDurationHigh = Math.max(
+        double avgDurationHighBase = Math.max(
                 durationP95 * factor.avgDurationFactor,
                 avgDuration * getAvgDurationMultiplier("high"));
 
+        // 确保不同级别的阈值有足够的差异
+        rule.avgDurationLow = avgDurationLowBase;
+        rule.avgDurationMid = Math.max(avgDurationMidBase, avgDurationLowBase * 1.2);
+        rule.avgDurationHigh = Math.max(avgDurationHighBase, rule.avgDurationMid * 1.2);
+
         // 最大延迟阈值（基于P99和标准差）
-        rule.maxDurationLow = Math.max(
+        double maxDurationLowBase = Math.max(
                 durationP90 * factor.maxDurationFactor,
                 maxDuration * getMaxDurationMultiplier("low"));
-        rule.maxDurationMid = Math.max(
+        double maxDurationMidBase = Math.max(
                 durationP95 * factor.maxDurationFactor,
                 maxDuration * getMaxDurationMultiplier("mid"));
-        rule.maxDurationHigh = Math.max(
+        double maxDurationHighBase = Math.max(
                 durationP99 * factor.maxDurationFactor,
                 maxDuration * getMaxDurationMultiplier("high"));
+
+        // 确保不同级别的阈值有足够的差异
+        rule.maxDurationLow = maxDurationLowBase;
+        rule.maxDurationMid = Math.max(maxDurationMidBase, maxDurationLowBase * 1.2);
+        rule.maxDurationHigh = Math.max(maxDurationHighBase, rule.maxDurationMid * 1.2);
 
         // 成功率阈值（使用配置文件中的固定值）
         rule.successRateLow = getSuccessRateThreshold("low");
@@ -260,9 +270,14 @@ public class EventsBasedThresholdGenerator {
         rule.successRateHigh = getSuccessRateThreshold("high");
 
         // 交易量阈值（基于历史均值）
-        rule.trafficVolumeLow = totalCount * getVolumeMultiplier("low") * factor.trafficVolumeFactor;
-        rule.trafficVolumeMid = totalCount * getVolumeMultiplier("mid") * factor.trafficVolumeFactor;
-        rule.trafficVolumeHigh = totalCount * getVolumeMultiplier("high") * factor.trafficVolumeFactor;
+        double trafficVolumeLowBase = totalCount * getVolumeMultiplier("low") * factor.trafficVolumeFactor;
+        double trafficVolumeMidBase = totalCount * getVolumeMultiplier("mid") * factor.trafficVolumeFactor;
+        double trafficVolumeHighBase = totalCount * getVolumeMultiplier("high") * factor.trafficVolumeFactor;
+
+        // 确保不同级别的阈值有足够的差异
+        rule.trafficVolumeLow = trafficVolumeLowBase;
+        rule.trafficVolumeMid = Math.max(trafficVolumeMidBase, trafficVolumeLowBase * 1.2);
+        rule.trafficVolumeHigh = Math.max(trafficVolumeHighBase, rule.trafficVolumeMid * 1.2);
 
         rule.alarmTemplate = String.format("服务%s操作%s在%d时动态阈值告警(基于前%d天events数据)",
                 service, operatorName, hourOfDay, analysisDays);
@@ -497,14 +512,15 @@ public class EventsBasedThresholdGenerator {
             double avgSuccessRate, double avgTotalCount,
             int analysisDays, int totalSampleCount) throws Exception {
 
-        String sql = "INSERT INTO hourly_alarm_rules (" +
+        // 批量插入SQL
+        String sql = "INSERT INTO integration.hourly_alarm_rules (" +
                 "hour_of_day, service, operator_name, operator_class, " +
                 "avg_duration_low, avg_duration_mid, avg_duration_high, " +
                 "max_duration_low, max_duration_mid, max_duration_high, " +
                 "success_rate_low, success_rate_mid, success_rate_high, " +
                 "traffic_volume_low, traffic_volume_mid, traffic_volume_high, " +
                 "alarm_template, analysis_days, sample_count, " +
-                "generated_time, last_updated, version " +
+                "generated_time, last_updated, version" +
                 ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now(), 1)";
 
         PreparedStatement ps = conn.prepareStatement(sql);

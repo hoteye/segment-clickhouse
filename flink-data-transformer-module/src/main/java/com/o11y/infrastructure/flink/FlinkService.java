@@ -77,7 +77,7 @@ import com.o11y.domain.model.alarm.AlertMessage;
 public class FlinkService {
         private static final Logger LOG = LoggerFactory.getLogger(FlinkService.class);
         private Map<String, Object> config;
-        private Map<String, String> kafkaConfig;
+        private Map<String, Object> kafkaConfig;
         private Map<String, String> clickhouseConfig;
         private Map<String, Integer> batchConfig;
         private Map<String, Object> flinkConfig;
@@ -92,7 +92,7 @@ public class FlinkService {
          */
         public FlinkService(Map<String, Object> config) {
                 this.config = config;
-                this.kafkaConfig = (Map<String, String>) config.get("kafka");
+                this.kafkaConfig = (Map<String, Object>) config.get("kafka");
                 this.clickhouseConfig = (Map<String, String>) config.get("clickhouse");
                 this.batchConfig = (Map<String, Integer>) config.get("batch");
                 this.flinkConfig = (Map<String, Object>) config.get("flink");
@@ -118,8 +118,16 @@ public class FlinkService {
                                 Types.STRING,
                                 TypeInformation.of(new TypeHint<Map<String, AlarmRule>>() {
                                 }));
+                // 为规则广播流创建主Kafka配置的副本
+                Map<String, String> mainKafkaConfig = Map.of(
+                                "bootstrap_servers", (String) kafkaConfig.get("bootstrap_servers"),
+                                "param_update_topic", (String) kafkaConfig.get("param_update_topic"),
+                                "alarm_rule_topic", (String) kafkaConfig.get("alarm_rule_topic"),
+                                "alarm_rule_group_id", (String) kafkaConfig.get("alarm_rule_group_id"),
+                                "poll_interval_ms", String.valueOf(kafkaConfig.get("poll_interval_ms")));
+
                 BroadcastStream<Map<String, AlarmRule>> broadcastRuleStream = RuleBroadcastStreamFactory
-                                .buildRuleBroadcastStream(env, kafkaConfig, ruleStateDescriptor);
+                                .buildRuleBroadcastStream(env, mainKafkaConfig, ruleStateDescriptor);
                 // 聚合流与规则流 connect、告警流 sink
                 setupOperatorSinks(broadcastRuleStream, ruleStateDescriptor);
                 execute();
@@ -146,26 +154,31 @@ public class FlinkService {
          * 支持乱序 2 秒，时间戳取 Entry 类型 span 的 endTime。
          */
         private void buildSource() {
-                KafkaSource<SegmentObject> kafkaSource = KafkaSource.<SegmentObject>builder()
-                                .setBootstrapServers(kafkaConfig.get("bootstrap_servers"))
-                                .setTopics(kafkaConfig.get("topic"))
-                                .setGroupId(kafkaConfig.get("group_id"))
-                                .setStartingOffsets(OffsetsInitializer.committedOffsets(OffsetResetStrategy.LATEST))
-                                .setValueOnlyDeserializer(new SegmentDeserializationSchema())
-                                .build();
-                stream = env.fromSource(
-                                kafkaSource,
-                                WatermarkStrategy.<SegmentObject>forBoundedOutOfOrderness(Duration.ofSeconds(2))
-                                                .withTimestampAssigner((segment, ts) -> {
-                                                        for (SpanObject span : segment.getSpansList()) {
-                                                                if (span.getSpanType() == SpanType.Entry) {
-                                                                        return span.getEndTime();
-                                                                }
-                                                        }
-                                                        return System.currentTimeMillis();
-                                                }),
-                                "KafkaSource-SegmentObject");
-                LOG.warn("Kafka 数据源和 DataStream 构建完成");
+                // 使用多Kafka源管理器构建数据流
+                MultiKafkaSourceManager sourceManager = new MultiKafkaSourceManager(env,
+                                (Map<String, Object>) kafkaConfig);
+
+                // 验证配置的数据源
+                List<String> enabledSources = sourceManager.getEnabledSourceNames();
+                List<String> allSources = sourceManager.getAllSourceNames();
+
+                LOG.info("配置的数据源总数: {}", allSources.size());
+                LOG.info("启用的数据源: {}", enabledSources);
+
+                // 验证每个数据源配置
+                for (String sourceName : allSources) {
+                        if (!sourceManager.validateSourceConfig(sourceName)) {
+                                LOG.error("数据源配置验证失败: {}", sourceName);
+                        } else {
+                                String description = sourceManager.getSourceDescription(sourceName);
+                                boolean enabled = sourceManager.isSourceEnabled(sourceName);
+                                LOG.info("数据源 {}: {} (启用: {})", sourceName, description, enabled);
+                        }
+                }
+
+                // 构建多源数据流
+                stream = sourceManager.buildMultiSourceStream();
+                LOG.warn("多Kafka源数据流构建完成，启用 {} 个数据源", enabledSources.size());
         }
 
         /**
@@ -437,7 +450,7 @@ public class FlinkService {
          */
         private void startHourlyRulePublishTask() {
                 // 从配置中读取Kafka主题，默认为alarm_rule_topic
-                String kafkaTopicName = kafkaConfig.getOrDefault("alarm_rule_topic", "alarm_rule_topic");
+                String kafkaTopicName = (String) kafkaConfig.getOrDefault("alarm_rule_topic", "alarm_rule_topic");
 
                 env.addSource(new InfiniteSource())
                                 .keyBy(x -> x)
@@ -446,7 +459,7 @@ public class FlinkService {
                                                 clickhouseConfig.get("schema_name"),
                                                 clickhouseConfig.get("username"),
                                                 clickhouseConfig.get("password"),
-                                                kafkaConfig.get("bootstrap_servers"),
+                                                (String) kafkaConfig.get("bootstrap_servers"),
                                                 kafkaTopicName))
                                 .setParallelism(1)
                                 .name("HourlyRulePublishProcessFunction")
