@@ -1,0 +1,41 @@
+# 动态阈值生成器配置
+threshold:
+  # 成功率阈值配置（固定值，不基于历史数据计算）
+  success_rate:
+    # 低级别告警阈值（低于此值触发LOW级别告警）
+    low: 0.995    # 99.5%
+    # 中级别告警阈值（低于此值触发MID级别告警）
+    mid: 0.99     # 99.0%
+    # 高级别告警阈值（低于此值触发HIGH级别告警）
+    high: 0.985   # 98.5%
+  
+  # 响应时间阈值配置（基于历史数据计算）
+  response_time:
+    # 平均响应时间倍数
+    avg_duration_multiplier:
+      low: 1.2    # 平均响应时间的1.2倍
+      mid: 1.5    # 平均响应时间的1.5倍
+      high: 2.0   # 平均响应时间的2.0倍
+    
+    # 最大响应时间倍数
+    max_duration_multiplier:
+      low: 1.1    # 最大响应时间的1.1倍
+      mid: 1.3    # 最大响应时间的1.3倍
+      high: 1.5   # 最大响应时间的1.5倍
+  
+  # 交易量阈值配置（基于历史数据计算）
+  traffic_volume:
+    # 交易量倍数
+    volume_multiplier:
+      low: 1.5    # 历史平均交易量的1.5倍
+      mid: 2.0    # 历史平均交易量的2.0倍
+      high: 3.0   # 历史平均交易量的3.0倍
+  
+  # 数据过滤配置
+  data_filter:
+    # 最小样本数要求
+    min_sample_count: 10
+    # 最大合理响应时间（毫秒）
+    max_reasonable_duration_ms: 60000
+    # 分析历史天数
+    analysis_days: 7 
