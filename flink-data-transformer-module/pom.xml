@@ -177,11 +177,18 @@
             <scope>test</scope>
         </dependency>
         
-        <!-- Embedded Kafka for Testing -->
+        <!-- Embedded Kafka for Testing - Using apache kafka instead of spring -->
         <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka-test</artifactId>
-            <version>3.0.12</version>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.13</artifactId>
+            <version>3.3.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.13</artifactId>
+            <version>3.3.2</version>
+            <classifier>test</classifier>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -52,12 +52,12 @@ clickhouse:
   password: "123456"
 
 batch:
-  size: 60         # Number of spans per batch insert
-  interval: 200    # Batch insert interval (milliseconds)
+  size: 500         # Number of spans per batch insert
+  interval: 100    # Batch insert interval (milliseconds)
 
 add_columns_interval: 80000  # Execute addColumns method every add_columns_interval milliseconds
 
 flink:
-  parallelism: 3
+  parallelism: 3           # 要与Kafka分区数保持一致
   checkpoint_interval: 120000      # 单位：毫秒
   checkpoint_timeout: 30000       # 单位：毫秒
