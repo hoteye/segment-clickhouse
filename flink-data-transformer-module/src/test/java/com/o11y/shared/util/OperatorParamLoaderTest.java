@@ -11,6 +11,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.*;
+import java.util.concurrent.Future;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.mockito.ArgumentCaptor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -33,6 +38,15 @@ public class OperatorParamLoaderTest {
     @Mock
     private ResultSet mockResultSet;
 
+    @Mock
+    private KafkaProducer<String, String> mockProducer;
+
+    @Mock
+    private Future<RecordMetadata> mockFuture;
+
+    @Mock
+    private RecordMetadata mockRecordMetadata;
+
     @BeforeEach
     void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
@@ -41,6 +55,10 @@ public class OperatorParamLoaderTest {
         when(mockDatabaseService.getConnection()).thenReturn(mockConnection);
         when(mockConnection.prepareStatement(anyString())).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
+
+        // Mock Kafka producer的send方法和Future返回值
+        when(mockProducer.send(any(ProducerRecord.class))).thenReturn(mockFuture);
+        when(mockFuture.get()).thenReturn(mockRecordMetadata);
     }
 
     @Test
@@ -283,5 +301,46 @@ public class OperatorParamLoaderTest {
         String key = "key_with-special.chars";
         assertTrue(result.containsKey(key), "应该包含特殊字符的key");
         assertEquals("value with spaces & special chars: @#$%", result.get(key), "特殊字符的值应该正确保存");
+    }
+
+    @Test
+    @DisplayName("测试新增参数")
+    void testNewParams() throws Exception {
+        Map<String, List<String>> params = new HashMap<>();
+        params.put("k1", Arrays.asList("v1", "v2"));
+        params.put("k2", Collections.singletonList("v3"));
+
+        OperatorParamLoader.newParams(mockDatabaseService, "TestOp", params, mockProducer);
+
+        verify(mockConnection, atLeastOnce()).prepareStatement(anyString());
+        verify(mockPreparedStatement, atLeastOnce()).setString(anyInt(), anyString());
+        verify(mockPreparedStatement, atLeastOnce()).executeUpdate();
+
+        ArgumentCaptor<ProducerRecord<String, String>> captor = ArgumentCaptor.forClass(ProducerRecord.class);
+        verify(mockProducer).send(captor.capture());
+        ProducerRecord<String, String> record = captor.getValue();
+        assertEquals("flink-operator-param-update", record.topic());
+        assertEquals("TestOp", record.key());
+        assertTrue(record.value().contains("new"));
+    }
+
+    @Test
+    @DisplayName("测试更新参数")
+    void testUpdateParams() throws Exception {
+        Map<String, List<String>> params = new HashMap<>();
+        params.put("k1", Arrays.asList("v1", "v2"));
+
+        OperatorParamLoader.updateParams(mockDatabaseService, "TestOp", params, mockProducer);
+
+        verify(mockConnection, atLeastOnce()).prepareStatement(anyString());
+        verify(mockPreparedStatement, atLeastOnce()).setString(anyInt(), anyString());
+        verify(mockPreparedStatement, atLeastOnce()).executeUpdate();
+
+        ArgumentCaptor<ProducerRecord<String, String>> captor = ArgumentCaptor.forClass(ProducerRecord.class);
+        verify(mockProducer).send(captor.capture());
+        ProducerRecord<String, String> record = captor.getValue();
+        assertEquals("flink-operator-param-update", record.topic());
+        assertEquals("TestOp", record.key());
+        assertTrue(record.value().contains("update"));
     }
 }
