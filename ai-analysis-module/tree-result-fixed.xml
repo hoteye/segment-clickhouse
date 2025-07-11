@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Trace Call Tree" id="tree">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tree_0" value="dubbo-provider-a\ncom.example....\n127ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="50" y="100" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="100" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="220" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_0" value="dubbo-provider-a\ncom.example....\n127ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="50" y="220" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="220" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="580" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_0" value="dubbo-provider-a\ncom.example....\n127ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="50" y="340" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="580" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="700" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_0" value="dubbo-provider-a\ncom.example....\n127ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="50" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="580" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="700" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="820" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_0" value="dubbo-provider-a\ncom.example....\n127ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="50" y="580" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="580" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_1" value="dubbo-provider-b\ncom.example....\n137ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="700" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="820" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tree_2" value="dubbo-consumer\ncom.example....\n131ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeWidth=2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="300" y="940" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_1000" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2" edge="1" parent="1" source="tree_0" target="tree_1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_1001" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2" edge="1" parent="1" source="tree_0" target="tree_1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_1002" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2" edge="1" parent="1" source="tree_0" target="tree_2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_1003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2" edge="1" parent="1" source="tree_0" target="tree_2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Trace Flame Graph" id="flame">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="flame_title" value="Trace Flame Graph - Performance Analysis" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="50" y="50" width="1200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G0_L0_0" value="python-sample::/sayHai\n498ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="50" y="100" width="405" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G1_L1_1" value="dubbo-consumer::com.example.provi...\n228ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="50" y="150" width="186" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G2_L1_1" value="dubbo-provider-b::com.example.provi...\n137ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="236" y="150" width="111" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G3_L1_2" value="dubbo-provider-b::H2/JDBI/PreparedS...\n0ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#4caf50;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="347" y="150" width="20" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G4_L1_2" value="dubbo-consumer::com.example.provi...\n131ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="367" y="150" width="106" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G5_L0_0" value="dubbo-consumer::{GET}/sayHai\n493ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="455" y="100" width="401" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G6_L1_1" value="dubbo-consumer::com.example.provi...\n228ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="455" y="150" width="184" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G7_L1_1" value="dubbo-provider-b::com.example.provi...\n137ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="639" y="150" width="110" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G8_L1_2" value="dubbo-provider-b::H2/JDBI/PreparedS...\n0ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#4caf50;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="749" y="150" width="20" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G9_L1_2" value="dubbo-consumer::com.example.provi...\n131ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="769" y="150" width="105" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G10_L0_0" value="dubbo-provider-b::com.example.provi...\n220ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="856" y="100" width="179" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G11_L1_1" value="dubbo-consumer::com.example.provi...\n228ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="856" y="150" width="82" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G12_L1_1" value="dubbo-provider-b::com.example.provi...\n137ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="938" y="150" width="49" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G13_L1_2" value="dubbo-provider-b::H2/JDBI/PreparedS...\n0ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#4caf50;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="987" y="150" width="20" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G14_L1_2" value="dubbo-consumer::com.example.provi...\n131ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1007" y="150" width="47" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G15_L0_0" value="dubbo-provider-a::com.example.provi...\n134ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1035" y="100" width="109" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G16_L1_1" value="dubbo-consumer::com.example.provi...\n228ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1035" y="150" width="50" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G17_L1_1" value="dubbo-provider-b::com.example.provi...\n137ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1085" y="150" width="30" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G18_L1_2" value="dubbo-provider-b::H2/JDBI/PreparedS...\n0ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#4caf50;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1115" y="150" width="20" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G19_L1_2" value="dubbo-consumer::com.example.provi...\n131ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1135" y="150" width="28" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G20_L0_0" value="dubbo-provider-a::com.example.provi...\n127ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1144" y="100" width="103" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G21_L1_1" value="dubbo-consumer::com.example.provi...\n228ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1144" y="150" width="47" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G22_L1_1" value="dubbo-provider-b::com.example.provi...\n137ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1191" y="150" width="28" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G23_L1_2" value="dubbo-provider-b::H2/JDBI/PreparedS...\n0ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#4caf50;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1219" y="150" width="20" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="flame_G24_L1_2" value="dubbo-consumer::com.example.provi...\n131ms" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8bc34a;strokeWidth=1;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1239" y="150" width="27" height="48" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

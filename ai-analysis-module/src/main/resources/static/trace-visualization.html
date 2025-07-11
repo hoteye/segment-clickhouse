@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>链路可视化演示</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .section h2 {
+            color: #555;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        .trace-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .trace-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .trace-item:hover {
+            background: #e9ecef;
+            border-color: #007acc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .trace-id {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .trace-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .trace-services {
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .btn-primary {
+            background: #007acc;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #005999;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background: #117a8b;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .visualization-frame {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            margin-top: 15px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .api-demo {
+            background: #f8f9fa;
+            border-left: 4px solid #007acc;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .api-demo h3 {
+            margin-top: 0;
+            color: #007acc;
+        }
+        .api-demo code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 1200px;
+            height: 90vh;
+            margin: 5vh auto;
+            background: white;
+            border-radius: 8px;
+            position: relative;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #555;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        .modal-iframe {
+            width: 100%;
+            height: calc(90vh - 120px);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 SkyWalking 链路可视化演示</h1>
+        
+        <div class="section">
+            <h2>📊 系统概览</h2>
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="trace-count">--</div>
+                    <div class="stat-label">最近链路数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="service-count">--</div>
+                    <div class="stat-label">活跃服务数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="error-count">--</div>
+                    <div class="stat-label">错误链路数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avg-duration">--</div>
+                    <div class="stat-label">平均耗时(ms)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔍链路列表</h2>
+            <div class="buttons">
+                <button class="btn btn-primary" onclick="loadRecentTraces()">刷新链路</button>
+                <button class="btn btn-info" onclick="loadVisualizationTypes()">查看可视化类型</button>
+            </div>
+            <div id="trace-list" class="trace-list">
+                <div class="loading">正在加载链路数据...</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎨 链路可视化展示</h2>
+            <div id="visualization-content">
+                <p>请选择一个链路查看可视化效果</p>
+                <div class="api-demo">
+                    <h3>支持的可视化类型：</h3>
+                    <ul>
+                        <li><strong>有向无环图 (DAG)</strong> - 展示服务间调用关系和依赖</li>
+                        <li><strong>瀑布图 (Waterfall)</strong> - 按时间轴展示各span执行时序</li>
+                        <li><strong>火焰图 (FlameGraph)</strong> - 按耗时展示性能热点</li>
+                        <li><strong>调用树 (CallTree)</strong> - 展示完整调用栈层次结构</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 API 接口演示</h2>
+            <div class="api-demo">
+                <h3>链路可视化接口</h3>
+                <p><code>GET /api/trace-visualization/trace/{traceId}/dag</code> - 生成服务依赖DAG图</p>
+                <p><code>GET /api/trace-visualization/trace/{traceId}/waterfall</code> - 生成时序瀑布图</p>
+                <p><code>GET /api/trace-visualization/trace/{traceId}/flame</code> - 生成性能火焰图</p>
+                <p><code>GET /api/trace-visualization/trace/{traceId}/tree</code> - 生成调用树</p>
+                <p><code>GET /api/trace-visualization/trace/{traceId}/service-relations</code> - 分析服务调用关系</p>
+                <p><code>GET /api/trace-visualization/traces/recent</code> - 获取最近链路</p>
+                <p><code>GET /api/trace-visualization/trace/{traceId}/details</code> - 获取链路详情</p>
+                <p><code>GET /api/trace-visualization/stats/recent-day</code> - 获取最近一天统计</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 调用树模态框 -->
+    <div id="treeModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeTreeModal()">&times;</span>
+            <h2>调用树可视化</h2>
+            <div id="treeModalContent"></div>
+        </div>
+    </div>
+
+    <!-- DAG图模态框 -->
+    <div id="dagModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeDagModal()">&times;</span>
+            <h2>DAG图可视化</h2>
+            <div id="dagModalContent"></div>
+        </div>
+    </div>
+
+    <!-- 瀑布图模态框 -->
+    <div id="waterfallModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeWaterfallModal()">&times;</span>
+            <h2>瀑布图可视化</h2>
+            <div id="waterfallModalContent"></div>
+        </div>
+    </div>
+
+    <!-- 火焰图模态框 -->
+    <div id="flameModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeFlameModal()">&times;</span>
+            <h2>火焰图可视化</h2>
+            <div id="flameModalContent"></div>
+        </div>
+    </div>
+
+    <!-- 服务关系模态框 -->
+    <div id="serviceRelationModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeServiceRelationModal()">&times;</span>
+            <h2>服务关系分析</h2>
+            <div id="serviceRelationModalContent"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/mxgraph@4.2.2/javascript/mxClient.min.js"></script>
+    <script>
+        const API_BASE = '/ai-analysis/api/trace-visualization';
+        
+        // 更新统计信息 - 用于处理最近链路列表数据
+        function updateStats(traces) {
+            const traceCount = traces.length;
+            const serviceSet = new Set();
+            let errorCount = 0;
+            let totalDuration = 0;
+
+            traces.forEach(trace => {
+                if (Array.isArray(trace.services)) {
+                    trace.services.forEach(service => serviceSet.add(service));
+                }
+                if (trace.error_count > 0) errorCount++;
+                totalDuration += trace.duration_ms || 0;
+            });
+
+            document.getElementById('trace-count').textContent = traceCount;
+            document.getElementById('service-count').textContent = serviceSet.size;
+            document.getElementById('error-count').textContent = errorCount;
+            document.getElementById('avg-duration').textContent = 
+                traceCount > 0 ? Math.round(totalDuration / traceCount) : 0;
+        }
+
+        // 使用API数据更新统计信息 - 用于处理 recent-day 接口返回的统计数据
+        function updateStatsFromApi(stats) {
+            document.getElementById('trace-count').textContent = stats.trace_count || '--';
+            document.getElementById('service-count').textContent = stats.service_count || '--';
+            document.getElementById('error-count').textContent = stats.error_count || '--';
+            document.getElementById('avg-duration').textContent = 
+                stats.avg_duration_ms ? Math.round(stats.avg_duration_ms) : '--';
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 设置初始加载状态
+                document.getElementById('trace-list').innerHTML = '<div class="loading">正在加载链路数据...</div>';
+                
+                // 并行加载以提高性能
+                await Promise.all([
+                    loadRecentDayStats(),
+                    loadRecentTraces()
+                ]);
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                document.getElementById('trace-list').innerHTML = `
+                    <div class="error">
+                        <p>初始化失败: ${error.message}</p>
+                        <button class="btn btn-primary" onclick="retryInit()">重试</button>
+                    </div>`;
+            }
+        });
+
+        // 重试初始化
+        async function retryInit() {
+            try {
+                await Promise.all([
+                    loadRecentDayStats(),
+                    loadRecentTraces()
+                ]);
+            } catch (error) {
+                console.error('重试初始化失败:', error);
+            }
+        }
+
+        // 加载最近链路
+        let loadingTimeout;
+        async function loadRecentTraces() {
+            try {
+                const traceList = document.getElementById('trace-list');
+                traceList.innerHTML = '<div class="loading">正在加载链路数据...</div>';
+                
+                // 如果10秒后还没有响应，显示提示
+                loadingTimeout = setTimeout(() => {
+                    traceList.innerHTML = `
+                        <div class="loading">
+                            <p>仍在加载中，请耐心等待...</p>
+                            <p>首次加载可能需要较长时间。</p>
+                            <button class="btn btn-warning" onclick="loadRecentTraces()">重试</button>
+                        </div>`;
+                }, 10000);
+                
+                const response = await fetch(`${API_BASE}/traces/recent?limit=20&hours=1`);
+                
+                // 清除超时提示
+                clearTimeout(loadingTimeout);
+                
+                if (!response.ok) {
+                    throw new Error(`请求失败 (${response.status}): ${response.statusText}`);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`预期返回JSON但收到 ${contentType}。响应内容: ${text.substring(0, 200)}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayTraces(data.traces);
+                    updateStats(data.traces);
+                    
+                    // 显示查询性能信息
+                    if (data.queryTime) {
+                        console.log(`查询耗时: ${data.queryTime}ms`);
+                        if (data.queryTime > 5000) {
+                            console.warn('查询耗时较长，可能需要优化');
+                        }
+                    }
+                } else {
+                    throw new Error(data.message || '数据加载失败');
+                }
+            } catch (error) {
+                clearTimeout(loadingTimeout);
+                console.error('加载链路失败:', error);
+                document.getElementById('trace-list').innerHTML = `
+                    <div class="error">
+                        <p>加载链路失败: ${error.message}</p>
+                        <p>请检查网络连接并重试</p>
+                        <button class="btn btn-primary" onclick="loadRecentTraces()">重试</button>
+                    </div>`;
+            }
+        }
+
+        // 显示链路列表
+        function displayTraces(traces) {
+            const traceList = document.getElementById('trace-list');
+            
+            if (traces.length === 0) {
+                traceList.innerHTML = '<div class="loading">暂无链路数据</div>';
+                return;
+            }
+
+            traceList.innerHTML = traces.map(trace => `
+                <div class="trace-item" onclick="selectTrace('${trace.trace_id}')">
+                    <div class="trace-id">TraceID: ${trace.trace_id}</div>
+                    <div class="trace-info">
+                        <span><strong>${trace.span_count}</strong> spans</span>
+                        <span><strong>${trace.duration_ms}</strong>ms</span>
+                        ${trace.error_count > 0 ? '<span style="color: #dc3545;">⚠️ 有错误</span>' : '<span style="color: #28a745;">✅ 正常</span>'}
+                    </div>
+                    <div class="trace-services">
+                        服务: ${Array.isArray(trace.services) ? trace.services.join(', ') : trace.services}
+                    </div>
+                    <div class="buttons">
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); showDagModal('${trace.trace_id}')">DAG图</button>
+                        <button class="btn btn-success" onclick="event.stopPropagation(); showWaterfallModal('${trace.trace_id}')">瀑布图</button>
+                        <button class="btn btn-warning" onclick="event.stopPropagation(); showFlameModal('${trace.trace_id}')">火焰图</button>
+                        <button class="btn btn-info" onclick="event.stopPropagation(); showTreeModal('${trace.trace_id}')">调用树</button>
+                        <button class="btn" style="background-color: #9c27b0; color: white;" onclick="event.stopPropagation(); showServiceRelationModal('${trace.trace_id}')">服务关系</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 打开调用树模态框
+        async function showTreeModal(traceId) {
+            document.getElementById('treeModalContent').innerHTML = '<div class="loading">正在生成调用树...</div>';
+            document.getElementById('treeModal').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/trace/${traceId}/tree`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // 保存当前的XML数据
+                    window.currentDrawioXml = data.drawioXml;
+                    window.currentTraceId = data.traceId;
+                    window.currentVisualizationType = 'tree';
+                    
+                    // 创建预览内容
+                    const modalContent = document.getElementById('treeModalContent');
+                    modalContent.innerHTML = `
+                        <div class="success">
+                            ✅ 成功生成调用树图表，包含 ${data.spanCount} 个span
+                        </div>
+                        <div class="buttons" style="margin: 15px 0;">
+                            <button class="btn btn-primary" onclick="downloadDrawio('${data.traceId}', 'tree')">下载Draw.io文件</button>
+                            <button class="btn btn-success" onclick="openInDrawio()">在Draw.io中打开</button>
+                            <button class="btn btn-warning" onclick="showTreeXmlContent()">查看XML内容</button>
+                        </div>
+                        <div style="margin: 15px 0;">
+                            <strong>Trace ID:</strong> ${data.traceId}<br>
+                            <strong>生成时间:</strong> ${data.timestamp}
+                        </div>
+                        <textarea id="tree-drawio-xml" style="width: 100%; height: 200px; margin-top: 15px; font-family: monospace; display: none;">${data.drawioXml}</textarea>
+                        <iframe id="tree-drawio-iframe" class="modal-iframe"></iframe>
+                    `;
+
+                    // 设置iframe src
+                    const encoded = encodeURIComponent(data.drawioXml);
+                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_tree#R${encoded}`;
+                    document.getElementById('tree-drawio-iframe').src = viewerUrl;
+                } else {
+                    throw new Error(data.message || '生成失败');
+                }
+            } catch (error) {
+                document.getElementById('treeModalContent').innerHTML = 
+                    `<div class="error">生成调用树失败: ${error.message}</div>`;
+            }
+        }
+
+        // 关闭调用树模态框
+        function closeTreeModal() {
+            document.getElementById('treeModal').style.display = 'none';
+            // 清理iframe内容，避免内存泄漏
+            const iframe = document.getElementById('tree-drawio-iframe');
+            if (iframe) {
+                iframe.src = 'about:blank';
+            }
+        }
+
+        // 显示/隐藏调用树XML内容
+        function showTreeXmlContent() {
+            const textarea = document.getElementById('tree-drawio-xml');
+            textarea.style.display = textarea.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('treeModal');
+            if (event.target === modal) {
+                closeTreeModal();
+            }
+        }
+
+        // 显示XML内容函数
+        function showXmlContent(prefix) {
+            const xmlElement = document.getElementById(`${prefix}-drawio-xml`);
+            xmlElement.style.display = xmlElement.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 通用下载 Draw.io 文件函数
+        function downloadDrawio(traceId, type) {
+            if (!window.currentDrawioXml) return;
+            
+            const blob = new Blob([window.currentDrawioXml], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${traceId}_${type}.drawio`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 在 Draw.io 中打开函数
+        function openInDrawio() {
+            if (!window.currentDrawioXml) return;
+            
+            const encoded = encodeURIComponent(window.currentDrawioXml);
+            const url = `https://app.diagrams.net/?src=about#R${encoded}`;
+            window.open(url, '_blank');
+        }
+
+        // DAG图模态框函数
+        async function showDagModal(traceId) {
+            document.getElementById('dagModalContent').innerHTML = '<div class="loading">正在生成DAG图...</div>';
+            document.getElementById('dagModal').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/trace/${traceId}/dag`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    window.currentDrawioXml = data.drawioXml;
+                    window.currentTraceId = data.traceId;
+                    window.currentVisualizationType = 'dag';
+                    
+                    const modalContent = document.getElementById('dagModalContent');
+                    modalContent.innerHTML = `
+                        <div class="success">
+                            ✅ 成功生成DAG图表，包含 ${data.spanCount} 个span
+                        </div>
+                        <div class="buttons" style="margin: 15px 0;">
+                            <button class="btn btn-primary" onclick="downloadDrawio('${data.traceId}', 'dag')">下载Draw.io文件</button>
+                            <button class="btn btn-success" onclick="openInDrawio()">在Draw.io中打开</button>
+                            <button class="btn btn-warning" onclick="showDagXmlContent()">查看XML内容</button>
+                        </div>
+                        <div style="margin: 15px 0;">
+                            <strong>Trace ID:</strong> ${data.traceId}<br>
+                            <strong>生成时间:</strong> ${data.timestamp}
+                        </div>
+                        <textarea id="dag-drawio-xml" style="width: 100%; height: 200px; margin-top: 15px; font-family: monospace; display: none;">${data.drawioXml}</textarea>
+                        <iframe id="dag-drawio-iframe" class="modal-iframe"></iframe>
+                    `;
+
+                    const encoded = encodeURIComponent(data.drawioXml);
+                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_dag#R${encoded}`;
+                    document.getElementById('dag-drawio-iframe').src = viewerUrl;
+                } else {
+                    throw new Error(data.message || '生成失败');
+                }
+            } catch (error) {
+                document.getElementById('dagModalContent').innerHTML = 
+                    `<div class="error">生成DAG图失败: ${error.message}</div>`;
+            }
+        }
+
+        function closeDagModal() {
+            document.getElementById('dagModal').style.display = 'none';
+        }
+
+        function showDagXmlContent() {
+            showXmlContent('dag');
+        }
+
+        // 瀑布图模态框函数
+        async function showWaterfallModal(traceId) {
+            document.getElementById('waterfallModalContent').innerHTML = '<div class="loading">正在生成瀑布图...</div>';
+            document.getElementById('waterfallModal').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/trace/${traceId}/waterfall`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    window.currentDrawioXml = data.drawioXml;
+                    window.currentTraceId = data.traceId;
+                    window.currentVisualizationType = 'waterfall';
+                    
+                    const modalContent = document.getElementById('waterfallModalContent');
+                    modalContent.innerHTML = `
+                        <div class="success">
+                            ✅ 成功生成瀑布图表，包含 ${data.spanCount} 个span
+                        </div>
+                        <div class="buttons" style="margin: 15px 0;">
+                            <button class="btn btn-primary" onclick="downloadDrawio('${data.traceId}', 'waterfall')">下载Draw.IO文件</button>
+                            <button class="btn btn-success" onclick="openInDrawio()">在Draw.IO中打开</button>
+                            <button class="btn btn-warning" onclick="showWaterfallXmlContent()">查看XML内容</button>
+                        </div>
+                        <div style="margin: 15px 0;">
+                            <strong>Trace ID:</strong> ${data.traceId}<br>
+                            <strong>生成时间:</strong> ${data.timestamp}
+                        </div>
+                        <textarea id="waterfall-drawio-xml" style="width: 100%; height: 200px; margin-top: 15px; font-family: monospace; display: none;">${data.drawioXml}</textarea>
+                        <iframe id="waterfall-drawio-iframe" class="modal-iframe"></iframe>
+                    `;
+
+                    const encoded = encodeURIComponent(data.drawioXml);
+                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_waterfall#R${encoded}`;
+                    document.getElementById('waterfall-drawio-iframe').src = viewerUrl;
+                } else {
+                    throw new Error(data.message || '生成失败');
+                }
+            } catch (error) {
+                document.getElementById('waterfallModalContent').innerHTML = 
+                    `<div class="error">生成瀑布图失败: ${error.message}</div>`;
+            }
+        }
+
+        function closeWaterfallModal() {
+            document.getElementById('waterfallModal').style.display = 'none';
+        }
+
+        function showWaterfallXmlContent() {
+            showXmlContent('waterfall');
+        }
+
+        // 火焰图模态框函数
+        async function showFlameModal(traceId) {
+            document.getElementById('flameModalContent').innerHTML = '<div class="loading">正在生成火焰图...</div>';
+            document.getElementById('flameModal').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/trace/${traceId}/flame`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    window.currentDrawioXml = data.drawioXml;
+                    window.currentTraceId = data.traceId;
+                    window.currentVisualizationType = 'flame';
+                    
+                    const modalContent = document.getElementById('flameModalContent');
+                    modalContent.innerHTML = `
+                        <div class="success">
+                            ✅ 成功生成火焰图表，包含 ${data.spanCount} 个span
+                        </div>
+                        <div class="buttons" style="margin: 15px 0;">
+                            <button class="btn btn-primary" onclick="downloadDrawio('${data.traceId}', 'flame')">下载Draw.io文件</button>
+                            <button class="btn btn-success" onclick="openInDrawio()">在Draw.io中打开</button>
+                            <button class="btn btn-warning" onclick="showFlameXmlContent()">查看XML内容</button>
+                        </div>
+                        <div style="margin: 15px 0;">
+                            <strong>Trace ID:</strong> ${data.traceId}<br>
+                            <strong>生成时间:</strong> ${data.timestamp}
+                        </div>
+                        <textarea id="flame-drawio-xml" style="width: 100%; height: 200px; margin-top: 15px; font-family: monospace; display: none;">${data.drawioXml}</textarea>
+                        <iframe id="flame-drawio-iframe" class="modal-iframe"></iframe>
+                    `;
+
+                    const encoded = encodeURIComponent(data.drawioXml);
+                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_flame#R${encoded}`;
+                    document.getElementById('flame-drawio-iframe').src = viewerUrl;
+                } else {
+                    throw new Error(data.message || '生成失败');
+                }
+            } catch (error) {
+                document.getElementById('flameModalContent').innerHTML = 
+                    `<div class="error">生成火焰图失败: ${error.message}</div>`;
+            }
+        }
+
+        function closeFlameModal() {
+            document.getElementById('flameModal').style.display = 'none';
+        }
+
+        function showFlameXmlContent() {
+            showXmlContent('flame');
+        }
+
+        // 服务关系模态框函数
+        async function showServiceRelationModal(traceId) {
+            document.getElementById('serviceRelationModalContent').innerHTML = '<div class="loading">正在生成服务关系图...</div>';
+            document.getElementById('serviceRelationModal').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/trace/${traceId}/service-relation`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    window.currentDrawioXml = data.drawioXml;
+                    window.currentTraceId = data.traceId;
+                    window.currentVisualizationType = 'service-relation';
+                    
+                    const modalContent = document.getElementById('serviceRelationModalContent');
+                    modalContent.innerHTML = `
+                        <div class="success">
+                            ✅ 成功生成服务关系图表，包含 ${data.serviceCount} 个服务
+                        </div>
+                        <div class="buttons" style="margin: 15px 0;">
+                            <button class="btn btn-primary" onclick="downloadDrawio('${data.traceId}', 'service-relation')">下载Draw.io文件</button>
+                            <button class="btn btn-success" onclick="openInDrawio()">在Draw.io中打开</button>
+                            <button class="btn btn-warning" onclick="showServiceRelationXmlContent()">查看XML内容</button>
+                        </div>
+                        <div style="margin: 15px 0;">
+                            <strong>Trace ID:</strong> ${data.traceId}<br>
+                            <strong>生成时间:</strong> ${data.timestamp}
+                        </div>
+                        <textarea id="service-relation-drawio-xml" style="width: 100%; height: 200px; margin-top: 15px; font-family: monospace; display: none;">${data.drawioXml}</textarea>
+                        <iframe id="service-relation-drawio-iframe" class="modal-iframe"></iframe>
+                    `;
+
+                    const encoded = encodeURIComponent(data.drawioXml);
+                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_service_relation#R${encoded}`;
+                    document.getElementById('service-relation-drawio-iframe').src = viewerUrl;
+                } else {
+                    throw new Error(data.message || '生成失败');
+                }
+            } catch (error) {
+                document.getElementById('serviceRelationModalContent').innerHTML = 
+                    `<div class="error">生成服务关系图失败: ${error.message}</div>`;
+            }
+        }
+
+        function closeServiceRelationModal() {
+            document.getElementById('serviceRelationModal').style.display = 'none';
+        }
+
+        function showServiceRelationXmlContent() {
+            showXmlContent('service-relation');
+        }
+
+        // 点击模态框外部关闭 - 更新处理多个模态框
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+                const iframes = event.target.getElementsByTagName('iframe');
+                for (let iframe of iframes) {
+                    iframe.src = 'about:blank';
+                }
+            }
+        }
+
+        // 加载最近一天的统计信息
+        async function loadRecentDayStats() {
+            try {
+                // 初始化显示为加载状态
+                const statsElements = ['trace-count', 'service-count', 'error-count', 'avg-duration'];
+                statsElements.forEach(id => {
+                    document.getElementById(id).textContent = '--';
+                });
+
+                const response = await fetch(`${API_BASE}/traces/recent-day-stats`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    updateStatsFromApi(data.stats);
+                } else {
+                    throw new Error(data.message || '加载统计信息失败');
+                }
+            } catch (error) {
+                console.error('加载统计信息失败:', error);
+                // 保持显示为 '--' 状态
+            }
+        }
+    </script>
+</body>
+</html>

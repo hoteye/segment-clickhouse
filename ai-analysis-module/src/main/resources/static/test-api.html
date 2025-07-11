@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>API测试</title>
+</head>
+<body>
+    <h1>API测试</h1>
+    <button onclick="testAPI()">测试API</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            try {
+                console.log('开始测试API...');
+                const response = await fetch('/ai-analysis/api/trace-visualization/stats/recent-day');
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>API响应结果:</h3>
+                    <p>状态: ${response.status}</p>
+                    <p>Content-Type: ${response.headers.get('content-type')}</p>
+                    <pre>${text}</pre>
+                `;
+            } catch (error) {
+                console.error('API测试失败:', error);
+                document.getElementById('result').innerHTML = `
+                    <h3>错误:</h3>
+                    <p style="color: red;">${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

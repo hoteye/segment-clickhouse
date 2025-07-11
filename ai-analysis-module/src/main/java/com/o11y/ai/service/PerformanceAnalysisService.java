@@ -761,7 +761,7 @@ public class PerformanceAnalysisService {
                 "AND service = ? AND log_stack IS NOT NULL " +
                 "GROUP BY substr(log_stack, 1, 1500) " +
                 "ORDER BY error_count DESC " +
-                "LIMIT 40";
+                "LIMIT 30";
 
         try (Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
