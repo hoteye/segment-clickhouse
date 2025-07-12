@@ -28,7 +28,9 @@ public class TransactionAnalysisController {
     @PostMapping("/trace/analyze")
     public Map<String, Object> analyzeTrace(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> traceData = (Map<String, Object>) request.get("traceData");
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> errorLogs = (List<Map<String, Object>>) request.getOrDefault("errorLogs",
                     new ArrayList<>());
 
@@ -56,6 +58,7 @@ public class TransactionAnalysisController {
     @PostMapping("/anomaly/detect")
     public Map<String, Object> detectAnomalies(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> recentTraces = (List<Map<String, Object>>) request.get("traces");
 
             LOG.info("开始实时异常检测，样本数量: {}", recentTraces.size());
@@ -83,7 +86,9 @@ public class TransactionAnalysisController {
     public Map<String, Object> analyzeFailure(@RequestBody Map<String, Object> request) {
         try {
             String transactionId = (String) request.get("transactionId");
+            @SuppressWarnings("unchecked")
             Map<String, Object> transactionData = (Map<String, Object>) request.get("transactionData");
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> contextData = (List<Map<String, Object>>) request.getOrDefault("contextData",
                     new ArrayList<>());
 
@@ -112,6 +117,7 @@ public class TransactionAnalysisController {
     @PostMapping("/performance/bottlenecks")
     public Map<String, Object> identifyBottlenecks(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> performanceData = (Map<String, Object>) request.get("performanceData");
 
             LOG.info("开始性能瓶颈识别");

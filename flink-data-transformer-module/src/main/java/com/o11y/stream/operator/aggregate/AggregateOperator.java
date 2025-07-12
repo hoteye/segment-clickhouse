@@ -101,6 +101,7 @@ public class AggregateOperator implements FlinkOperator {
     public DataStream<ServiceAggResult> apply(DataStream<?> input, Map<String, List<String>> params) {
         // 不再做空判断，参数缺失时直接抛出异常，便于启动阶段发现配置问题
         windowSeconds = Integer.parseInt(params.get("windowSize").get(0));
+        @SuppressWarnings("unchecked")
         DataStream<SegmentObject> segmentStream = (DataStream<SegmentObject>) input;
         DataStream<Tuple5<String, String, Boolean, Long, Long>> baseAggStream = extractEntrySpan(segmentStream);
         DataStream<ServiceAggResult> aggStream = aggregateByService(baseAggStream);

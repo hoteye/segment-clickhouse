@@ -84,10 +84,18 @@ public class FlinkService {
          */
         public FlinkService(Map<String, Object> config) {
                 this.config = config;
-                this.kafkaConfig = (Map<String, Object>) config.get("kafka");
-                this.clickhouseConfig = (Map<String, String>) config.get("clickhouse");
-                this.batchConfig = (Map<String, Integer>) config.get("batch");
-                this.flinkConfig = (Map<String, Object>) config.get("flink");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> kafkaConfig = (Map<String, Object>) config.get("kafka");
+                this.kafkaConfig = kafkaConfig;
+                @SuppressWarnings("unchecked")
+                Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
+                this.clickhouseConfig = clickhouseConfig;
+                @SuppressWarnings("unchecked")
+                Map<String, Integer> batchConfig = (Map<String, Integer>) config.get("batch");
+                this.batchConfig = batchConfig;
+                @SuppressWarnings("unchecked")
+                Map<String, Object> flinkConfig = (Map<String, Object>) config.get("flink");
+                this.flinkConfig = flinkConfig;
         }
 
         /**
@@ -147,8 +155,9 @@ public class FlinkService {
          */
         private void buildSource() {
                 // 使用多Kafka源管理器构建数据流
-                MultiKafkaSourceManager sourceManager = new MultiKafkaSourceManager(env,
-                                (Map<String, Object>) kafkaConfig);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> kafkaConfigMap = (Map<String, Object>) kafkaConfig;
+                MultiKafkaSourceManager sourceManager = new MultiKafkaSourceManager(env, kafkaConfigMap);
 
                 // 验证配置的数据源
                 List<String> enabledSources = sourceManager.getEnabledSourceNames();

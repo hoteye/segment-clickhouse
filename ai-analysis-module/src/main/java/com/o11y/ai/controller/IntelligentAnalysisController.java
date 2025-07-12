@@ -52,7 +52,9 @@ public class IntelligentAnalysisController {
     @PostMapping("/anomaly/advanced-detect")
     public Map<String, Object> advancedAnomalyDetection(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> timeSeriesData = (List<Map<String, Object>>) request.get("timeSeriesData");
+            @SuppressWarnings("unchecked")
             Map<String, Object> currentMetrics = (Map<String, Object>) request.get("currentMetrics");
 
             LOG.info("开始高级异常检测，数据点数量: {}", timeSeriesData.size());
@@ -79,6 +81,7 @@ public class IntelligentAnalysisController {
     @PostMapping("/rootcause/comprehensive-analysis")
     public Map<String, Object> comprehensiveRootCauseAnalysis(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> incidentData = (Map<String, Object>) request.get("incidentData");
 
             LOG.info("开始综合根因分析，事件ID: {}", incidentData.get("incidentId"));
@@ -105,7 +108,9 @@ public class IntelligentAnalysisController {
     @PostMapping("/transaction/intelligent-analysis")
     public Map<String, Object> intelligentTransactionAnalysis(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> traceData = (Map<String, Object>) request.get("traceData");
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> errorLogs = (List<Map<String, Object>>) request.getOrDefault("errorLogs",
                     new ArrayList<>());
 
@@ -140,7 +145,9 @@ public class IntelligentAnalysisController {
 
             // 1. 异常检测
             try {
+                @SuppressWarnings("unchecked")
                 List<Map<String, Object>> timeSeriesData = (List<Map<String, Object>>) request.get("timeSeriesData");
+                @SuppressWarnings("unchecked")
                 Map<String, Object> currentMetrics = (Map<String, Object>) request.get("currentMetrics");
 
                 if (timeSeriesData != null && currentMetrics != null) {
@@ -157,6 +164,7 @@ public class IntelligentAnalysisController {
 
             // 2. 根因分析
             try {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> incidentData = (Map<String, Object>) request.get("incidentData");
                 if (incidentData != null) {
                     Map<String, Object> rootCauseResult = rootCauseEngine.analyzeRootCause(incidentData);
@@ -171,7 +179,9 @@ public class IntelligentAnalysisController {
 
             // 3. 交易链路分析
             try {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> traceData = (Map<String, Object>) request.get("traceData");
+                @SuppressWarnings("unchecked")
                 List<Map<String, Object>> errorLogs = (List<Map<String, Object>>) request.getOrDefault("errorLogs",
                         new ArrayList<>());
 
@@ -219,6 +229,7 @@ public class IntelligentAnalysisController {
     @PostMapping("/optimization/intelligent-suggestions")
     public Map<String, Object> intelligentOptimizationSuggestions(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> performanceData = (Map<String, Object>) request.get("performanceData");
             String optimizationGoal = (String) request.getOrDefault("goal", "general");
 
@@ -246,6 +257,7 @@ public class IntelligentAnalysisController {
     @PostMapping("/prediction/trend-analysis")
     public Map<String, Object> predictiveTrendAnalysis(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> historicalData = (List<Map<String, Object>>) request.get("historicalData");
             String predictionHorizon = (String) request.getOrDefault("horizon", "1hour");
 
@@ -310,6 +322,7 @@ public class IntelligentAnalysisController {
     // ==================== 私有辅助方法 ====================
 
     private String assessAnomalyPriority(Map<String, Object> anomalyResult) {
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> anomalies = (List<Map<String, Object>>) anomalyResult.get("anomalies");
         if (anomalies == null || anomalies.isEmpty())
             return "LOW";
@@ -326,6 +339,7 @@ public class IntelligentAnalysisController {
         if (primaryRootCause == null)
             return "LOW";
 
+        @SuppressWarnings("unchecked")
         Map<String, Object> rootCause = (Map<String, Object>) primaryRootCause;
         Double confidence = (Double) rootCause.get("confidence");
 

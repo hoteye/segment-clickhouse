@@ -1023,6 +1023,7 @@ public class LLMAnalysisService {
         prompt.append("\n## 性能指标：\n");
         Object metrics = data.get("performanceMetrics");
         if (metrics instanceof Map) {
+            @SuppressWarnings("unchecked")
             Map<String, Object> metricsMap = (Map<String, Object>) metrics;
             metricsMap.forEach((key, value) -> prompt.append("- ").append(key).append(": ").append(value).append("\n"));
         }
@@ -1030,6 +1031,7 @@ public class LLMAnalysisService {
         // 错误信息
         if (data.containsKey("errors")) {
             prompt.append("\n## 错误信息：\n");
+            @SuppressWarnings("unchecked")
             List<Object> errors = (List<Object>) data.get("errors");
             errors.forEach(error -> prompt.append("- ").append(error).append("\n"));
         }
@@ -1055,6 +1057,7 @@ public class LLMAnalysisService {
 
         // 异常概览
         prompt.append("## 异常概览：\n");
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> anomalies = (List<Map<String, Object>>) data.get("anomalies");
         if (anomalies != null) {
             for (int i = 0; i < anomalies.size(); i++) {
@@ -1068,6 +1071,7 @@ public class LLMAnalysisService {
         prompt.append("\n## 当前系统状态：\n");
         Object currentState = data.get("currentState");
         if (currentState instanceof Map) {
+            @SuppressWarnings("unchecked")
             Map<String, Object> stateMap = (Map<String, Object>) currentState;
             stateMap.forEach((key, value) -> prompt.append("- ").append(key).append(": ").append(value).append("\n"));
         }
@@ -1095,6 +1099,7 @@ public class LLMAnalysisService {
         prompt.append("## 当前性能状况：\n");
         Object performanceData = data.get("performanceData");
         if (performanceData instanceof Map) {
+            @SuppressWarnings("unchecked")
             Map<String, Object> perfMap = (Map<String, Object>) performanceData;
             perfMap.forEach((key, value) -> prompt.append("- ").append(key).append(": ").append(value).append("\n"));
         }
@@ -1141,6 +1146,7 @@ public class LLMAnalysisService {
         // 症状描述
         if (data.containsKey("symptoms")) {
             prompt.append("\n## 故障症状：\n");
+            @SuppressWarnings("unchecked")
             List<Object> symptoms = (List<Object>) data.get("symptoms");
             symptoms.forEach(symptom -> prompt.append("- ").append(symptom).append("\n"));
         }
@@ -1148,6 +1154,7 @@ public class LLMAnalysisService {
         // 环境变化
         if (data.containsKey("recentChanges")) {
             prompt.append("\n## 近期变化：\n");
+            @SuppressWarnings("unchecked")
             List<Object> changes = (List<Object>) data.get("recentChanges");
             changes.forEach(change -> prompt.append("- ").append(change).append("\n"));
         }
@@ -1175,6 +1182,7 @@ public class LLMAnalysisService {
         prompt.append("## 当前容量状况：\n");
         Object currentCapacity = data.get("currentCapacity");
         if (currentCapacity instanceof Map) {
+            @SuppressWarnings("unchecked")
             Map<String, Object> capacityMap = (Map<String, Object>) currentCapacity;
             capacityMap
                     .forEach((key, value) -> prompt.append("- ").append(key).append(": ").append(value).append("\n"));

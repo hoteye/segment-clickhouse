@@ -445,33 +445,46 @@ public class RootCauseAnalysisEngine {
         List<String> errors = new ArrayList<>();
         Object errorObj = incidentData.get("errorMessages");
         if (errorObj instanceof List) {
-            errors = (List<String>) errorObj;
+            @SuppressWarnings("unchecked")
+            List<String> errorList = (List<String>) errorObj;
+            errors = errorList;
         }
         return errors;
     }
 
     private Map<String, Object> extractPerformanceMetrics(Map<String, Object> incidentData) {
-        return (Map<String, Object>) incidentData.getOrDefault("performanceMetrics", new HashMap<>());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = (Map<String, Object>) incidentData.getOrDefault("performanceMetrics", new HashMap<>());
+        return result;
     }
 
     private List<String> extractSystemComponents(Map<String, Object> incidentData) {
-        return (List<String>) incidentData.getOrDefault("systemComponents", new ArrayList<>());
+        @SuppressWarnings("unchecked")
+        List<String> result = (List<String>) incidentData.getOrDefault("systemComponents", new ArrayList<>());
+        return result;
     }
 
     private List<Map<String, Object>> extractRecentDeployments(Map<String, Object> incidentData) {
-        return (List<Map<String, Object>>) incidentData.getOrDefault("recentDeployments", new ArrayList<>());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> result = (List<Map<String, Object>>) incidentData.getOrDefault("recentDeployments", new ArrayList<>());
+        return result;
     }
 
     private List<Map<String, Object>> extractConfigurationChanges(Map<String, Object> incidentData) {
-        return (List<Map<String, Object>>) incidentData.getOrDefault("configurationChanges", new ArrayList<>());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> result = (List<Map<String, Object>>) incidentData.getOrDefault("configurationChanges", new ArrayList<>());
+        return result;
     }
 
     private Map<String, Object> extractExternalFactors(Map<String, Object> incidentData) {
-        return (Map<String, Object>) incidentData.getOrDefault("externalFactors", new HashMap<>());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = (Map<String, Object>) incidentData.getOrDefault("externalFactors", new HashMap<>());
+        return result;
     }
 
     private List<String> analyzeErrorPatterns(Map<String, Object> features) {
         List<String> patterns = new ArrayList<>();
+        @SuppressWarnings("unchecked")
         List<String> errorMessages = (List<String>) features.get("errorMessages");
 
         if (errorMessages != null) {
@@ -491,6 +504,7 @@ public class RootCauseAnalysisEngine {
 
     private Map<String, Object> analyzePerformanceMetrics(Map<String, Object> features) {
         Map<String, Object> issues = new HashMap<>();
+        @SuppressWarnings("unchecked")
         Map<String, Object> metrics = (Map<String, Object>) features.get("performanceMetrics");
 
         if (metrics != null) {
@@ -512,6 +526,7 @@ public class RootCauseAnalysisEngine {
 
     private Map<String, Object> analyzeComponentHealth(Map<String, Object> features) {
         Map<String, Object> health = new HashMap<>();
+        @SuppressWarnings("unchecked")
         List<String> components = (List<String>) features.get("systemComponents");
 
         if (components != null) {
@@ -525,6 +540,7 @@ public class RootCauseAnalysisEngine {
 
     private Map<String, Object> analyzeResourceUsage(Map<String, Object> features) {
         Map<String, Object> usage = new HashMap<>();
+        @SuppressWarnings("unchecked")
         Map<String, Object> metrics = (Map<String, Object>) features.get("performanceMetrics");
 
         if (metrics != null) {
@@ -633,6 +649,7 @@ public class RootCauseAnalysisEngine {
             List<Map<String, Object>> evidences) {
         List<Map<String, Object>> candidates = new ArrayList<>();
 
+        @SuppressWarnings("unchecked")
         Map<String, Object> performanceIssues = (Map<String, Object>) analysis.get("performanceIssues");
         if (performanceIssues != null && Boolean.TRUE.equals(performanceIssues.get("highResponseTime"))) {
             Map<String, Object> candidate = new HashMap<>();
