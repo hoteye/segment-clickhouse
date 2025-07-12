@@ -73,6 +73,14 @@
             <artifactId>clickhouse-jdbc</artifactId>
             <version>0.4.6</version>
         </dependency>
+        
+        <!-- LZ4 Compression for ClickHouse -->
+        <dependency>
+            <groupId>org.lz4</groupId>
+            <artifactId>lz4-java</artifactId>
+            <version>1.8.0</version>
+        </dependency>
+        
           <!-- H2 Database for testing -->
         <dependency>
             <groupId>com.h2database</groupId>
