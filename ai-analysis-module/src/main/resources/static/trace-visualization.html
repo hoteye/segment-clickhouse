@@ -228,6 +228,38 @@
             border-radius: 4px;
             margin-top: 15px;
         }
+
+        /* Trace ID输入框样式 */
+        .trace-input-section {
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .trace-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s ease;
+        }
+        
+        .trace-input:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+        }
+        
+        .trace-input::placeholder {
+            color: #999;
+        }
     </style>
 </head>
 <body>
@@ -235,7 +267,7 @@
         <h1>🔍 SkyWalking 链路可视化演示</h1>
         
         <div class="section">
-            <h2>📊 系统概览</h2>
+            <h2>📊 系统概览（近1小时）</h2>
             <div class="stats" id="stats">
                 <div class="stat-card">
                     <div class="stat-number" id="trace-count">--</div>
@@ -257,10 +289,16 @@
         </div>
 
         <div class="section">
-            <h2>🔍链路列表</h2>
-            <div class="buttons">
-                <button class="btn btn-primary" onclick="loadRecentTraces()">刷新链路</button>
-                <button class="btn btn-info" onclick="loadVisualizationTypes()">查看可视化类型</button>
+            <h2>🔍链路列表（最近18笔交易）</h2>
+            <div class="trace-input-section">
+                <div class="input-group">
+                    <input type="text" id="trace-id-input" placeholder="请输入Trace ID" class="trace-input">
+                    <button class="btn btn-success" onclick="queryTraceById()">查询</button>
+                </div>
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="loadRecentTraces()">刷新链路</button>
+                    <button class="btn btn-info" onclick="loadVisualizationTypes()">查看可视化类型</button>
+                </div>
             </div>
             <div id="trace-list" class="trace-list">
                 <div class="loading">正在加载链路数据...</div>
@@ -335,14 +373,7 @@
         </div>
     </div>
 
-    <!-- 服务关系模态框 -->
-    <div id="serviceRelationModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeServiceRelationModal()">&times;</span>
-            <h2>服务关系分析</h2>
-            <div id="serviceRelationModalContent"></div>
-        </div>
-    </div>
+
 
     <script src="https://unpkg.com/mxgraph@4.2.2/javascript/mxClient.min.js"></script>
     <script>
@@ -429,7 +460,7 @@
                         </div>`;
                 }, 10000);
                 
-                const response = await fetch(`${API_BASE}/traces/recent?limit=20&hours=1`);
+                const response = await fetch(`${API_BASE}/traces/recent-18`);
                 
                 // 清除超时提示
                 clearTimeout(loadingTimeout);
@@ -448,7 +479,8 @@
                 
                 if (data.status === 'success') {
                     displayTraces(data.traces);
-                    updateStats(data.traces);
+                    // 移除这行，避免覆盖系统概览数据
+                    // updateStats(data.traces);
                     
                     // 显示查询性能信息
                     if (data.queryTime) {
@@ -497,7 +529,6 @@
                         <button class="btn btn-success" onclick="event.stopPropagation(); showWaterfallModal('${trace.trace_id}')">瀑布图</button>
                         <button class="btn btn-warning" onclick="event.stopPropagation(); showFlameModal('${trace.trace_id}')">火焰图</button>
                         <button class="btn btn-info" onclick="event.stopPropagation(); showTreeModal('${trace.trace_id}')">调用树</button>
-                        <button class="btn" style="background-color: #9c27b0; color: white;" onclick="event.stopPropagation(); showServiceRelationModal('${trace.trace_id}')">服务关系</button>
                     </div>
                 </div>
             `).join('');
@@ -760,57 +791,7 @@
             showXmlContent('flame');
         }
 
-        // 服务关系模态框函数
-        async function showServiceRelationModal(traceId) {
-            document.getElementById('serviceRelationModalContent').innerHTML = '<div class="loading">正在生成服务关系图...</div>';
-            document.getElementById('serviceRelationModal').style.display = 'block';
-            
-            try {
-                const response = await fetch(`${API_BASE}/trace/${traceId}/service-relation`);
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    window.currentDrawioXml = data.drawioXml;
-                    window.currentTraceId = data.traceId;
-                    window.currentVisualizationType = 'service-relation';
-                    
-                    const modalContent = document.getElementById('serviceRelationModalContent');
-                    modalContent.innerHTML = `
-                        <div class="success">
-                            ✅ 成功生成服务关系图表，包含 ${data.serviceCount} 个服务
-                        </div>
-                        <div class="buttons" style="margin: 15px 0;">
-                            <button class="btn btn-primary" onclick="downloadDrawio('${data.traceId}', 'service-relation')">下载Draw.io文件</button>
-                            <button class="btn btn-success" onclick="openInDrawio()">在Draw.io中打开</button>
-                            <button class="btn btn-warning" onclick="showServiceRelationXmlContent()">查看XML内容</button>
-                        </div>
-                        <div style="margin: 15px 0;">
-                            <strong>Trace ID:</strong> ${data.traceId}<br>
-                            <strong>生成时间:</strong> ${data.timestamp}
-                        </div>
-                        <textarea id="service-relation-drawio-xml" style="width: 100%; height: 200px; margin-top: 15px; font-family: monospace; display: none;">${data.drawioXml}</textarea>
-                        <iframe id="service-relation-drawio-iframe" class="modal-iframe"></iframe>
-                    `;
 
-                    const encoded = encodeURIComponent(data.drawioXml);
-                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_service_relation#R${encoded}`;
-                    document.getElementById('service-relation-drawio-iframe').src = viewerUrl;
-                } else {
-                    throw new Error(data.message || '生成失败');
-                }
-            } catch (error) {
-                document.getElementById('serviceRelationModalContent').innerHTML = 
-                    `<div class="error">生成服务关系图失败: ${error.message}</div>`;
-            }
-        }
-
-        function closeServiceRelationModal() {
-            document.getElementById('serviceRelationModal').style.display = 'none';
-        }
-
-        function showServiceRelationXmlContent() {
-            showXmlContent('service-relation');
-        }
 
         // 点击模态框外部关闭 - 更新处理多个模态框
         window.onclick = function(event) {
@@ -832,7 +813,7 @@
                     document.getElementById(id).textContent = '--';
                 });
 
-                const response = await fetch(`${API_BASE}/traces/recent-day-stats`);
+                const response = await fetch(`${API_BASE}/stats/recent-hour`);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
@@ -848,6 +829,107 @@
                 // 保持显示为 '--' 状态
             }
         }
+
+        // Trace ID查询功能
+        async function queryTraceById() {
+            const traceId = document.getElementById('trace-id-input').value.trim();
+            
+            if (!traceId) {
+                alert('请输入Trace ID');
+                return;
+            }
+
+            // 验证trace id格式
+            if (!/^[a-f0-9]{32}$/.test(traceId)) {
+                alert('请输入有效的Trace ID（32位十六进制字符串）');
+                return;
+            }
+
+            try {
+                // 显示查询结果区域
+                const traceList = document.getElementById('trace-list');
+                traceList.innerHTML = '<div class="loading">正在查询Trace ID: ' + traceId + '...</div>';
+
+                // 验证trace是否存在
+                const validateResponse = await fetch(`${API_BASE}/api/traces/validate/${traceId}`);
+                const validateData = await validateResponse.json();
+                
+                if (!validateData.exists) {
+                    traceList.innerHTML = `
+                        <div class="error">
+                            <p>Trace ID "${traceId}" 不存在或不在最近一天的数据中</p>
+                            <button class="btn btn-primary" onclick="loadRecentTraces()">返回链路列表</button>
+                        </div>`;
+                    return;
+                }
+
+                // 获取trace详情
+                const detailsResponse = await fetch(`${API_BASE}/trace/${traceId}/details`);
+                const detailsData = await detailsResponse.json();
+                
+                if (detailsData.status === 'success') {
+                    // 显示单个trace的详细信息
+                    const trace = {
+                        trace_id: traceId,
+                        span_count: detailsData.spans.length,
+                        duration_ms: detailsData.metadata.totalDuration,
+                        error_count: detailsData.metadata.errorCount,
+                        services: Array.from(detailsData.metadata.services)
+                    };
+                    
+                    displaySingleTrace(trace);
+                } else {
+                    throw new Error(detailsData.message || '获取Trace详情失败');
+                }
+            } catch (error) {
+                console.error('查询Trace失败:', error);
+                document.getElementById('trace-list').innerHTML = `
+                    <div class="error">
+                        <p>查询Trace失败: ${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadRecentTraces()">返回链路列表</button>
+                    </div>`;
+            }
+        }
+
+        // 显示单个trace的详细信息
+        function displaySingleTrace(trace) {
+            const traceList = document.getElementById('trace-list');
+            
+            traceList.innerHTML = `
+                <div class="trace-item" onclick="selectTrace('${trace.trace_id}')">
+                    <div class="trace-id">TraceID: ${trace.trace_id}</div>
+                    <div class="trace-info">
+                        <span><strong>${trace.span_count}</strong> spans</span>
+                        <span><strong>${trace.duration_ms}</strong>ms</span>
+                        ${trace.error_count > 0 ? '<span style="color: #dc3545;">⚠️ 有错误</span>' : '<span style="color: #28a745;">✅ 正常</span>'}
+                    </div>
+                    <div class="trace-services">
+                        服务: ${Array.isArray(trace.services) ? trace.services.join(', ') : trace.services}
+                    </div>
+                    <div class="buttons">
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); showDagModal('${trace.trace_id}')">DAG图</button>
+                        <button class="btn btn-success" onclick="event.stopPropagation(); showWaterfallModal('${trace.trace_id}')">瀑布图</button>
+                        <button class="btn btn-warning" onclick="event.stopPropagation(); showFlameModal('${trace.trace_id}')">火焰图</button>
+                        <button class="btn btn-info" onclick="event.stopPropagation(); showTreeModal('${trace.trace_id}')">调用树</button>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-secondary" onclick="loadRecentTraces()">返回链路列表</button>
+                </div>
+            `;
+        }
+
+        // 支持回车键查询
+        document.addEventListener('DOMContentLoaded', function() {
+            const traceInput = document.getElementById('trace-id-input');
+            if (traceInput) {
+                traceInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        queryTraceById();
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

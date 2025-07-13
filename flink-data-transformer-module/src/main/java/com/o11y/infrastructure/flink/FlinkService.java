@@ -155,7 +155,6 @@ public class FlinkService {
          */
         private void buildSource() {
                 // 使用多Kafka源管理器构建数据流
-                @SuppressWarnings("unchecked")
                 Map<String, Object> kafkaConfigMap = (Map<String, Object>) kafkaConfig;
                 MultiKafkaSourceManager sourceManager = new MultiKafkaSourceManager(env, kafkaConfigMap);
 
