@@ -48,7 +48,15 @@ public abstract class BaseIntegrationTest {
         objectMapper = new ObjectMapper();
 
         // 加载测试配置
-        testConfig = ConfigurationUtils.loadConfig("application.yaml");
+        testConfig = ConfigurationUtils.loadConfig("application-test.yaml");
+
+        // 安全检查：确保不是生产环境
+        @SuppressWarnings("unchecked")
+        Map<String, String> clickhouseConfig = (Map<String, String>) testConfig.get("clickhouse");
+        String url = clickhouseConfig.get("url");
+        if (url.contains("192.168.100.6") || url.contains("production") || url.contains("prod")) {
+            throw new RuntimeException("禁止在生产环境运行集成测试！当前URL: " + url);
+        }
 
         // 初始化ClickHouse连接
         initClickHouseConnection();

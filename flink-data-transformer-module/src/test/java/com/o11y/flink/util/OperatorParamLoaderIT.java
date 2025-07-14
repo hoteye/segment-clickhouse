@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 集成测试：真实 ClickHouse + 真实 Kafka
- * 需保证 application.yaml 配置正确，ClickHouse/Kafka 服务可用
+ * 需保证 application-test.yaml 配置正确，ClickHouse/Kafka 服务可用
  */
 public class OperatorParamLoaderIT {
     private static DatabaseService dbService;
@@ -25,9 +25,16 @@ public class OperatorParamLoaderIT {
     private static String paramUpdateTopic;
 
     @BeforeAll
-    public static void setup() throws Exception { // 读取 application.yaml
-        Map<String, Object> config = ConfigurationUtils.loadConfig("application.yaml");
+    public static void setup() throws Exception { // 读取 application-test.yaml
+        Map<String, Object> config = ConfigurationUtils.loadConfig("application-test.yaml");
         Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
+        
+        // 安全检查：确保不是生产环境
+        String url = clickhouseConfig.get("url");
+        if (url.contains("192.168.100.6") || url.contains("production") || url.contains("prod")) {
+            throw new RuntimeException("禁止在生产环境运行集成测试！当前URL: " + url);
+        }
+        @SuppressWarnings("unchecked")
         Map<String, String> kafkaConfig = (Map<String, String>) config.get("kafka");
         paramUpdateTopic = kafkaConfig.getOrDefault("param_update_topic", "flink-operator-param-update");
         dbService = new DatabaseService(

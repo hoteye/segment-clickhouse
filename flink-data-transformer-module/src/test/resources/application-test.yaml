@@ -1,0 +1,42 @@
+kafka:
+  # 使用生产环境Kafka但测试专用topic
+  bootstrap_servers: "192.168.100.6:9092"
+  group_id: "test-consumer-group"
+  topic: "test-segments-topic"
+  param_update_topic: "test-param-update"
+  alarm_rule_topic: "test-alarm-rule-topic"
+  alarm_rule_group_id: "test-alarm-rule-consumer-group"
+  auto_offset_reset: "earliest"
+  poll_interval_ms: 200
+  
+  # 测试数据源配置
+  data_sources:
+    test_source_1:
+      bootstrap_servers: "192.168.100.6:9092"
+      topic: "test-segments-topic-1"
+      group_id: "test-segments-consumer-group-1"
+      auto_offset_reset: "earliest"
+      poll_interval_ms: 200
+
+clickhouse:
+  schema_name: default          # 测试数据库
+  table_name: events_test       # 测试表名
+  url: jdbc:clickhouse://localhost:8123/default?use_time_zone=UTC+8&use_server_time_zone=UTC+8
+  username: root
+  password: "123456"
+
+batch:
+  size: 10              # 测试环境小批次
+  interval: 100         # 批次间隔
+add_columns_interval: 5000  # 测试环境更短间隔
+
+flink:
+  parallelism: 1        # 测试环境单并行度
+  checkpoint:
+    interval: 10000     # 测试环境更短检查点间隔
+    mode: EXACTLY_ONCE
+
+# 测试专用配置
+test:
+  cleanup_tables: true  # 测试后清理表
+  timeout_seconds: 30   # 测试超时时间

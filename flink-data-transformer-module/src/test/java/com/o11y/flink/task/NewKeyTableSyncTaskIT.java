@@ -24,21 +24,28 @@ public class NewKeyTableSyncTaskIT {
 
     @BeforeAll
     static void setup() throws Exception {
-        Map<String, Object> config = ConfigurationUtils.loadConfig("application.yaml");
+        Map<String, Object> config = ConfigurationUtils.loadConfig("application-test.yaml");
         @SuppressWarnings("unchecked")
         Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
         String url = clickhouseConfig.get("url");
         String user = clickhouseConfig.get("username");
         String password = clickhouseConfig.get("password");
+        
+        // 安全检查：确保不是生产环境
+        if (url.contains("192.168.100.6") || url.contains("production") || url.contains("prod")) {
+            throw new RuntimeException("禁止在生产环境运行集成测试！当前URL: " + url);
+        }
+        
         conn = DriverManager.getConnection(url, user, password);
-        dbService = new DatabaseService(url, "default", TABLE, user, password).initConnection();
+        String schemaName = clickhouseConfig.get("schema_name");
+        dbService = new DatabaseService(url, schemaName, TABLE, user, password).initConnection();
         try (Statement st = conn.createStatement()) {
             st.execute("DROP TABLE IF EXISTS " + TABLE);
             st.execute("CREATE TABLE " + TABLE + " (id UInt32) ENGINE = MergeTree() ORDER BY id");
-            st.execute("DROP TABLE IF EXISTS new_key");
-            // 修正：new_key 表使用 MergeTree 引擎，isCreated 字段类型改为 UInt8，兼容 ClickHouse
+            st.execute("DROP TABLE IF EXISTS new_key_test");
+            // 修正：new_key_test 表使用 MergeTree 引擎，isCreated 字段类型改为 UInt8，兼容 ClickHouse
             st.execute(
-                    "CREATE TABLE new_key (keyName String, keyType String, isCreated UInt8, createTime DateTime) ENGINE = MergeTree() ORDER BY keyName");
+                    "CREATE TABLE new_key_test (keyName String, keyType String, isCreated UInt8, createTime DateTime) ENGINE = MergeTree() ORDER BY keyName");
         }
     }
 
@@ -50,14 +57,14 @@ public class NewKeyTableSyncTaskIT {
             String key = "col_"
                     + type.toLowerCase().replaceAll("[()]+", "_").replaceAll("_+", "_").replaceAll("_$", "");
             try (Statement st = conn.createStatement()) {
-                st.execute(String.format("INSERT INTO new_key (keyName, keyType, isCreated) VALUES ('%s', '%s', 0)",
+                st.execute(String.format("INSERT INTO new_key_test (keyName, keyType, isCreated) VALUES ('%s', '%s', 0)",
                         key, type));
             }
         }
         // 额外插入小写/别名类型，测试类型映射
         try (Statement st = conn.createStatement()) {
-            st.execute("INSERT INTO new_key (keyName, keyType, isCreated) VALUES ('col_uint16_alias', 'uInt16', 0)");
-            st.execute("INSERT INTO new_key (keyName, keyType, isCreated) VALUES ('col_int64_alias', 'int_64', 0)");
+            st.execute("INSERT INTO new_key_test (keyName, keyType, isCreated) VALUES ('col_uint16_alias', 'uInt16', 0)");
+            st.execute("INSERT INTO new_key_test (keyName, keyType, isCreated) VALUES ('col_int64_alias', 'int_64', 0)");
         }
         // 执行同步
         NewKeyTableSyncTask task = new NewKeyTableSyncTask(dbService, 10000L);
@@ -84,7 +91,7 @@ public class NewKeyTableSyncTaskIT {
     static void cleanup() throws Exception {
         try (Statement st = conn.createStatement()) {
             st.execute("TRUNCATE TABLE " + TABLE);
-            st.execute("TRUNCATE TABLE new_key");
+            st.execute("TRUNCATE TABLE new_key_test");
         }
         conn.close();
     }
