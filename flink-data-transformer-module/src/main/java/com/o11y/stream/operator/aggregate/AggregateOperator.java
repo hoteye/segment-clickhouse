@@ -99,7 +99,10 @@ public class AggregateOperator implements FlinkOperator {
      */
     @Override
     public DataStream<ServiceAggResult> apply(DataStream<?> input, Map<String, List<String>> params) {
-        // 不再做空判断，参数缺失时直接抛出异常，便于启动阶段发现配置问题
+        if (!params.containsKey("windowSize") || params.get("windowSize").isEmpty()) {
+            throw new IllegalStateException("Critical parameter 'windowSize' is missing in param_config table. " +
+                    "Please ensure the parameter is properly configured before starting the service.");
+        }
         windowSeconds = Integer.parseInt(params.get("windowSize").get(0));
         @SuppressWarnings("unchecked")
         DataStream<SegmentObject> segmentStream = (DataStream<SegmentObject>) input;
