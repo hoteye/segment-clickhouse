@@ -31,6 +31,8 @@ public class ReportStorageService {
     public ReportStorageService() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
+        // 配置Jackson以忽略未知枚举值
+        this.objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true);
 
         // 创建报告目录
         try {

@@ -1,0 +1,69 @@
+services:
+  # Elasticsearch
+  es7:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: es7
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - cluster.name=elasticsearch
+      - node.name=es7-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es7_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - skywalking-network
+
+  # SkyWalking OAP Server  
+  skywalking-oap:
+    image: apache/skywalking-oap-server:9.1.0
+    container_name: skywalking-oap-server
+    depends_on:
+      es7:
+        condition: service_healthy
+    environment:
+      - SW_STORAGE=elasticsearch
+      - SW_STORAGE_ES_CLUSTER_NODES=es7:9200
+      - SW_HEALTH_CHECKER=default
+      - SW_TELEMETRY=prometheus
+      - TZ=Asia/Shanghai
+    ports:
+      - "11800:11800"  # gRPC端口
+      - "12800:12800"  # HTTP端口
+    restart: on-failure
+    networks:
+      - skywalking-network
+
+  # SkyWalking UI
+  skywalking-ui:
+    image: apache/skywalking-ui:9.1.0
+    container_name: skywalking-ui
+    depends_on:
+      - skywalking-oap
+    environment:
+      - SW_OAP_ADDRESS=http://skywalking-oap:12800
+    ports:
+      - "8080:8080"
+    restart: on-failure
+    networks:
+      - skywalking-network
+
+volumes:
+  es7_data:
+    driver: local
+
+networks:
+  skywalking-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16 

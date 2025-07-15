@@ -1,0 +1,28 @@
+server:
+  port: 8746
+
+spring:
+  application:
+    name: dubbo-provider-b
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  h2:
+    console:
+      enabled: true
+dubbo:
+  application:
+    name: dubbo-provider-b
+  protocol:
+    name: dubbo # 确保协议名称为 dubbo
+    host: 0.0.0.0 # 设置主机地址
+    port: 8746 # 确保端口号为 20880
+  registry:
+    address: N/A # 禁用注册中心
+  scan:
+    base-packages: com.example.provider # 指定扫描的包路径
+
+user:
+  sys: 1088100

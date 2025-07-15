@@ -19,9 +19,9 @@ kafka:
       poll_interval_ms: 200
 
 clickhouse:
-  schema_name: default          # 测试数据库
-  table_name: events_test       # 测试表名
-  url: jdbc:clickhouse://localhost:8123/default?use_time_zone=UTC+8&use_server_time_zone=UTC+8
+  schema_name: integration      # 测试数据库
+  table_name: events           # 测试表名
+  url: jdbc:clickhouse://localhost:8123/integration?use_time_zone=UTC+8&use_server_time_zone=UTC+8
   username: root
   password: "123456"
 

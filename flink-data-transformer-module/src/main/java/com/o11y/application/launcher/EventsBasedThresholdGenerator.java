@@ -55,21 +55,37 @@ public class EventsBasedThresholdGenerator {
      * @param analysisDays 分析的历史天数
      */
     public void generateAllHourlyRulesFromEvents(int analysisDays) throws Exception {
+        generateAllHourlyRulesFromEvents(analysisDays, "application.yaml");
+    }
+
+    /**
+     * 从 events 表生成所有24小时的动态阈值规则
+     * 
+     * @param analysisDays 分析的历史天数
+     * @param configFile 配置文件名
+     */
+    public void generateAllHourlyRulesFromEvents(int analysisDays, String configFile) throws Exception {
         LOG.info("开始基于events表生成24小时动态阈值规则，基于前{}天数据", analysisDays);
 
         // 1. 加载配置文件
         loadThresholdConfig();
 
         // 2. 初始化 ClickHouse 连接
-        Map<String, Object> config = ConfigurationUtils.loadConfig("application.yaml");
+        Map<String, Object> config = ConfigurationUtils.loadConfig(configFile);
         @SuppressWarnings("unchecked")
         Map<String, String> clickhouseConfig = (Map<String, String>) config.get("clickhouse");
         DatabaseService db = new DatabaseService(clickhouseConfig).initConnection();
         Connection conn = db.getConnection();
+        
+        // 获取数据库名称和表名称
+        String schemaName = clickhouseConfig.getOrDefault("schema_name", "default");
+        String tableName = clickhouseConfig.getOrDefault("table_name", "events");
+        String eventsTable = schemaName + "." + tableName;
+        String rulesTable = schemaName + ".hourly_alarm_rules";
 
         // 3. 清空整个hourly_alarm_rules表
         LOG.info("清空hourly_alarm_rules表，确保数据一致性");
-        String clearSql = "TRUNCATE TABLE integration.hourly_alarm_rules";
+        String clearSql = "TRUNCATE TABLE " + rulesTable;
         PreparedStatement clearPs = conn.prepareStatement(clearSql);
         clearPs.executeUpdate();
         clearPs.close();
@@ -96,7 +112,7 @@ public class EventsBasedThresholdGenerator {
                 "count(*) - sum(is_error) as success_count, " +
                 // 标准差
                 "stddevSamp((end_time - start_time) * 1000) as duration_std " +
-                "FROM integration.events " +
+                "FROM " + eventsTable + " " +
                 "WHERE start_time >= now() - INTERVAL ? DAY " +
                 "AND start_time < now() " +
                 "AND service IS NOT NULL " +
@@ -188,7 +204,7 @@ public class EventsBasedThresholdGenerator {
                 if (!hourRules.isEmpty()) {
                     // 调用数据库保存方法，传入该小时的统计汇总信息
                     // 这些统计信息用于监控和调试，帮助了解规则生成的整体情况
-                    saveHourlyRuleToDatabase(conn, hour, hourRules,
+                    saveHourlyRuleToDatabase(conn, hour, hourRules, rulesTable,
                             stats.services.size(), // 该小时涉及的服务数量
                             stats.operators.size(), // 该小时涉及的操作数量
                             stats.ruleCount, // 该小时生成的规则总数
@@ -495,6 +511,7 @@ public class EventsBasedThresholdGenerator {
      * @param conn             数据库连接
      * @param hourOfDay        小时序号 (0-23)
      * @param ruleMap          该小时的所有规则映射，key为规则标识，value为AlarmRule对象
+     * @param rulesTable       规则表名称
      * @param totalServices    该小时涉及的服务数量（用于统计监控）
      * @param totalOperators   该小时涉及的操作数量（用于统计监控）
      * @param ruleCount        该小时生成的规则总数（用于统计监控）
@@ -506,14 +523,14 @@ public class EventsBasedThresholdGenerator {
      * @param totalSampleCount 该小时的总样本数（用于统计监控）
      */
     private void saveHourlyRuleToDatabase(Connection conn, int hourOfDay,
-            Map<String, AlarmRule> ruleMap,
+            Map<String, AlarmRule> ruleMap, String rulesTable,
             int totalServices, int totalOperators, int ruleCount,
             double avgAvgDuration, double avgMaxDuration,
             double avgSuccessRate, double avgTotalCount,
             int analysisDays, int totalSampleCount) throws Exception {
 
         // 批量插入SQL
-        String sql = "INSERT INTO integration.hourly_alarm_rules (" +
+        String sql = "INSERT INTO " + rulesTable + " (" +
                 "hour_of_day, service, operator_name, operator_class, " +
                 "avg_duration_low, avg_duration_mid, avg_duration_high, " +
                 "max_duration_low, max_duration_mid, max_duration_high, " +

@@ -49,7 +49,7 @@ class EventsBasedThresholdGeneratorTest extends BaseIntegrationTest {
 
         // 执行规则生成
         long startTime = System.currentTimeMillis();
-        generator.generateAllHourlyRulesFromEvents(7);
+        generator.generateAllHourlyRulesFromEvents(7, "application-test.yaml");
         long endTime = System.currentTimeMillis();
 
         LOG.info("规则生成完成，耗时: {}ms", endTime - startTime);
@@ -75,11 +75,11 @@ class EventsBasedThresholdGeneratorTest extends BaseIntegrationTest {
         LOG.info("=== 开始测试规则生成幂等性 ===");
 
         // 第一次生成
-        generator.generateAllHourlyRulesFromEvents(7);
+        generator.generateAllHourlyRulesFromEvents(7, "application-test.yaml");
         List<AlarmRule> firstGenerationRules = queryAllRules();
 
         // 第二次生成（应该覆盖之前的规则）
-        generator.generateAllHourlyRulesFromEvents(7);
+        generator.generateAllHourlyRulesFromEvents(7, "application-test.yaml");
         List<AlarmRule> secondGenerationRules = queryAllRules();
 
         // 验证规则数量一致

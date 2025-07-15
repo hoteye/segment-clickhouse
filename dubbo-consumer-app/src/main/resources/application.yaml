@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: dubbo-consumer-app
+  config:
+    additional-location: classpath:application-monitor.properties
+
+server:
+  port: 8087
+
+dubbo:
+  application:
+    name: dubbo-consumer
+    qos-port: 33333
+    qos-enable: false
+  registry:
+    address: N/A
+
+user:
+  sys: 1088100
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+
+customtags:
+  enable-env: true
+  enable-rpc: true
+  enable-app: true
+  enable-jvm: true
+  enable-os: true
+  enable-thread: true
