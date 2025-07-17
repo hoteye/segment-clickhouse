@@ -1134,49 +1134,60 @@ public class TraceVisualizationController {
         }
 
         try {
-            // 创建局部节点ID映射表
-            Map<String, String> nodeIdMap = createNodeIdMap();
-
+            // 1. 初始化XML和ID映射
             StringBuilder xml = new StringBuilder();
             xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
             xml.append("<mxfile host=\"app.diagrams.net\">\n");
             xml.append("  <diagram name=\"Flame Graph\" id=\"flame\">\n");
-            xml.append("    <mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\">\n");
+            xml.append("    <mxGraphModel dx=\"1400\" dy=\"900\" grid=\"1\" gridSize=\"10\" guides=\"1\">\n");
             xml.append("      <root>\n");
             xml.append("        <mxCell id=\"0\" />\n");
             xml.append("        <mxCell id=\"1\" parent=\"0\" />\n");
+            Map<String, String> nodeIdMap = createNodeIdMap();
 
-            // 构建调用树
+            // 2. 构建完整的调用树（包括跨服务）
             Map<String, Map<String, Object>> spanMap = new HashMap<>();
-            Map<String, String> parentMap = new HashMap<>();
+            Map<String, List<String>> childrenMap = new HashMap<>();
             for (Map<String, Object> span : spans) {
-                // 将数字类型的ID转换为字符串
-                String spanId = String.valueOf(span.get("span_id"));
-                Object parentSpanIdObj = span.get("parent_span_id");
-                String parentSpanId = parentSpanIdObj != null ? String.valueOf(parentSpanIdObj) : null;
-
-                spanMap.put(spanId, span);
-                if (parentSpanId != null && !"-1".equals(parentSpanId)) {
-                    parentMap.put(spanId, parentSpanId);
+                String uniqueId = getUniqueSpanId(span);
+                spanMap.put(uniqueId, span);
+                String parentUniqueId = getParentUniqueId(span);
+                if (parentUniqueId != null) {
+                    childrenMap.computeIfAbsent(parentUniqueId, k -> new ArrayList<>()).add(uniqueId);
                 }
             }
 
-            // 找到根节点
-            List<String> rootIds = new ArrayList<>();
-            for (Map<String, Object> span : spans) {
-                String spanId = String.valueOf(span.get("span_id"));
-                if (!parentMap.containsKey(spanId)) {
-                    rootIds.add(spanId);
-                }
+            // 3. 找到所有根节点
+            Set<String> allChildren = childrenMap.values().stream().flatMap(List::stream).collect(Collectors.toSet());
+            List<Map<String, Object>> rootSpans = spanMap.values().stream()
+                    .filter(s -> !allChildren.contains(getUniqueSpanId(s)))
+                    .sorted(Comparator.comparing(s -> (LocalDateTime) s.get("start_time")))
+                    .collect(Collectors.toList());
+
+            if (rootSpans.isEmpty()) {
+                 return generateEmptyDAG("未找到根节点，无法生成火焰图");
             }
 
-            // 递归生成火焰图
-            int y = 600; // 从底部开始
-            int baseX = 50;
-            int maxWidth = 1000;
+            // 4. 计算全局时间范围和缩放比例（火焰图核心：X轴代表时间线）
+            LocalDateTime globalStartTime = spans.stream()
+                .map(s -> (LocalDateTime) s.get("start_time"))
+                .min(LocalDateTime::compareTo)
+                .orElse(LocalDateTime.now());
+            LocalDateTime globalEndTime = spans.stream()
+                .map(s -> (LocalDateTime) s.get("end_time"))
+                .max(LocalDateTime::compareTo)
+                .orElse(globalStartTime);
+            long totalDurationMs = java.time.Duration.between(globalStartTime, globalEndTime).toMillis();
+            if (totalDurationMs == 0) totalDurationMs = 1; // 防止除以零
 
-            for (String rootId : rootIds) {
-                drawFlameNode(xml, spanMap, parentMap, rootId, baseX, y, maxWidth, nodeIdMap);
+            double graphWidth = 1200.0;
+            double timeScale = graphWidth / totalDurationMs;
+            int levelHeight = 35;
+            int startY = 50; // 火焰图从顶部开始
+
+            // 5. 递归绘制火焰图：根节点在顶部，调用栈向下增长
+            for (Map<String, Object> rootSpan : rootSpans) {
+                drawFlameNode(xml, rootSpan, spanMap, childrenMap, globalStartTime, timeScale, startY, 0, nodeIdMap, levelHeight);
             }
 
             xml.append("      </root>\n");
@@ -1188,76 +1199,124 @@ public class TraceVisualizationController {
 
         } catch (Exception e) {
             LOG.error("生成火焰图时发生错误", e);
-            return generateEmptyDAG("生成火焰图时发生错误：" + e.getMessage());
+            return generateEmptyDAG("生成火焰图时发生错误: " + e.getMessage());
         }
     }
 
-    private void drawFlameNode(StringBuilder xml, Map<String, Map<String, Object>> spanMap,
-            Map<String, String> parentMap, String spanId, int x, int y, int width, Map<String, String> nodeIdMap) {
-        Map<String, Object> span = spanMap.get(spanId);
-        if (span == null)
-            return;
+    private void drawFlameNode(StringBuilder xml, Map<String, Object> span,
+                               Map<String, Map<String, Object>> spanMap,
+                               Map<String, List<String>> childrenMap,
+                               LocalDateTime globalStartTime, double timeScale,
+                               int baseY, int depth,
+                               Map<String, String> nodeIdMap, int levelHeight) {
+        if (span == null) return;
 
-        // 计算节点属性
+        // 1. 基于start_time计算X轴位置（时间线）
+        LocalDateTime startTime = (LocalDateTime) span.get("start_time");
+        long duration = ((Number) span.get("duration_ms")).longValue();
+        long offsetMs = java.time.Duration.between(globalStartTime, startTime).toMillis();
+
+        int x = (int) (offsetMs * timeScale) + 50; // 50是左侧边距
+        
+        // 2. 基于duration_ms计算宽度（火焰图核心：宽度正比于耗时）
+        int width = Math.max(1, (int) (duration * timeScale));
+        
+        // 3. 基于调用栈深度计算Y轴位置（火焰图核心：Y轴代表调用栈深度）
+        int y = baseY + (depth * levelHeight);
+
+        // 4. 绘制当前Span的矩形
         String service = (String) span.get("service");
         String operation = (String) span.get("operation_name");
-        long duration = ((Number) span.get("duration_ms")).longValue();
         boolean isError = span.get("is_error") != null && ((Number) span.get("is_error")).intValue() > 0;
-        String spanType = (String) span.get("span_type");
+        
+        // 使用SkyWalking标准识别span类型
+        boolean isEntry = isEntrySpan(span);
+        boolean isExit = isExitSpan(span);
+        
+        String fillColor = isError ? "#ffcdd2" : (isExit ? "#ede7f6" : (isEntry ? "#e3f2fd" : "#e8f5e9"));
+        String strokeColor = isError ? "#d32f2f" : (isExit ? "#7e57c2" : (isEntry ? "#1976d2" : "#2e7d32"));
 
-        // 选择颜色
-        String fillColor;
-        String strokeColor;
-        if ("Exit".equalsIgnoreCase(spanType)) {
-            fillColor = "#ede7f6";
-            strokeColor = "#7e57c2";
-        } else if (isError) {
-            fillColor = "#ffcdd2";
-            strokeColor = "#d32f2f";
-        } else if (duration > 1000) {
-            fillColor = "#fff3e0";
-            strokeColor = "#f57c00";
-        } else {
-            fillColor = "#e8f5e9";
-            strokeColor = "#2e7d32";
-        }
-
-        // 生成节点标签
-        String label = String.format("%s&#xa;%s&#xa;%dms",
+        String label = String.format("%s&#xa;%s (%dms)",
                 escapeXml(service != null ? service : "unknown"),
                 escapeXml(operation != null ? operation : "unknown"),
                 duration);
 
-        // 使用全局唯一ID添加火焰图节点
         String uniqueId = generateUniqueId("flame");
-        nodeIdMap.put(spanId, uniqueId);
+        nodeIdMap.put(getUniqueSpanId(span), uniqueId);
 
         xml.append(String.format(
-                "        <mxCell id=\"%s\" value=\"%s\" style=\"rounded=1;whiteSpace=wrap;html=1;" +
-                        "fillColor=%s;strokeColor=%s;strokeWidth=2;fontSize=12;fontStyle=1\" vertex=\"1\" parent=\"1\">\n",
+                "        <mxCell id=\"%s\" value=\"%s\" style=\"rounded=0;whiteSpace=wrap;html=1;" +
+                        "fillColor=%s;strokeColor=%s;strokeWidth=1;fontSize=10;fontStyle=1;align=left;spacingLeft=4;\" vertex=\"1\" parent=\"1\">\n",
                 uniqueId, label, fillColor, strokeColor));
         xml.append(String.format(
-                "          <mxGeometry x=\"%d\" y=\"%d\" width=\"%d\" height=\"40\" as=\"geometry\" />\n",
-                x, y, width));
+                "          <mxGeometry x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" as=\"geometry\" />\n",
+                x, y, width, levelHeight - 2)); // 留出层级间的间隙
         xml.append("        </mxCell>\n");
 
-        // 查找子节点
-        List<String> childIds = new ArrayList<>();
-        for (Map.Entry<String, String> entry : parentMap.entrySet()) {
-            if (entry.getValue().equals(spanId)) {
-                childIds.add(entry.getKey());
+        // 5. 递归绘制子节点（调用栈向下增长）
+        String parentUniqueId = getUniqueSpanId(span);
+        List<String> childIds = childrenMap.getOrDefault(parentUniqueId, Collections.emptyList());
+        
+        // 保证子节点按时间顺序绘制
+        childIds.sort(Comparator.comparing(id -> (LocalDateTime) spanMap.get(id).get("start_time")));
+
+        for (String childId : childIds) {
+            Map<String, Object> childSpan = spanMap.get(childId);
+            drawFlameNode(xml, childSpan, spanMap, childrenMap, globalStartTime, timeScale, baseY, depth + 1, nodeIdMap, levelHeight);
+        }
+    }
+
+    /**
+     * 为Span生成一个在Trace内唯一的ID
+     */
+    private String getUniqueSpanId(Map<String, Object> span) {
+        return span.get("trace_segment_id") + "_" + span.get("span_id");
+    }
+
+    /**
+     * 获取Span的父级唯一ID，能处理跨服务和同服务两种情况
+     */
+    private String getParentUniqueId(Map<String, Object> span) {
+        // 优先处理跨服务的父级 (refs_*)
+        String parentSegmentId = (String) span.get("refs_parent_trace_segment_id");
+        if (parentSegmentId != null && !parentSegmentId.isEmpty() && !"\\N".equals(parentSegmentId)) {
+            Object parentSpanIdObj = span.get("refs_parent_span_id");
+            if (parentSpanIdObj != null) {
+                return parentSegmentId + "_" + parentSpanIdObj;
             }
         }
 
-        // 如果有子节点，继续递归
-        if (!childIds.isEmpty()) {
-            int childWidth = width / childIds.size();
-            int childX = x;
-            for (String childId : childIds) {
-                drawFlameNode(xml, spanMap, parentMap, childId, childX, y - 60, childWidth, nodeIdMap);
-                childX += childWidth;
+        // 处理同一服务内的父级 (parent_span_id)
+        Object parentSpanIdObj = span.get("parent_span_id");
+        if (parentSpanIdObj != null) {
+            String parentSpanId = String.valueOf(parentSpanIdObj);
+            if (!"-1".equals(parentSpanId)) {
+                return span.get("trace_segment_id") + "_" + parentSpanId;
             }
         }
+        return null;
+    }
+
+    /**
+     * 识别EntrySpan: CrossProcess引用 + parent_span_id=-1
+     */
+    private boolean isEntrySpan(Map<String, Object> span) {
+        Object refsRefType = span.get("refs_ref_type");
+        Object parentSpanId = span.get("parent_span_id");
+        return "CrossProcess".equals(refsRefType) && 
+               parentSpanId != null && "-1".equals(String.valueOf(parentSpanId));
+    }
+
+    /**
+     * 识别ExitSpan: 被其他span的refs_*字段引用
+     */
+    private boolean isExitSpan(Map<String, Object> span) {
+        // 简化版本：检查span_type字段或operation_name是否包含客户端特征
+        String spanType = (String) span.get("span_type");
+        String operationName = (String) span.get("operation_name");
+        
+        return "Exit".equalsIgnoreCase(spanType) || 
+               (operationName != null && (operationName.contains("HTTP") || operationName.contains("RPC")));
     }
 
     private String generateTreeDrawio(List<Map<String, Object>> spans) {

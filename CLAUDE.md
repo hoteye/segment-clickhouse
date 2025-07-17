@@ -135,6 +135,152 @@ java -jar flink-data-transformer-module/target/flink-data-transformer-module-1.0
 3. LLM调用失败：验证API密钥、网络连接
 4. 数据查询问题：检查表结构、时间范围
 
+## SkyWalking链路追踪分析
+
+### SkyWalking架构与数据流
+**整体架构：**
+```
+Application (应用)
+├── SkyWalking Agent (数据采集)
+│   ├── 字节码增强
+│   ├── Trace数据生成
+│   └── 上报到OAP
+├── OAP Server (数据处理)
+│   ├── 接收Agent数据
+│   ├── 数据聚合分析
+│   └── 存储到Storage
+└── Storage (数据存储)
+    ├── ClickHouse (我们的存储)
+    └── 查询接口
+```
+
+**数据模型原理：**
+```
+Trace (分布式事务全链路)
+├── TraceSegment (单JVM进程内操作)
+│   ├── EntrySpan (服务接收请求入口)
+│   ├── LocalSpan (进程内方法调用)  
+│   └── ExitSpan (对外调用出口)
+└── ContextCarrier (跨进程上下文传播)
+    ├── TraceId (全局唯一标识)
+    ├── TraceSegmentId (片段标识)
+    ├── SpanId (span标识)
+    └── Parent Service Info (父服务信息)
+```
+
+**Span类型详解：**
+- **EntrySpan**：服务接收外部请求的入口点（如Web请求、RPC调用接收端）
+- **ExitSpan**：服务向外部发起调用的出口点（如数据库查询、RPC调用发起端）
+- **LocalSpan**：服务内部方法调用（不涉及进程间通信）
+
+**上下文传播机制：**
+- 单线程内：使用ThreadLocal管理TraceContext
+- 跨线程：通过ContextSnapshot实现
+- 跨进程：通过ContextCarrier在HTTP Header或RPC参数中传递
+
+### events表结构关键信息
+- 数据库：`default.events`（不是o11y数据库）
+- 总数据量：920万+ spans，165万+ traces
+- CrossProcess spans：418万+（约45%为跨服务调用）
+
+### ref_字段分析（跨进程关系核心字段）
+```sql
+-- 关键字段说明（基于SkyWalking ContextCarrier机制）
+refs_ref_type          -- 关系类型：CrossProcess（跨服务调用）
+refs_trace_id          -- 父trace ID（保持链路连续性）
+refs_parent_trace_segment_id  -- 父segment ID（上游服务片段）
+refs_parent_span_id    -- 父span ID（上游Exit Span）
+refs_parent_service    -- 父服务名称（调用方）
+refs_parent_service_instance -- 父服务实例
+refs_parent_endpoint   -- 父端点（上游接口）
+```
+
+### 链路调用模式（基于最近2小时数据分析）
+**典型调用链路：**
+```
+crm-simulate → esb-c → esb-p → ism-server
+python-sample → esb-c → iam-server → esb-p
+```
+
+**服务清单：**
+- `crm-simulate` - CRM模拟器（入口服务）
+- `python-sample` - Python示例服务（入口服务）
+- `esb-c` - 企业服务总线-Consumer
+- `esb-p` - 企业服务总线-Provider  
+- `iam-server` - 身份认证服务
+- `ism-server` - 信息安全管理服务
+- `dubbo-consumer/provider-a/provider-b` - Dubbo服务
+
+### 链路关系识别规则（基于SkyWalking模型）
+1. **EntrySpan识别**：
+   - `refs_ref_type = 'CrossProcess'`且`parent_span_id = -1`
+   - 对应events表中接收外部请求的span（如Web接口、RPC接收端）
+
+2. **ExitSpan识别**：
+   - 发起对外调用的span，下游EntrySpan会通过refs字段引用
+   - 对应events表中数据库查询、RPC调用发起端
+
+3. **LocalSpan识别**：
+   - `refs_ref_type = NULL`且`parent_span_id != -1`
+   - 同TraceSegment内的方法调用
+
+4. **跨进程链路重构**：
+   - **上游ExitSpan** → **下游EntrySpan**通过ContextCarrier关联
+   - `refs_parent_trace_segment_id + refs_parent_span_id`精确定位父节点
+   - `refs_parent_service`标识调用来源服务
+
+5. **TraceSegment边界**：
+   - 每个服务实例的操作形成独立的TraceSegment
+   - 通过`trace_segment_id`字段识别
+
+### 数据查询示例
+```sql
+-- 查看完整调用链路
+SELECT trace_id, service, operation_name, refs_parent_service, 
+       refs_ref_type, start_time
+FROM default.events 
+WHERE trace_id = 'YOUR_TRACE_ID' 
+ORDER BY start_time;
+
+-- 统计服务间调用关系
+SELECT refs_parent_service, service, COUNT(*) as call_count
+FROM default.events 
+WHERE refs_ref_type = 'CrossProcess' 
+GROUP BY refs_parent_service, service;
+```
+
+## TraceVisualizationController改进记录
+
+### 改进内容（已完成）
+1. **完善SQL查询**：添加了缺失的SkyWalking ref_字段
+   - `refs_trace_id` - 父trace ID（链路连续性）
+   - `refs_parent_service_instance` - 父服务实例
+   - `refs_parent_endpoint` - 父端点
+   - `refs_network_address_used_at_peer` - 网络地址
+
+2. **新增SkyWalking标准Span识别方法**：
+   - `isEntrySpan()` - 基于 `refs_ref_type='CrossProcess'` + `parent_span_id=-1`
+   - `isExitSpan()` - 基于下游EntrySpan的refs字段引用关系
+   - `isLocalSpan()` - 基于 `refs_ref_type=null` + `parent_span_id!=-1`
+   - `isCrossProcessCall()` - 检查 `refs_ref_type='CrossProcess'`
+
+3. **优化链路分析算法**：
+   - `analyzeSegmentReferences()` 方法增加span类型统计
+   - 只处理真正的跨进程调用（CrossProcess类型）
+   - 新增span类型分布统计
+
+4. **新增API端点**：
+   - `GET /trace/{traceId}/skywalking-analysis` - 基于SkyWalking标准的链路结构分析
+   - 返回EntrySpan、ExitSpan、LocalSpan分类结果
+   - 提供TraceSegment边界分析
+
+### 符合性验证
+- ✅ SQL查询包含完整ref_字段
+- ✅ EntrySpan识别符合SkyWalking标准  
+- ✅ ExitSpan识别基于refs关联而非span_type
+- ✅ 正确处理CrossProcess检查
+- ✅ 链路重构算法符合SkyWalking模型
+
 ## 相关文档
 
 - [Flink模块文档](./flink-data-transformer-module/README.md)
