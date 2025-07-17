@@ -1,7 +1,6 @@
 package com.example.consumer.controller;
 
 import com.example.consumer.service.HelloServiceConsumer;
-import com.example.consumer.service.HaiServiceConsumer;
 
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
@@ -34,16 +33,13 @@ public class HelloController {
     GlobalMemory memory = hal.getMemory();
 
     private final HelloServiceConsumer helloServiceConsumer;
-    private final HaiServiceConsumer haiServiceConsumer;
 
-    public HelloController(HelloServiceConsumer helloServiceConsumer, HaiServiceConsumer haiServiceConsumer) {
+    public HelloController(HelloServiceConsumer helloServiceConsumer) {
         this.helloServiceConsumer = helloServiceConsumer;
-        this.haiServiceConsumer = haiServiceConsumer;
     }
 
     @Trace(operationName = "before-method")
     private void before(String methodName) throws InterruptedException {
-        performComplexCalculation();
         Thread.sleep(ThreadLocalRandom.current().nextInt(15, 24));
         ActiveSpan.info("Before executing method: " + methodName);
         ActiveSpan.tag("methodName", methodName);
@@ -62,7 +58,6 @@ public class HelloController {
         logger.info("开始处理sayHello请求，参数: {}", name);
 
         try {
-            haiServiceConsumer.sayHello(name);
             int delay = ThreadLocalRandom.current().nextInt(30, 91);
             Thread.sleep(delay);
             if (name.equals("somebody")) {
@@ -93,7 +88,6 @@ public class HelloController {
             "dubbo-consumer" })
     @GetMapping("/sayHai")
     public String sayHai(@RequestParam String name) throws InterruptedException {
-        haiServiceConsumer.sayHai(name);
         int delay = ThreadLocalRandom.current().nextInt(130, 291);
         Thread.sleep(delay);
         if (name.equals("somebody")) {
@@ -124,11 +118,10 @@ public class HelloController {
             }
             // 模拟一个消耗内存的操作
             List<byte[]> memoryHog = new ArrayList<>();
-            for (int i = 0; i < 90; i++) {
+            for (int i = 0; i < 70; i++) {
                 memoryHog.add(new byte[1024 * 1024]); // 每次分配 1MB 的内存
                 Thread.sleep(10); // 模拟分配的延迟
             }
-            haiServiceConsumer.sayGoodbye(name);
             int delay = ThreadLocalRandom.current().nextInt(90, 129);
             Thread.sleep(delay);
             logger.info("sayGoodbye请求处理成功，结果: {}", result);
@@ -146,17 +139,16 @@ public class HelloController {
         if (name.equals("errorbody")) {
             int b = 1 / 0; // 故意制造异常
         }
-        String result = helloServiceConsumer.sayGoodbye(name);
+        String result = helloServiceConsumer.sayThankYou(name);
         if ("Lisa Moore".equals(name)) {
-            after("sayGoodbye");
+            after("sayThankYou");
         }
         // 模拟一个消耗内存的操作
         List<byte[]> memoryHog = new ArrayList<>();
-        for (int i = 0; i < 90; i++) {
+        for (int i = 0; i < 70; i++) {
             memoryHog.add(new byte[1024 * 1024]); // 每次分配 1MB 的内存
             Thread.sleep(10); // 模拟分配的延迟
         }
-        haiServiceConsumer.sayGoodbye(name);
         int delay = ThreadLocalRandom.current().nextInt(90, 129);
         Thread.sleep(delay);
         return result;
@@ -187,13 +179,6 @@ public class HelloController {
             after("sayGoodMorning");
         }
         return result;
-    }
-
-    // 模拟计算密集型任务
-    protected void performComplexCalculation() {
-        for (int i = 10; i < 100000; i++) {
-            double result = Math.sqrt(i) * Math.log(i);
-        }
     }
 
 }

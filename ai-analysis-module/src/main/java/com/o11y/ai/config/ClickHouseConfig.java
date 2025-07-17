@@ -25,6 +25,12 @@ public class ClickHouseConfig {
     @Value("${clickhouse.connection.password}")
     private String password;
 
+    @Value("${clickhouse.connection.socket-timeout:60000}")
+    private int socketTimeout;
+
+    @Value("${clickhouse.connection.connection-timeout:20000}")
+    private int connectionTimeout;
+
     /**
      * ClickHouse 数据源配置
      */
@@ -35,12 +41,19 @@ public class ClickHouseConfig {
         dataSource.setUrl(url);
         dataSource.setUsername(username);
         dataSource.setPassword(password);
+
         // ClickHouse 连接属性
         java.util.Properties props = new java.util.Properties();
-        props.setProperty("socket_timeout", "30000");
-        props.setProperty("connection_timeout", "10000");
+        props.setProperty("socket_timeout", String.valueOf(socketTimeout));
+        props.setProperty("connection_timeout", String.valueOf(connectionTimeout));
         props.setProperty("compress", "true");
         props.setProperty("decompress", "true");
+        props.setProperty("use_server_time_zone", "true");
+        props.setProperty("use_time_zone", "UTC+8");
+        props.setProperty("max_execution_time", "60"); // 查询超时时间（秒）
+        props.setProperty("connect_timeout", String.valueOf(connectionTimeout));
+        props.setProperty("max_total_rows_to_read", "1000000");
+        props.setProperty("max_result_rows", "100000");
         dataSource.setConnectionProperties(props);
 
         return dataSource;
@@ -51,6 +64,8 @@ public class ClickHouseConfig {
      */
     @Bean
     public JdbcTemplate clickHouseJdbcTemplate() {
-        return new JdbcTemplate(clickHouseDataSource());
+        JdbcTemplate template = new JdbcTemplate(clickHouseDataSource());
+        template.setQueryTimeout(60); // 设置查询超时时间为60秒
+        return template;
     }
 }

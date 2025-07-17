@@ -8,11 +8,6 @@ WORKDIR /app
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# 设置 SkyWalking 环境变量 - 支持容器环境
-ENV SW_AGENT_NAME=dubbo-consumer
-ENV SW_AGENT_COLLECTOR_BACKEND_SERVICES=skywalking-oap-server:11800
-ENV SW_GRPC_LOG_SERVER_HOST=skywalking-oap-server:11800
-ENV SW_GRPC_LOG_SERVER_PORT=11800
 
 # 传递版本号参数并写入环境变量
 ARG JAR_VERSION

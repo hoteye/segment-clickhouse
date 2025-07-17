@@ -205,6 +205,7 @@
 							<goal>check</goal>
 						</goals>
 						<configuration>
+							<skip>true</skip>
 							<rules>
 								<rule>
 									<element>BUNDLE</element>

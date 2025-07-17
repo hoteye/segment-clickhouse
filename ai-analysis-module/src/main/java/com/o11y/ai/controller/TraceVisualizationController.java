@@ -293,7 +293,6 @@ public class TraceVisualizationController {
                 "trace_id, " +
                 "trace_segment_id, " +
                 "service, " +
-                "service_instance, " +
                 "operation_name, " +
                 "span_id, " +
                 "parent_span_id, " +
@@ -303,29 +302,14 @@ public class TraceVisualizationController {
                 "is_error, " +
                 "span_type, " +
                 "span_layer, " +
-                "component_id, " +
-                "tag_status_code, " +
-                "tag_http_method, " +
-                "tag_http_url, " +
-                "tag_db_type, " +
-                "tag_db_statement, " +
-                "tag_error_message, " +
-                "log_error_kind, " +
-                "log_message, " +
-                "log_stack, " +
-                // SegmentReference 相关字段 - 服务间关系的关键
-                "refs_ref_type, " +
-                "refs_trace_id, " +
                 "refs_parent_trace_segment_id, " +
                 "refs_parent_span_id, " +
-                "refs_parent_service, " +
-                "refs_parent_service_instance, " +
-                "refs_parent_endpoint, " +
-                "refs_network_address_used_at_peer " +
+                "refs_parent_service " +
                 "FROM events " +
-                "WHERE trace_id = ? " +
-                "AND start_time >= now() - INTERVAL 1 DAY " +
-                "ORDER BY start_time, span_id";
+                "PREWHERE trace_id = ? " +
+                "WHERE start_time >= now() - INTERVAL 1 DAY " +
+                "ORDER BY start_time, span_id " +
+                "SETTINGS max_execution_time=3, max_bytes_before_external_group_by=2147483648";
 
         return clickHouseJdbcTemplate.queryForList(sql, traceId);
     }
@@ -858,7 +842,7 @@ public class TraceVisualizationController {
                     "MAX(start_time) as latest_time " +
                     "FROM events " +
                     "WHERE start_time >= now() - INTERVAL 1 HOUR " +
-                    "AND service IN ('python-sample', 'dubbo-consumer', 'dubbo-provider-a', 'dubbo-provider-b')";
+                    "SETTINGS max_execution_time=3";
 
             List<Map<String, Object>> result = clickHouseJdbcTemplate.queryForList(sql);
             Map<String, Object> stats = result.isEmpty() ? Map.of() : result.get(0);
@@ -884,7 +868,6 @@ public class TraceVisualizationController {
         long startTime = System.currentTimeMillis();
 
         try {
-            // 链路列表：只显示最近18笔交易
             String sql = "SELECT " +
                     "trace_id, " +
                     "COUNT(*) as span_count, " +
@@ -895,13 +878,15 @@ public class TraceVisualizationController {
                     "groupArray(DISTINCT service) as services " +
                     "FROM events " +
                     "PREWHERE toDate(start_time) >= toDate(now() - INTERVAL 1 HOUR) " +
-                    "WHERE start_time >= now() - INTERVAL 1 HOUR " +
                     "AND service IN ('python-sample', 'dubbo-consumer', 'dubbo-provider-a', 'dubbo-provider-b') " +
+                    "WHERE start_time >= now() - INTERVAL 1 HOUR " +
                     "GROUP BY trace_id " +
                     "HAVING span_count > 1 " +
                     "ORDER BY trace_start DESC " +
                     "LIMIT 18 " +
-                    "SETTINGS max_execution_time=10, max_bytes_before_external_group_by=2147483648";
+                    "SETTINGS max_execution_time=3, " +
+                    "max_bytes_before_external_group_by=2147483648, " +
+                    "max_memory_usage=10000000000";
 
             List<Map<String, Object>> traces = clickHouseJdbcTemplate.queryForList(sql);
 
@@ -1521,12 +1506,13 @@ public class TraceVisualizationController {
             int currentY = 120;
             for (String service : sortedServices) {
                 List<Map<String, Object>> serviceSpanList = serviceSpans.get(service);
-                
+
                 // 绘制服务标题行
                 drawServiceHeader(xml, service, currentY);
-                
+
                 // 绘制该服务的所有spans（按层次结构）
-                currentY = drawServiceSpans(xml, serviceSpanList, spanHierarchy, minTime, totalDurationMs, currentY, nodeIdMap);
+                currentY = drawServiceSpans(xml, serviceSpanList, spanHierarchy, minTime, totalDurationMs, currentY,
+                        nodeIdMap);
                 currentY += 40; // 服务间间距
             }
 
@@ -1548,7 +1534,7 @@ public class TraceVisualizationController {
      */
     private Map<String, List<Map<String, Object>>> buildSpanHierarchy(List<Map<String, Object>> spans) {
         Map<String, List<Map<String, Object>>> hierarchy = new HashMap<>();
-        
+
         // 按segment分组
         Map<String, List<Map<String, Object>>> segmentSpans = spans.stream()
                 .collect(Collectors.groupingBy(span -> (String) span.get("trace_segment_id")));
@@ -1556,12 +1542,12 @@ public class TraceVisualizationController {
         for (List<Map<String, Object>> segmentSpanList : segmentSpans.values()) {
             // 在每个segment内部构建父子关系
             Map<String, List<Map<String, Object>>> childrenMap = new HashMap<>();
-            
+
             for (Map<String, Object> span : segmentSpanList) {
                 String spanId = String.valueOf(span.get("span_id"));
                 Object parentSpanIdObj = span.get("parent_span_id");
                 String parentSpanId = parentSpanIdObj != null ? String.valueOf(parentSpanIdObj) : null;
-                
+
                 if (parentSpanId != null && !"-1".equals(parentSpanId)) {
                     String parentKey = span.get("trace_segment_id") + "_" + parentSpanId;
                     childrenMap.computeIfAbsent(parentKey, k -> new ArrayList<>()).add(span);
@@ -1571,11 +1557,11 @@ public class TraceVisualizationController {
                     hierarchy.computeIfAbsent(rootKey, k -> new ArrayList<>()).add(span);
                 }
             }
-            
+
             // 将子span关系加入hierarchy
             hierarchy.putAll(childrenMap);
         }
-        
+
         return hierarchy;
     }
 
@@ -1584,12 +1570,12 @@ public class TraceVisualizationController {
      */
     private List<String> sortServicesByDependency(List<Map<String, Object>> spans, Set<String> allServices) {
         Map<String, Set<String>> dependencies = new HashMap<>();
-        
+
         // 构建服务依赖关系
         for (Map<String, Object> span : spans) {
             String service = (String) span.get("service");
             String refsParentService = (String) span.get("refs_parent_service");
-            
+
             if (refsParentService != null && !"\\N".equals(refsParentService) && !refsParentService.equals(service)) {
                 dependencies.computeIfAbsent(refsParentService, k -> new HashSet<>()).add(service);
             }
@@ -1607,8 +1593,8 @@ public class TraceVisualizationController {
         return sorted;
     }
 
-    private void topologicalSort(String service, Map<String, Set<String>> dependencies, 
-                                 List<String> sorted, Set<String> visited, Set<String> visiting) {
+    private void topologicalSort(String service, Map<String, Set<String>> dependencies,
+            List<String> sorted, Set<String> visited, Set<String> visiting) {
         if (visiting.contains(service)) {
             return; // 检测到循环依赖
         }
@@ -1617,12 +1603,12 @@ public class TraceVisualizationController {
         }
 
         visiting.add(service);
-        
+
         Set<String> dependents = dependencies.getOrDefault(service, new HashSet<>());
         for (String dependent : dependents) {
             topologicalSort(dependent, dependencies, sorted, visited, visiting);
         }
-        
+
         visiting.remove(service);
         visited.add(service);
         sorted.add(0, service); // 添加到前面
@@ -1634,14 +1620,14 @@ public class TraceVisualizationController {
     private void drawTimeAxis(StringBuilder xml, LocalDateTime minTime, LocalDateTime maxTime, long totalDurationMs) {
         // 时间轴背景
         xml.append("        <mxCell id=\"timeaxis_bg\" value=\"\" style=\"rounded=0;whiteSpace=wrap;html=1;" +
-                   "fillColor=#f5f5f5;strokeColor=#d5d5d5;strokeWidth=1\" vertex=\"1\" parent=\"1\">\n");
+                "fillColor=#f5f5f5;strokeColor=#d5d5d5;strokeWidth=1\" vertex=\"1\" parent=\"1\">\n");
         xml.append("          <mxGeometry x=\"200\" y=\"50\" width=\"1000\" height=\"40\" as=\"geometry\" />\n");
         xml.append("        </mxCell>\n");
 
         // 时间标签
         xml.append("        <mxCell id=\"timeaxis_label\" value=\"时间轴 (总耗时: " + totalDurationMs + "ms)\" " +
-                   "style=\"text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;" +
-                   "whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1\" vertex=\"1\" parent=\"1\">\n");
+                "style=\"text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;" +
+                "whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1\" vertex=\"1\" parent=\"1\">\n");
         xml.append("          <mxGeometry x=\"200\" y=\"55\" width=\"1000\" height=\"30\" as=\"geometry\" />\n");
         xml.append("        </mxCell>\n");
 
@@ -1651,16 +1637,17 @@ public class TraceVisualizationController {
             for (int i = 0; i <= tickCount; i++) {
                 long tickTimeMs = (totalDurationMs * i) / tickCount;
                 int x = 200 + (1000 * i) / tickCount;
-                
+
                 xml.append("        <mxCell id=\"tick_" + i + "\" value=\"" + tickTimeMs + "ms\" " +
-                           "style=\"text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;" +
-                           "whiteSpace=wrap;rounded=0;fontSize=10\" vertex=\"1\" parent=\"1\">\n");
-                xml.append("          <mxGeometry x=\"" + (x - 25) + "\" y=\"90\" width=\"50\" height=\"20\" as=\"geometry\" />\n");
+                        "style=\"text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;" +
+                        "whiteSpace=wrap;rounded=0;fontSize=10\" vertex=\"1\" parent=\"1\">\n");
+                xml.append("          <mxGeometry x=\"" + (x - 25)
+                        + "\" y=\"90\" width=\"50\" height=\"20\" as=\"geometry\" />\n");
                 xml.append("        </mxCell>\n");
-                
+
                 // 垂直刻度线
                 xml.append("        <mxCell id=\"tickline_" + i + "\" value=\"\" style=\"endArrow=none;html=1;" +
-                           "strokeColor=#cccccc;strokeWidth=1\" edge=\"1\" parent=\"1\">\n");
+                        "strokeColor=#cccccc;strokeWidth=1\" edge=\"1\" parent=\"1\">\n");
                 xml.append("          <mxGeometry relative=\"1\" as=\"geometry\">\n");
                 xml.append("            <mxPoint x=\"" + x + "\" y=\"90\" as=\"sourcePoint\" />\n");
                 xml.append("            <mxPoint x=\"" + x + "\" y=\"800\" as=\"targetPoint\" />\n");
@@ -1676,8 +1663,8 @@ public class TraceVisualizationController {
     private void drawServiceHeader(StringBuilder xml, String service, int y) {
         String serviceId = generateUniqueId("service_header");
         xml.append("        <mxCell id=\"" + serviceId + "\" value=\"" + escapeXml(service) + "\" " +
-                   "style=\"rounded=0;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1976d2;" +
-                   "strokeWidth=2;fontSize=14;fontStyle=1;align=left;spacingLeft=10\" vertex=\"1\" parent=\"1\">\n");
+                "style=\"rounded=0;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1976d2;" +
+                "strokeWidth=2;fontSize=14;fontStyle=1;align=left;spacingLeft=10\" vertex=\"1\" parent=\"1\">\n");
         xml.append("          <mxGeometry x=\"20\" y=\"" + y + "\" width=\"170\" height=\"30\" as=\"geometry\" />\n");
         xml.append("        </mxCell>\n");
     }
@@ -1685,44 +1672,45 @@ public class TraceVisualizationController {
     /**
      * 绘制服务的所有spans
      */
-    private int drawServiceSpans(StringBuilder xml, List<Map<String, Object>> serviceSpanList, 
-                                Map<String, List<Map<String, Object>>> spanHierarchy,
-                                LocalDateTime minTime, long totalDurationMs, int startY,
-                                Map<String, String> nodeIdMap) {
-        
+    private int drawServiceSpans(StringBuilder xml, List<Map<String, Object>> serviceSpanList,
+            Map<String, List<Map<String, Object>>> spanHierarchy,
+            LocalDateTime minTime, long totalDurationMs, int startY,
+            Map<String, String> nodeIdMap) {
+
         int currentY = startY + 35; // 从服务标题下方开始
-        
+
         // 按span类型分组：Entry、Exit、Local
         Map<String, List<Map<String, Object>>> spansByType = serviceSpanList.stream()
                 .collect(Collectors.groupingBy(span -> (String) span.get("span_type")));
-        
+
         List<Map<String, Object>> entrySpans = spansByType.getOrDefault("Entry", new ArrayList<>());
         List<Map<String, Object>> exitSpans = spansByType.getOrDefault("Exit", new ArrayList<>());
         List<Map<String, Object>> localSpans = spansByType.getOrDefault("Local", new ArrayList<>());
-        
+
         // 如果该服务有Entry span，则需要特殊嵌套布局（Exit和Local都内嵌到Entry中）
         if (!entrySpans.isEmpty()) {
             // 绘制Entry spans（作为容器），Exit spans和Local spans内嵌其中
             for (Map<String, Object> entrySpan : entrySpans) {
                 List<Map<String, Object>> relatedExitSpans = findRelatedExitSpans(entrySpan, exitSpans);
                 List<Map<String, Object>> relatedLocalSpans = findRelatedLocalSpans(entrySpan, localSpans);
-                
+
                 // 计算内嵌span总数（Exit + Local）
                 int embeddedSpanCount = relatedExitSpans.size() + relatedLocalSpans.size();
-                
+
                 // 绘制Entry span容器（根据内部span数量调整高度）
                 int entrySpanHeight = Math.max(35, 35 + embeddedSpanCount * 30); // 基础高度35 + 每个内嵌span 30
-                drawEntrySpanWithEmbeddedSpans(xml, entrySpan, relatedExitSpans, relatedLocalSpans, minTime, totalDurationMs, currentY, entrySpanHeight, nodeIdMap);
+                drawEntrySpanWithEmbeddedSpans(xml, entrySpan, relatedExitSpans, relatedLocalSpans, minTime,
+                        totalDurationMs, currentY, entrySpanHeight, nodeIdMap);
                 currentY += entrySpanHeight + 10; // Entry span高度 + 间距
             }
-            
+
             // 绘制没有关联Entry span的独立Exit spans
             List<Map<String, Object>> independentExitSpans = findIndependentExitSpans(entrySpans, exitSpans);
             for (Map<String, Object> exitSpan : independentExitSpans) {
                 drawSingleSpan(xml, exitSpan, minTime, totalDurationMs, currentY, 0, nodeIdMap);
                 currentY += 35;
             }
-            
+
             // 绘制没有关联Entry span的独立Local spans
             List<Map<String, Object>> independentLocalSpans = findIndependentLocalSpans(entrySpans, localSpans);
             for (Map<String, Object> localSpan : independentLocalSpans) {
@@ -1739,34 +1727,34 @@ public class TraceVisualizationController {
                     .collect(Collectors.toList());
 
             for (Map<String, Object> rootSpan : rootSpans) {
-                currentY = drawSpanWithChildren(xml, rootSpan, spanHierarchy, minTime, totalDurationMs, 
-                                              currentY, 0, nodeIdMap);
+                currentY = drawSpanWithChildren(xml, rootSpan, spanHierarchy, minTime, totalDurationMs,
+                        currentY, 0, nodeIdMap);
             }
         }
-        
+
         return currentY;
     }
 
     /**
      * 绘制Entry span并在其内部嵌入Exit spans和Local spans
      */
-    private void drawEntrySpanWithEmbeddedSpans(StringBuilder xml, Map<String, Object> entrySpan, 
-                                              List<Map<String, Object>> exitSpans, List<Map<String, Object>> localSpans,
-                                              LocalDateTime minTime, long totalDurationMs, int y, int height, 
-                                              Map<String, String> nodeIdMap) {
-        
+    private void drawEntrySpanWithEmbeddedSpans(StringBuilder xml, Map<String, Object> entrySpan,
+            List<Map<String, Object>> exitSpans, List<Map<String, Object>> localSpans,
+            LocalDateTime minTime, long totalDurationMs, int y, int height,
+            Map<String, String> nodeIdMap) {
+
         // 绘制Entry span作为容器（更大的矩形）
         drawEntrySpanContainer(xml, entrySpan, minTime, totalDurationMs, y, height, nodeIdMap);
-        
+
         // 在Entry span内部绘制Exit spans和Local spans
         int embeddedY = y + 25; // Entry span顶部下方留一些空间
-        
+
         // 先绘制Exit spans
         for (Map<String, Object> exitSpan : exitSpans) {
             drawEmbeddedExitSpan(xml, exitSpan, minTime, totalDurationMs, embeddedY, nodeIdMap);
             embeddedY += 30; // span之间的间距
         }
-        
+
         // 再绘制Local spans
         for (Map<String, Object> localSpan : localSpans) {
             drawEmbeddedLocalSpan(xml, localSpan, minTime, totalDurationMs, embeddedY, nodeIdMap);
@@ -1777,151 +1765,154 @@ public class TraceVisualizationController {
     /**
      * 绘制Entry span容器
      */
-    private void drawEntrySpanContainer(StringBuilder xml, Map<String, Object> entrySpan, LocalDateTime minTime, 
-                                      long totalDurationMs, int y, int height, Map<String, String> nodeIdMap) {
-        
+    private void drawEntrySpanContainer(StringBuilder xml, Map<String, Object> entrySpan, LocalDateTime minTime,
+            long totalDurationMs, int y, int height, Map<String, String> nodeIdMap) {
+
         String operation = (String) entrySpan.get("operation_name");
         long duration = ((Number) entrySpan.get("duration_ms")).longValue();
         boolean isError = entrySpan.get("is_error") != null && ((Number) entrySpan.get("is_error")).intValue() > 0;
         LocalDateTime startTime = (LocalDateTime) entrySpan.get("start_time");
-        
+
         // 计算时间轴位置
         long offsetMs = java.time.Duration.between(minTime, startTime).toMillis();
         int spanX = totalDurationMs > 0 ? (int) (1000 * offsetMs / totalDurationMs) + 200 : 200;
         int spanWidth = totalDurationMs > 0 ? (int) Math.max(100, 1000 * duration / totalDurationMs) : 150;
-        
+
         // Entry span颜色
         String fillColor = isError ? "#ffcdd2" : "#c8e6c9"; // 绿色系
         String strokeColor = isError ? "#d32f2f" : "#4caf50";
-        
+
         String spanId = generateUniqueId("entry_container");
         nodeIdMap.put(entrySpan.get("trace_segment_id") + "_" + entrySpan.get("span_id"), spanId);
-        
+
         // 绘制Entry span容器矩形
         xml.append(String.format(
                 "        <mxCell id=\"%s\" value=\"%s\\n🟢 Entry | %dms%s\" " +
-                        "style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=%s;strokeColor=%s;strokeWidth=2;fontSize=10;fontStyle=1;\" " +
+                        "style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=%s;strokeColor=%s;strokeWidth=2;fontSize=10;fontStyle=1;\" "
+                        +
                         "vertex=\"1\" parent=\"1\">\n",
                 spanId,
-                operation != null ? operation.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") : "Unknown",
+                operation != null ? operation.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        : "Unknown",
                 duration,
                 isError ? " ❌" : "",
                 fillColor,
-                strokeColor
-        ));
-        
+                strokeColor));
+
         xml.append(String.format(
                 "          <mxGeometry x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" as=\"geometry\" />\n",
-                spanX, y, spanWidth, height
-        ));
-        
+                spanX, y, spanWidth, height));
+
         xml.append("        </mxCell>\n");
     }
 
     /**
      * 绘制内嵌的Exit span
      */
-    private void drawEmbeddedExitSpan(StringBuilder xml, Map<String, Object> exitSpan, LocalDateTime minTime, 
-                                    long totalDurationMs, int y, Map<String, String> nodeIdMap) {
-        
+    private void drawEmbeddedExitSpan(StringBuilder xml, Map<String, Object> exitSpan, LocalDateTime minTime,
+            long totalDurationMs, int y, Map<String, String> nodeIdMap) {
+
         String operation = (String) exitSpan.get("operation_name");
         long duration = ((Number) exitSpan.get("duration_ms")).longValue();
         boolean isError = exitSpan.get("is_error") != null && ((Number) exitSpan.get("is_error")).intValue() > 0;
         LocalDateTime startTime = (LocalDateTime) exitSpan.get("start_time");
-        
+
         // 计算时间轴位置（内嵌的Exit span稍微缩进）
         long offsetMs = java.time.Duration.between(minTime, startTime).toMillis();
         int spanX = totalDurationMs > 0 ? (int) (1000 * offsetMs / totalDurationMs) + 220 : 220; // 向右缩进20px
         int spanWidth = totalDurationMs > 0 ? (int) Math.max(80, 1000 * duration / totalDurationMs - 40) : 120; // 宽度稍小
-        
+
         // Exit span颜色
         String fillColor = isError ? "#ffcdd2" : "#e1bee7"; // 紫色系
         String strokeColor = isError ? "#d32f2f" : "#9c27b0";
-        
+
         String spanId = generateUniqueId("embedded_exit");
         nodeIdMap.put(exitSpan.get("trace_segment_id") + "_" + exitSpan.get("span_id"), spanId);
-        
+
         // 绘制内嵌Exit span矩形
         xml.append(String.format(
                 "        <mxCell id=\"%s\" value=\"%s\\n🟣 Exit | %dms%s\" " +
-                        "style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=%s;strokeColor=%s;strokeWidth=1;fontSize=9;\" " +
+                        "style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=%s;strokeColor=%s;strokeWidth=1;fontSize=9;\" "
+                        +
                         "vertex=\"1\" parent=\"1\">\n",
                 spanId,
-                operation != null ? operation.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") : "Unknown",
+                operation != null ? operation.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        : "Unknown",
                 duration,
                 isError ? " ❌" : "",
                 fillColor,
-                strokeColor
-        ));
-        
+                strokeColor));
+
         xml.append(String.format(
                 "          <mxGeometry x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" as=\"geometry\" />\n",
                 spanX, y, spanWidth, 25 // 内嵌Exit span高度固定为25
         ));
-        
+
         xml.append("        </mxCell>\n");
     }
 
     /**
      * 绘制内嵌的Local span
      */
-    private void drawEmbeddedLocalSpan(StringBuilder xml, Map<String, Object> localSpan, LocalDateTime minTime, 
-                                     long totalDurationMs, int y, Map<String, String> nodeIdMap) {
-        
+    private void drawEmbeddedLocalSpan(StringBuilder xml, Map<String, Object> localSpan, LocalDateTime minTime,
+            long totalDurationMs, int y, Map<String, String> nodeIdMap) {
+
         String operation = (String) localSpan.get("operation_name");
         long duration = ((Number) localSpan.get("duration_ms")).longValue();
         boolean isError = localSpan.get("is_error") != null && ((Number) localSpan.get("is_error")).intValue() > 0;
         LocalDateTime startTime = (LocalDateTime) localSpan.get("start_time");
-        
+
         // 计算时间轴位置（内嵌的Local span稍微缩进）
         long offsetMs = java.time.Duration.between(minTime, startTime).toMillis();
         int spanX = totalDurationMs > 0 ? (int) (1000 * offsetMs / totalDurationMs) + 220 : 220; // 向右缩进20px
         int spanWidth = totalDurationMs > 0 ? (int) Math.max(80, 1000 * duration / totalDurationMs - 40) : 120; // 宽度稍小
-        
+
         // Local span颜色
         String fillColor = isError ? "#ffcdd2" : "#fff3e0"; // 橙色系
         String strokeColor = isError ? "#d32f2f" : "#ff9800";
-        
+
         String spanId = generateUniqueId("embedded_local");
         nodeIdMap.put(localSpan.get("trace_segment_id") + "_" + localSpan.get("span_id"), spanId);
-        
+
         // 绘制内嵌Local span矩形
         xml.append(String.format(
                 "        <mxCell id=\"%s\" value=\"%s\\n🟠 Local | %dms%s\" " +
-                        "style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=%s;strokeColor=%s;strokeWidth=1;fontSize=9;\" " +
+                        "style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=%s;strokeColor=%s;strokeWidth=1;fontSize=9;\" "
+                        +
                         "vertex=\"1\" parent=\"1\">\n",
                 spanId,
-                operation != null ? operation.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") : "Unknown",
+                operation != null ? operation.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        : "Unknown",
                 duration,
                 isError ? " ❌" : "",
                 fillColor,
-                strokeColor
-        ));
-        
+                strokeColor));
+
         xml.append(String.format(
                 "          <mxGeometry x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" as=\"geometry\" />\n",
                 spanX, y, spanWidth, 25 // 内嵌Local span高度固定为25
         ));
-        
+
         xml.append("        </mxCell>\n");
     }
 
     /**
      * 找到与Entry span相关的Exit spans（基于父子关系）
      */
-    private List<Map<String, Object>> findRelatedExitSpans(Map<String, Object> entrySpan, List<Map<String, Object>> exitSpans) {
+    private List<Map<String, Object>> findRelatedExitSpans(Map<String, Object> entrySpan,
+            List<Map<String, Object>> exitSpans) {
         String entrySegmentId = (String) entrySpan.get("trace_segment_id");
         String entrySpanId = String.valueOf(entrySpan.get("span_id"));
-        
+
         return exitSpans.stream()
                 .filter(exitSpan -> {
                     String exitSegmentId = (String) exitSpan.get("trace_segment_id");
                     Object exitParentSpanId = exitSpan.get("parent_span_id");
-                    
+
                     // 同segment内且Exit span的parent_span_id等于Entry span的span_id
-                    return entrySegmentId.equals(exitSegmentId) && 
-                           exitParentSpanId != null && 
-                           entrySpanId.equals(String.valueOf(exitParentSpanId));
+                    return entrySegmentId.equals(exitSegmentId) &&
+                            exitParentSpanId != null &&
+                            entrySpanId.equals(String.valueOf(exitParentSpanId));
                 })
                 .collect(Collectors.toList());
     }
@@ -1929,19 +1920,20 @@ public class TraceVisualizationController {
     /**
      * 找到与Entry span相关的Local spans（基于父子关系）
      */
-    private List<Map<String, Object>> findRelatedLocalSpans(Map<String, Object> entrySpan, List<Map<String, Object>> localSpans) {
+    private List<Map<String, Object>> findRelatedLocalSpans(Map<String, Object> entrySpan,
+            List<Map<String, Object>> localSpans) {
         String entrySegmentId = (String) entrySpan.get("trace_segment_id");
         String entrySpanId = String.valueOf(entrySpan.get("span_id"));
-        
+
         return localSpans.stream()
                 .filter(localSpan -> {
                     String localSegmentId = (String) localSpan.get("trace_segment_id");
                     Object localParentSpanId = localSpan.get("parent_span_id");
-                    
+
                     // 同segment内且Local span的parent_span_id等于Entry span的span_id
-                    return entrySegmentId.equals(localSegmentId) && 
-                           localParentSpanId != null && 
-                           entrySpanId.equals(String.valueOf(localParentSpanId));
+                    return entrySegmentId.equals(localSegmentId) &&
+                            localParentSpanId != null &&
+                            entrySpanId.equals(String.valueOf(localParentSpanId));
                 })
                 .collect(Collectors.toList());
     }
@@ -1949,14 +1941,15 @@ public class TraceVisualizationController {
     /**
      * 找到没有关联Entry span的独立Exit spans
      */
-    private List<Map<String, Object>> findIndependentExitSpans(List<Map<String, Object>> entrySpans, List<Map<String, Object>> exitSpans) {
+    private List<Map<String, Object>> findIndependentExitSpans(List<Map<String, Object>> entrySpans,
+            List<Map<String, Object>> exitSpans) {
         Set<Map<String, Object>> relatedExitSpans = new HashSet<>();
-        
+
         // 收集所有已经关联的Exit spans
         for (Map<String, Object> entrySpan : entrySpans) {
             relatedExitSpans.addAll(findRelatedExitSpans(entrySpan, exitSpans));
         }
-        
+
         // 返回未关联的Exit spans
         return exitSpans.stream()
                 .filter(exitSpan -> !relatedExitSpans.contains(exitSpan))
@@ -1966,14 +1959,15 @@ public class TraceVisualizationController {
     /**
      * 找到没有关联Entry span的独立Local spans
      */
-    private List<Map<String, Object>> findIndependentLocalSpans(List<Map<String, Object>> entrySpans, List<Map<String, Object>> localSpans) {
+    private List<Map<String, Object>> findIndependentLocalSpans(List<Map<String, Object>> entrySpans,
+            List<Map<String, Object>> localSpans) {
         Set<Map<String, Object>> relatedLocalSpans = new HashSet<>();
-        
+
         // 收集所有已经关联的Local spans
         for (Map<String, Object> entrySpan : entrySpans) {
             relatedLocalSpans.addAll(findRelatedLocalSpans(entrySpan, localSpans));
         }
-        
+
         // 返回未关联的Local spans
         return localSpans.stream()
                 .filter(localSpan -> !relatedLocalSpans.contains(localSpan))
@@ -1984,34 +1978,34 @@ public class TraceVisualizationController {
      * 递归绘制span及其子span
      */
     private int drawSpanWithChildren(StringBuilder xml, Map<String, Object> span,
-                                   Map<String, List<Map<String, Object>>> spanHierarchy,
-                                   LocalDateTime minTime, long totalDurationMs, int y, int indentLevel,
-                                   Map<String, String> nodeIdMap) {
-        
+            Map<String, List<Map<String, Object>>> spanHierarchy,
+            LocalDateTime minTime, long totalDurationMs, int y, int indentLevel,
+            Map<String, String> nodeIdMap) {
+
         // 绘制当前span
         drawSingleSpan(xml, span, minTime, totalDurationMs, y, indentLevel, nodeIdMap);
         int currentY = y + 35;
-        
+
         // 绘制子spans
         String segmentId = (String) span.get("trace_segment_id");
         String spanId = String.valueOf(span.get("span_id"));
         String spanKey = segmentId + "_" + spanId;
-        
+
         List<Map<String, Object>> children = spanHierarchy.getOrDefault(spanKey, new ArrayList<>());
         for (Map<String, Object> child : children) {
-            currentY = drawSpanWithChildren(xml, child, spanHierarchy, minTime, totalDurationMs, 
-                                          currentY, indentLevel + 1, nodeIdMap);
+            currentY = drawSpanWithChildren(xml, child, spanHierarchy, minTime, totalDurationMs,
+                    currentY, indentLevel + 1, nodeIdMap);
         }
-        
+
         return currentY;
     }
 
     /**
      * 绘制单个span
      */
-    private void drawSingleSpan(StringBuilder xml, Map<String, Object> span, LocalDateTime minTime, 
-                              long totalDurationMs, int y, int indentLevel, Map<String, String> nodeIdMap) {
-        
+    private void drawSingleSpan(StringBuilder xml, Map<String, Object> span, LocalDateTime minTime,
+            long totalDurationMs, int y, int indentLevel, Map<String, String> nodeIdMap) {
+
         String operation = (String) span.get("operation_name");
         String spanType = (String) span.get("span_type");
         long duration = ((Number) span.get("duration_ms")).longValue();
@@ -2020,15 +2014,15 @@ public class TraceVisualizationController {
         String statusCode = (String) span.get("tag_status_code");
         String httpMethod = (String) span.get("tag_http_method");
         String httpUrl = (String) span.get("tag_http_url");
-        
+
         // 计算时间轴位置
         long offsetMs = java.time.Duration.between(minTime, startTime).toMillis();
         int spanX = totalDurationMs > 0 ? (int) (1000 * offsetMs / totalDurationMs) + 200 : 200;
         int spanWidth = totalDurationMs > 0 ? (int) Math.max(20, 1000 * duration / totalDurationMs) : 100;
-        
+
         // 根据缩进调整Y位置（子span略微缩进）
         int spanY = y + (indentLevel * 2);
-        
+
         // 根据span类型选择颜色
         String fillColor, strokeColor, textColor = "#000000";
         switch (spanType != null ? spanType.toLowerCase() : "unknown") {
@@ -2048,12 +2042,12 @@ public class TraceVisualizationController {
                 fillColor = isError ? "#ffcdd2" : "#f5f5f5"; // 灰色系 - 未知类型
                 strokeColor = isError ? "#d32f2f" : "#9e9e9e";
         }
-        
+
         // 构建标签文本
         StringBuilder labelBuilder = new StringBuilder();
         labelBuilder.append(escapeXml(operation != null ? operation : "unknown"));
         labelBuilder.append("&#xa;").append(duration).append("ms");
-        
+
         if (spanType != null) {
             labelBuilder.append(" [").append(spanType.toUpperCase()).append("]");
         }
@@ -2063,27 +2057,28 @@ public class TraceVisualizationController {
         if (httpMethod != null) {
             labelBuilder.append("&#xa;").append(httpMethod);
         }
-        
+
         String spanUniqueId = generateUniqueId("span");
         nodeIdMap.put(span.get("trace_segment_id") + "_" + span.get("span_id"), spanUniqueId);
-        
+
         // 绘制span矩形
         xml.append("        <mxCell id=\"").append(spanUniqueId).append("\" value=\"").append(labelBuilder.toString())
-           .append("\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=").append(fillColor)
-           .append(";strokeColor=").append(strokeColor).append(";strokeWidth=2;fontSize=11;fontStyle=")
-           .append(isError ? "1" : "0").append(";align=left;spacingLeft=5;verticalAlign=top;spacingTop=3\" vertex=\"1\" parent=\"1\">\n");
+                .append("\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=").append(fillColor)
+                .append(";strokeColor=").append(strokeColor).append(";strokeWidth=2;fontSize=11;fontStyle=")
+                .append(isError ? "1" : "0")
+                .append(";align=left;spacingLeft=5;verticalAlign=top;spacingTop=3\" vertex=\"1\" parent=\"1\">\n");
         xml.append("          <mxGeometry x=\"").append(spanX).append("\" y=\"").append(spanY)
-           .append("\" width=\"").append(spanWidth).append("\" height=\"30\" as=\"geometry\" />\n");
+                .append("\" width=\"").append(spanWidth).append("\" height=\"30\" as=\"geometry\" />\n");
         xml.append("        </mxCell>\n");
-        
+
         // 如果有详细信息，添加tooltip样式的小图标
         if (httpUrl != null || isError) {
             String infoId = generateUniqueId("info");
             xml.append("        <mxCell id=\"").append(infoId).append("\" value=\"ⓘ\" ")
-               .append("style=\"text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;")
-               .append("whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#1976d2\" vertex=\"1\" parent=\"1\">\n");
+                    .append("style=\"text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;")
+                    .append("whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#1976d2\" vertex=\"1\" parent=\"1\">\n");
             xml.append("          <mxGeometry x=\"").append(spanX + spanWidth - 15).append("\" y=\"").append(spanY)
-               .append("\" width=\"15\" height=\"15\" as=\"geometry\" />\n");
+                    .append("\" width=\"15\" height=\"15\" as=\"geometry\" />\n");
             xml.append("        </mxCell>\n");
         }
     }

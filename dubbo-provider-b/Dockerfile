@@ -8,7 +8,8 @@ ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 将项目的 JAR 文件复制到容器中
-COPY target/dubbo-provider-b-1.1-SNAPSHOT.jar /app/demo.jar
+ARG JAR_FILE
+COPY target/${JAR_FILE} /app/demo.jar
 
 # 复制 SkyWalking Java Agent 目录到容器中
 COPY apache-skywalking-apm-bin-es7 /app/skywalking-agent
