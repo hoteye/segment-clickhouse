@@ -91,8 +91,10 @@ ai-analysis:
 ### AI模块
 - `PerformanceAnalysisService.java` - 核心分析引擎
 - `LLMAnalysisService.java` - 多LLM提供商支持
-- `ClickHouseRepository.java` - 数据访问
+- `ClickHouseRepository.java` - 数据访问 (已修复请求统计逻辑)
 - `PerformanceAnalysisController.java` - REST API
+
+**重要修复**: ClickHouseRepository 已修复请求统计逻辑，使用 `uniqIf(trace_segment_id)` 替代错误的 Span 计数方式，确保性能指标的准确性。
 
 ## 小时级动态阈值系统
 
@@ -168,6 +170,12 @@ Trace (分布式事务全链路)
     └── Parent Service Info (父服务信息)
 ```
 
+**⭐ 重要概念：TraceSegmentId 与服务请求统计**
+- **1个 TraceSegmentId = 1次对服务的完整请求**
+- 在性能分析中，应使用 `COUNT(DISTINCT trace_segment_id)` 统计真实请求数
+- 不应使用 Span 数量统计，因为一个 TraceSegment 可能包含多个 Span
+- 这是准确计算服务吞吐量、请求量等关键指标的基础
+
 **Span类型详解：**
 - **EntrySpan**：服务接收外部请求的入口点（如Web请求、RPC调用接收端）
 - **ExitSpan**：服务向外部发起调用的出口点（如数据库查询、RPC调用发起端）
@@ -241,6 +249,19 @@ SELECT trace_id, service, operation_name, refs_parent_service,
 FROM default.events 
 WHERE trace_id = 'YOUR_TRACE_ID' 
 ORDER BY start_time;
+
+-- 正确统计服务真实请求数 (按 TraceSegmentId)
+SELECT service, COUNT(DISTINCT trace_segment_id) as real_requests
+FROM default.events 
+WHERE start_time >= now() - INTERVAL 1 HOUR
+GROUP BY service
+ORDER BY real_requests DESC;
+
+-- 错误的统计方式 (会高估请求数)
+SELECT service, COUNT(*) as span_count  -- ❌ 统计 Span 数量
+FROM default.events 
+WHERE start_time >= now() - INTERVAL 1 HOUR
+GROUP BY service;
 
 -- 统计服务间调用关系
 SELECT refs_parent_service, service, COUNT(*) as call_count

@@ -405,15 +405,15 @@ public class ClickHouseRepository {
         LocalDateTime baselineEndTime = endTime.minusDays(1);
 
         String sql = "SELECT " +
-            // Current App Metrics
-            "countIf(start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as total_requests, " +
-            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as avg_response_time, " +
-            "maxIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as max_response_time, " +
-            "sumIf(is_error, start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as failed_requests, " +
+            // Current App Metrics - 按TraceSegment统计真实请求数
+            "uniqIf(trace_segment_id, start_time >= ? AND start_time <= ?) as total_requests, " +
+            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as avg_response_time, " +
+            "maxIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as max_response_time, " +
+            "sumIf(is_error, start_time >= ? AND start_time <= ?) as failed_requests, " +
 
-            // Baseline App Metrics
-            "countIf(start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as baseline_total_requests, " +
-            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as baseline_avg_response_time, " +
+            // Baseline App Metrics - 按TraceSegment统计基线请求数
+            "uniqIf(trace_segment_id, start_time >= ? AND start_time <= ?) as baseline_total_requests, " +
+            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as baseline_avg_response_time, " +
 
             // Current DB Metrics
             "countIf(start_time >= ? AND start_time <= ? AND span_layer = 'Database') as total_queries, " +
