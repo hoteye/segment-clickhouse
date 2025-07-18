@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>dubbo-consumer-app</artifactId>
-    <version>1.1.8</version>
+    <version>1.1.10</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -138,6 +138,7 @@
                     <tag>${project.version}</tag>
                     <dockerfile>${project.basedir}/Dockerfile</dockerfile> <!-- 指定 Dockerfile 路径 -->
                     <contextDirectory>${project.basedir}</contextDirectory> <!-- 指定上下文目录 -->
+                    <skip>${dockerfile.skip}</skip> <!-- 支持跳过Docker构建 -->
                     <buildArgs>
                         <JAR_VERSION>${project.version}</JAR_VERSION>
                         <JAR_FILE>${project.build.finalName}.jar</JAR_FILE>

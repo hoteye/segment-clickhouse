@@ -55,6 +55,8 @@ public class AiAnalysisProperties {
             private double errorRatePercent = 5.0;
             private double cpuUsagePercent = 80.0;
             private double memoryUsagePercent = 85.0;
+            private double responseTimeDeviationPercent = 50.0; // 响应时间动态阈值百分比
+            private double errorRateAbsoluteIncreasePercent = 2.0; // 错误率绝对增加百分比
         }
     }
 

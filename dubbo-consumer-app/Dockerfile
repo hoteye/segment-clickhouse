@@ -1,4 +1,4 @@
-# 使用 OpenJDK 11 作为基础镜像
+# 使用本地 OpenJDK 11 作为基础镜像
 FROM openjdk:11-jdk-slim
 
 # 设置工作目录

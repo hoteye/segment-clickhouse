@@ -65,4 +65,7 @@ public class PerformanceMetrics {
 
     // 自定义指标
     private Map<String, Object> customMetrics;
+
+    // 基线指标 (用于对比分析)
+    private PerformanceMetrics baselineMetrics;
 }

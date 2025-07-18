@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 性能分析报告</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; }
+        .container { max-width: 1200px; }
+        .card { border: none; border-radius: .5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card-header h3, .card-header h5 { margin-bottom: 0; }
+        #reportContainer h5 { color: #0d6efd; border-bottom: 2px solid #0d6efd; padding-bottom: .5rem; margin-top: 1.5rem; }
+        #reportContainer .table { margin-top: 1rem; }
+        #reportContainer .alert { white-space: pre-wrap; font-family: monospace; }
+        .spinner-border { width: 1.5rem; height: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container my-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>AI 性能分析报告生成器</h3>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label for="serviceSelect" class="form-label">选择服务名称</label>
+                        <select id="serviceSelect" class="form-select"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="timeRangeInput" class="form-label">时间范围 (小时)</label>
+                        <input type="number" id="timeRangeInput" class="form-control" value="1">
+                    </div>
+                    <div class="col-md-2">
+                        <button id="generateBtn" class="btn btn-primary w-100">
+                            <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            生成报告
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusCard" class="card">
+            <div class="card-header">
+                <h5>分析状态</h5>
+            </div>
+            <div class="card-body">
+                <div id="statusMessage" class="alert alert-info">请选择服务并点击生成报告。</div>
+            </div>
+        </div>
+
+        <div id="reportContainer"></div>
+
+    </div>
+
+    <script>
+        const serviceSelect = document.getElementById('serviceSelect');
+        const timeRangeInput = document.getElementById('timeRangeInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const statusMessage = document.getElementById('statusMessage');
+        const reportContainer = document.getElementById('reportContainer');
+        const statusCard = document.getElementById('statusCard');
+
+        let pollingInterval;
+
+        // 1. 动态加载服务列表
+        async function loadServices() {
+            try {
+                const response = await fetch('/ai-analysis/api/services');
+                if (!response.ok) throw new Error('获取服务列表失败');
+                const services = await response.json();
+                serviceSelect.innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
+            } catch (error) {
+                statusMessage.className = 'alert alert-danger';
+                statusMessage.textContent = `错误: ${error.message}`;
+            }
+        }
+
+        // 2. 生成报告按钮点击事件
+        generateBtn.addEventListener('click', async () => {
+            const service = serviceSelect.value;
+            const hours = timeRangeInput.value;
+            let reportId = null;
+
+            if (!service) {
+                statusMessage.className = 'alert alert-warning';
+                statusMessage.textContent = '请先选择一个服务。';
+                return;
+            }
+
+            generateBtn.disabled = true;
+            btnSpinner.classList.remove('d-none');
+            statusCard.classList.remove('d-none');
+            statusMessage.className = 'alert alert-info';
+            statusMessage.textContent = `正在为服务 [${service}] 生成报告，请稍候...`;
+            reportContainer.innerHTML = '';
+
+            try {
+                const response = await fetch(`/ai-analysis/api/reports/generate?timeRangeHours=${hours}&service=${service}`, { method: 'POST' });
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.error || `服务器错误: ${response.statusText}`);
+                
+                reportId = data.reportId;
+                statusMessage.textContent = data.message;
+                startPolling(reportId);
+
+            } catch (error) {
+                statusMessage.className = 'alert alert-danger';
+                statusMessage.textContent = `错误: ${error.message}`;
+                generateBtn.disabled = false;
+                btnSpinner.classList.add('d-none');
+            }
+        });
+
+        // 3. 轮询获取特定报告
+        function startPolling(reportId) {
+            if (pollingInterval) clearInterval(pollingInterval);
+            let attempts = 0;
+            const maxAttempts = 60;
+
+            pollingInterval = setInterval(async () => {
+                if (attempts++ > maxAttempts) {
+                    clearInterval(pollingInterval);
+                    statusMessage.className = 'alert alert-warning';
+                    statusMessage.textContent = '获取报告超时，请稍后手动查询。';
+                    generateBtn.disabled = false;
+                    btnSpinner.classList.add('d-none');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/ai-analysis/api/reports/clickhouse/${reportId}`);
+                    if (response.status === 404) {
+                        statusMessage.textContent = `报告 (ID: ${reportId}) 生成中... (尝试次数: ${attempts})`;
+                        return;
+                    }
+                    if (!response.ok) throw new Error(`查询报告失败: ${response.statusText}`);
+
+                    const reportData = await response.json();
+                    const reportContent = JSON.parse(reportData.content);
+
+                    if (reportContent && reportContent.summary) {
+                         clearInterval(pollingInterval);
+                         statusMessage.className = 'alert alert-success';
+                         statusMessage.textContent = `报告 (ID: ${reportId}) 已生成！`;
+                         renderReport(reportContent);
+                         generateBtn.disabled = false;
+                         btnSpinner.classList.add('d-none');
+                    }
+                } catch (error) {
+                    clearInterval(pollingInterval);
+                    statusMessage.className = 'alert alert-danger';
+                    statusMessage.textContent = `错误: ${error.message}`;
+                    generateBtn.disabled = false;
+                    btnSpinner.classList.add('d-none');
+                }
+            }, 5000);
+        }
+
+        // 4. 渲染报告
+        function renderReport(data) {
+            reportContainer.innerHTML = `
+                <div class="card mt-4">
+                    <div class="card-header"><h5>报告摘要</h5></div>
+                    <div class="card-body"><p class="fs-5">${data.summary}</p></div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header"><h5>AI 智能分析</h5></div>
+                    <div class="card-body">${marked.parse(data.intelligentAnalysis || '')}</div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header"><h5>核心性能指标</h5></div>
+                    <div class="card-body">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr><th>平均响应时间</th><td>${data.metrics.avgResponseTime.toFixed(2)} ms</td></tr>
+                                <tr><th>错误率</th><td>${(data.metrics.errorRate * 100).toFixed(2)} %</td></tr>
+                                <tr><th>总请求数</th><td>${data.metrics.totalRequests}</td></tr>
+                                <tr><th>总错误数</th><td>${data.metrics.totalErrors}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header"><h5>优化建议</h5></div>
+                    <ul class="list-group list-group-flush">
+                        ${(data.optimizationSuggestions || []).map(s => `<li class="list-group-item">${s}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header"><h5>错误堆栈 (Top 3)</h5></div>
+                    <div class="card-body">
+                        ${(data.errorStacks || []).slice(0, 3).map(stack => `<div class="alert alert-warning">${stack}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 页面加载时初始化
+        loadServices();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</body>
+</html>

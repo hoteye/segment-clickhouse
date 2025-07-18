@@ -48,7 +48,7 @@ ai:
     window:
       hours: 1  # 默认分析时间窗口（小时）
     schedule:
-      enabled: true
+      enabled: false
       cron: "0 0 */1 * * ?"  # 每小时执行一次
     thresholds:
       response-time-ms: 1000      # 响应时间阈值（毫秒）
@@ -82,9 +82,9 @@ ai:
       api-key: ${AI_DEEPSEEK_API_KEY:sk-af87414f0b044883a76f2a297b6eaf86}
       base-url: ${AI_DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
       model: ${AI_DEEPSEEK_MODEL:deepseek-chat}  # 改为更快的chat模型
-      timeout: 80000    # 增加超时时间到30秒
-      max-tokens: 3000
-      temperature: 0.7
+      timeout: 30000    # 减少超时时间到30秒
+      max-tokens: 2000  # 减少token数量提高速度
+      temperature: 0.3  # 降低温度值提高一致性和速度
     
     # 本地 LLM 配置 (Ollama)
     local:

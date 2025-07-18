@@ -15,12 +15,14 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * AI 性能分析 REST API 控制器
  */
 @RestController
-@RequestMapping("/api/ai-analysis")
+@RequestMapping("/api")
 public class PerformanceAnalysisController {
 
     private static final Logger LOG = LoggerFactory.getLogger(PerformanceAnalysisController.class);
@@ -45,16 +47,44 @@ public class PerformanceAnalysisController {
         try {
             LOG.info("收到生成报告请求，时间范围: {}小时, service={}", timeRangeHours, service);
 
-            PerformanceReport report = analysisService.generateAnalysisReport(timeRangeHours, service);
-            if (report == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "无法生成报告，可能缺少数据"));
-            }
+            // 异步调用服务层方法
+            CompletableFuture<PerformanceReport> futureReport = analysisService.generateAnalysisReport(timeRangeHours, service);
 
-            return ResponseEntity.ok(report);
+            // 从future中获取报告ID（这里会阻塞，但因为ID几乎是立刻生成的，所以很快）
+            String reportId = futureReport.handle((report, ex) -> {
+                if (report != null) {
+                    return report.getReportId();
+                } else {
+                    // 如果发生异常，创建一个临时的ID用于追踪
+                    return "error-" + UUID.randomUUID().toString();
+                }
+            }).join();
+
+            String message = String.format("报告正在后台生成中。报告ID: %s", reportId);
+            return ResponseEntity.accepted().body(Map.of(
+                "message", message,
+                "reportId", reportId
+            ));
 
         } catch (Exception e) {
-            LOG.error("生成报告失败", e);
-            return ResponseEntity.internalServerError().body(Map.of("error", "生成报告失败: " + e.getMessage()));
+            LOG.error("生成报告请求失败", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "生成报告请求失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取最近指定小时内出现过的服务列表
+     */
+    @GetMapping("/services")
+    public ResponseEntity<?> getServiceList(@RequestParam(defaultValue = "24") int hours) {
+        try {
+            LocalDateTime endTime = LocalDateTime.now();
+            LocalDateTime startTime = endTime.minusHours(hours);
+            List<String> services = clickHouseRepository.getDistinctServices(startTime, endTime);
+            return ResponseEntity.ok(services);
+        } catch (Exception e) {
+            LOG.error("获取服务列表失败", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "获取服务列表失败: " + e.getMessage()));
         }
     }
 

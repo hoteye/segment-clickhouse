@@ -50,7 +50,7 @@ class ClickHouseRepositoryTest {
 
         // When & Then
         assertDoesNotThrow(() -> {
-            List<PerformanceMetrics> result = clickHouseRepository.getServiceMetrics(startTime, endTime, service);
+            List<PerformanceMetrics> result = clickHouseRepository.getServiceMetrics(startTime, endTime, service, 1);
             // 应该返回空列表（由mock配置决定）
             assertNotNull(result, "结果不应为null");
         });
@@ -68,7 +68,7 @@ class ClickHouseRepositoryTest {
 
         // When & Then
         assertDoesNotThrow(() -> {
-            List<PerformanceMetrics> result = clickHouseRepository.getServiceMetrics(startTime, endTime, nullService);
+            List<PerformanceMetrics> result = clickHouseRepository.getServiceMetrics(startTime, endTime, nullService, 1);
             assertNotNull(result, "结果不应为null");
         });
     }
@@ -147,7 +147,8 @@ class ClickHouseRepositoryTest {
             clickHouseRepository.getServiceMetrics(
                 LocalDateTime.now().minusHours(1), 
                 LocalDateTime.now(), 
-                "test-service"
+                "test-service",
+                1
             );
             // 异常应该被正确抛出
         });

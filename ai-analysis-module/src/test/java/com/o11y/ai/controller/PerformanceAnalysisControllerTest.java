@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -58,7 +59,7 @@ class PerformanceAnalysisControllerTest {
                 .intelligentAnalysis("Test analysis")
                 .build();
 
-        when(analysisService.generateAnalysisReport(anyInt(), anyString())).thenReturn(mockReport);
+        when(analysisService.generateAnalysisReport(anyInt(), anyString())).thenReturn(CompletableFuture.completedFuture(mockReport));
 
         // When & Then
         mockMvc.perform(post("/api/ai-analysis/reports/generate")
@@ -81,7 +82,7 @@ class PerformanceAnalysisControllerTest {
                 .timeRange(1)
                 .build();
 
-        when(analysisService.generateAnalysisReport(anyInt(), any())).thenReturn(mockReport);
+        when(analysisService.generateAnalysisReport(anyInt(), any())).thenReturn(CompletableFuture.completedFuture(mockReport));
 
         // When & Then
         mockMvc.perform(post("/api/ai-analysis/reports/generate"))
@@ -95,7 +96,7 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testGenerateReport_whenServiceReturnsNull() throws Exception {
         // Given
-        when(analysisService.generateAnalysisReport(anyInt(), anyString())).thenReturn(null);
+        when(analysisService.generateAnalysisReport(anyInt(), anyString())).thenReturn(CompletableFuture.completedFuture(null));
 
         // When & Then
         mockMvc.perform(post("/api/ai-analysis/reports/generate")

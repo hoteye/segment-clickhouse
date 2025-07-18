@@ -24,6 +24,7 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
+import java.lang.management.GarbageCollectorMXBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -157,6 +158,26 @@ public class LoggingAspect {
             ActiveSpan.tag("jvm.version", runtimeMXBean.getVmVersion());
             ActiveSpan.tag("jvm.start_time", String.valueOf(runtimeMXBean.getStartTime()));
             ActiveSpan.tag("jvm.uptime", runtimeMXBean.getUptime() + " ms");
+            
+            // GC 信息
+            List<GarbageCollectorMXBean> gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
+            long totalGcTime = 0;
+            long totalGcCollections = 0;
+            
+            for (GarbageCollectorMXBean gcBean : gcBeans) {
+                long collectionTime = gcBean.getCollectionTime();
+                long collectionCount = gcBean.getCollectionCount();
+                String gcName = gcBean.getName().replaceAll("\\s+", "_").toLowerCase();
+                
+                ActiveSpan.tag("gc." + gcName + ".time.type.Int64", String.valueOf(collectionTime));
+                ActiveSpan.tag("gc." + gcName + ".count.type.Int64", String.valueOf(collectionCount));
+                
+                totalGcTime += collectionTime;
+                totalGcCollections += collectionCount;
+            }
+            
+            ActiveSpan.tag("gc.total_time.type.Int64", String.valueOf(totalGcTime));
+            ActiveSpan.tag("gc.total_collections.type.Int64", String.valueOf(totalGcCollections));
         }
 
         // 操作系统信息

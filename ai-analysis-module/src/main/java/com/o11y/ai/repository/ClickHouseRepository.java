@@ -11,6 +11,7 @@ import org.springframework.lang.NonNull;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +32,7 @@ public class ClickHouseRepository {
      * 从 flink_operator_agg_result 表查询聚合后的性能数据
      */
     public List<PerformanceMetrics> getServiceMetrics(LocalDateTime startTime, LocalDateTime endTime,
-            String serviceName) {
+            String serviceName, int timeRangeHours) {
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT ")
                 .append("service, ")
@@ -59,7 +60,7 @@ public class ClickHouseRepository {
                 ? new Object[] { startTime, endTime, serviceName }
                 : new Object[] { startTime, endTime };
 
-        return clickHouseJdbcTemplate.query(sqlBuilder.toString(), new PerformanceMetricsRowMapper(), params);
+        return clickHouseJdbcTemplate.query(sqlBuilder.toString(), new PerformanceMetricsRowMapper(timeRangeHours), params);
     }
 
     /**
@@ -313,6 +314,12 @@ public class ClickHouseRepository {
      * 性能指标行映射器
      */
     private static class PerformanceMetricsRowMapper implements RowMapper<PerformanceMetrics> {
+        private final int timeRangeHours;
+        
+        public PerformanceMetricsRowMapper(int timeRangeHours) {
+            this.timeRangeHours = timeRangeHours;
+        }
+        
         @Override
         public PerformanceMetrics mapRow(@NonNull ResultSet rs, int rowNum) throws SQLException {
             return PerformanceMetrics.builder()
@@ -323,7 +330,7 @@ public class ClickHouseRepository {
                     .errorRate(rs.getDouble("avg_error_rate")) // 使用 avg_error_rate 字段
                     .startTime(rs.getTimestamp("time_window").toLocalDateTime())
                     .endTime(rs.getTimestamp("time_window").toLocalDateTime().plusMinutes(5))
-                    .timeRangeHours(1) // 默认1小时窗口
+                    .timeRangeHours(timeRangeHours) // 使用传入的时间范围
                     .build();
         }
     }
@@ -385,5 +392,187 @@ public class ClickHouseRepository {
                 return 0.0;
             return ((actual - expected) / expected) * 100;
         }
+    }
+
+    /**
+     * 通过单次聚合查询获取所有性能指标
+     */
+    public PerformanceMetrics getAggregatedPerformanceMetrics(LocalDateTime startTime, LocalDateTime endTime, String service) {
+        // 计算时间范围（小时）
+        int timeRangeHours = (int) Duration.between(startTime, endTime).toHours();
+        // Also fetch baseline metrics from 24 hours ago
+        LocalDateTime baselineStartTime = startTime.minusDays(1);
+        LocalDateTime baselineEndTime = endTime.minusDays(1);
+
+        String sql = "SELECT " +
+            // Current App Metrics
+            "countIf(start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as total_requests, " +
+            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as avg_response_time, " +
+            "maxIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as max_response_time, " +
+            "sumIf(is_error, start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as failed_requests, " +
+
+            // Baseline App Metrics
+            "countIf(start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as baseline_total_requests, " +
+            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer IN ('Web', 'Http', 'RPCFramework')) as baseline_avg_response_time, " +
+
+            // Current DB Metrics
+            "countIf(start_time >= ? AND start_time <= ? AND span_layer = 'Database') as total_queries, " +
+            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer = 'Database') as avg_query_duration, " +
+            "sumIf((end_time - start_time) * 1000 > 1000, start_time >= ? AND start_time <= ? AND span_layer = 'Database') as slow_queries, " +
+
+            // Current JVM Heap Metrics
+            "avgIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ?) as avg_heap_used, " +
+            "maxIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ?) as max_heap_used, " +
+            "avgIf(tag_jvm_heap_max_type_Int64, start_time >= ? AND start_time <= ?) as avg_heap_max, " +
+            "avgIf(tag_jvm_heap_committed_type_Int64, start_time >= ? AND start_time <= ?) as heap_committed, " +
+            "avgIf(tag_jvm_heap_init_type_Int64, start_time >= ? AND start_time <= ?) as heap_init, " +
+
+            // Current JVM Non-Heap Metrics
+            "avgIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ?) as avg_nonheap_used, " +
+            "maxIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ?) as max_nonheap_used, " +
+            "avgIf(tag_jvm_nonheap_committed_type_Int64, start_time >= ? AND start_time <= ?) as nonheap_committed, " +
+            "avgIf(tag_jvm_nonheap_init_type_Int64, start_time >= ? AND start_time <= ?) as nonheap_init, " +
+            "avgIf(tag_jvm_nonheap_max_type_Int64, start_time >= ? AND start_time <= ?) as nonheap_max, " +
+
+            // Current Thread Metrics
+            "avgIf(tag_thread_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_count_type_Int64 IS NOT NULL) as avg_thread_count, " +
+            "maxIf(tag_thread_peak_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_peak_count_type_Int64 IS NOT NULL) as max_thread_peak_count, " +
+            "avgIf(tag_thread_daemon_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_daemon_count_type_Int64 IS NOT NULL) as thread_daemon_count, " +
+            "avgIf(tag_thread_total_started_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_total_started_count_type_Int64 IS NOT NULL) as thread_total_started_count, " +
+
+            // Current CPU Metrics (CPU时间是纳秒单位，需要计算CPU使用率)
+            "avgIf(tag_thread_current_cpu_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_current_cpu_time_type_Int64 IS NOT NULL) as avg_cpu_time_ns, " +
+            "avgIf(tag_thread_current_user_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_current_user_time_type_Int64 IS NOT NULL) as avg_user_time_ns, " +
+
+            // Current System Memory Metrics
+            "avgIf(tag_Total_Memory_type_Int64, start_time >= ? AND start_time <= ?) as avg_total_memory, " +
+            "avgIf(tag_Available_Memory_type_Int64, start_time >= ? AND start_time <= ?) as avg_available_memory, " +
+            
+            // Current GC Metrics
+            "sumIf(tag_gc_total_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_time_type_Int64 IS NOT NULL) as total_gc_time, " +
+            "sumIf(tag_gc_total_collections_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_collections_type_Int64 IS NOT NULL) as total_gc_collections " +
+
+            "FROM events " +
+            "WHERE service = ? AND ((start_time >= ? AND start_time <= ?) OR (start_time >= ? AND start_time <= ?))";
+
+        return clickHouseJdbcTemplate.queryForObject(sql, new Object[]{
+            // Current time range for app metrics
+            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+            // Baseline time range for app metrics
+            baselineStartTime, baselineEndTime, baselineStartTime, baselineEndTime,
+            // Current time range for DB metrics
+            startTime, endTime, startTime, endTime, startTime, endTime,
+            // Current time range for JVM heap metrics
+            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+            // Current time range for JVM non-heap metrics
+            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+            // Current time range for thread metrics
+            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+            // Current time range for CPU metrics
+            startTime, endTime, startTime, endTime,
+            // Current time range for system memory metrics
+            startTime, endTime, startTime, endTime,
+            // Current time range for GC metrics
+            startTime, endTime, startTime, endTime,
+            // Service and WHERE clause time ranges
+            service, startTime, endTime, baselineStartTime, baselineEndTime
+        }, (rs, rowNum) -> {
+            PerformanceMetrics metrics = new PerformanceMetrics();
+            metrics.setStartTime(startTime);
+            metrics.setEndTime(endTime);
+            metrics.setService(service);
+            metrics.setTimeRangeHours(timeRangeHours);
+
+            // App Metrics
+            metrics.setTotalRequests(rs.getLong("total_requests"));
+            metrics.setAvgResponseTime(rs.getDouble("avg_response_time"));
+            metrics.setMaxResponseTime(rs.getDouble("max_response_time"));
+            metrics.setFailedRequests(rs.getLong("failed_requests"));
+            if (metrics.getTotalRequests() > 0) {
+                metrics.setErrorRate(metrics.getFailedRequests() / (double) metrics.getTotalRequests());
+                // 计算平均吞吐量: 总请求数 / 时间范围（秒）
+                double timeRangeSeconds = timeRangeHours * 3600.0;
+                metrics.setAvgThroughput(metrics.getTotalRequests() / timeRangeSeconds);
+            }
+
+            // DB Metrics
+            metrics.setTotalQueries(rs.getLong("total_queries"));
+            metrics.setAvgQueryDuration(rs.getDouble("avg_query_duration"));
+            metrics.setSlowQueries(rs.getLong("slow_queries"));
+
+            // JVM Heap Metrics
+            metrics.setAvgHeapUsed(rs.getDouble("avg_heap_used"));
+            metrics.setMaxHeapUsed(rs.getDouble("max_heap_used"));
+            metrics.setHeapCommitted(rs.getLong("heap_committed"));
+            metrics.setHeapInit(rs.getLong("heap_init"));
+            metrics.setHeapMax(rs.getLong("avg_heap_max"));
+            double avgHeapMax = rs.getDouble("avg_heap_max");
+            if (avgHeapMax > 0) {
+                metrics.setMaxHeapUsedRatio(rs.getDouble("max_heap_used") / avgHeapMax);
+            }
+
+            // JVM Non-Heap Metrics
+            metrics.setAvgNonHeapUsed(rs.getDouble("avg_nonheap_used"));
+            metrics.setMaxNonHeapUsed(rs.getDouble("max_nonheap_used"));
+            metrics.setNonHeapCommitted(rs.getLong("nonheap_committed"));
+            metrics.setNonHeapInit(rs.getLong("nonheap_init"));
+            metrics.setNonHeapMax(rs.getLong("nonheap_max"));
+
+            // Thread Metrics
+            double avgThreadCount = rs.getDouble("avg_thread_count");
+            metrics.setAvgThreadCount(rs.wasNull() ? 0 : (int) avgThreadCount);
+            double maxThreadPeak = rs.getDouble("max_thread_peak_count");
+            metrics.setMaxThreadPeakCount(rs.wasNull() ? 0 : (int) maxThreadPeak);
+            double threadDaemon = rs.getDouble("thread_daemon_count");
+            metrics.setThreadDaemonCount(rs.wasNull() ? 0 : (int) threadDaemon);
+            double threadTotalStarted = rs.getDouble("thread_total_started_count");
+            metrics.setThreadTotalStartedCount(rs.wasNull() ? 0 : (int) threadTotalStarted);
+
+            // CPU Metrics - 转换纳秒到合适的单位
+            // CPU时间是累积值，需要计算CPU使用率
+            double avgCpuTimeNs = rs.getDouble("avg_cpu_time_ns");
+            if (!rs.wasNull() && avgCpuTimeNs > 0) {
+                // 简化计算：将CPU时间转换为秒并计算相对使用率
+                // 这里使用启发式方法，实际CPU使用率需要时间间隔计算
+                double timeRangeSeconds = timeRangeHours * 3600.0;
+                double cpuTimeSeconds = avgCpuTimeNs / 1_000_000_000.0;
+                // 估算CPU使用率（这是累积时间，实际使用率会更低）
+                metrics.setAvgCpuUsage(Math.min(100.0, (cpuTimeSeconds / timeRangeSeconds) * 100));
+            } else {
+                metrics.setAvgCpuUsage(0.0);
+            }
+
+            // System Memory Metrics
+            double totalMemory = rs.getDouble("avg_total_memory");
+            double availableMemory = rs.getDouble("avg_available_memory");
+            
+            // GC Metrics
+            long totalGcTime = rs.getLong("total_gc_time");
+            metrics.setTotalGcTime(rs.wasNull() ? 0 : totalGcTime);
+            if (totalMemory > 0 && availableMemory > 0) {
+                double usedMemory = totalMemory - availableMemory;
+                metrics.setAvgMemoryUsage((usedMemory / totalMemory) * 100);
+                metrics.setAvgSystemCpuUsage(metrics.getAvgCpuUsage()); // 系统CPU使用率暂时使用线程CPU时间
+            }
+
+            // 注意：GC时间在SkyWalking events表中没有直接字段，设置为0
+            metrics.setTotalGcTime(0L);
+
+            // Baseline Metrics
+            PerformanceMetrics baselineMetrics = new PerformanceMetrics();
+            baselineMetrics.setTotalRequests(rs.getLong("baseline_total_requests"));
+            baselineMetrics.setAvgResponseTime(rs.getDouble("baseline_avg_response_time"));
+            metrics.setBaselineMetrics(baselineMetrics);
+
+            return metrics;
+        });
+    }
+
+    /**
+     * 获取指定时间范围内的不同服务名称列表
+     */
+    public List<String> getDistinctServices(LocalDateTime startTime, LocalDateTime endTime) {
+        String sql = "SELECT DISTINCT service FROM events WHERE start_time >= ? AND start_time <= ? AND service IS NOT NULL AND service != '' ORDER BY service";
+        return clickHouseJdbcTemplate.queryForList(sql, String.class, startTime, endTime);
     }
 }
