@@ -166,6 +166,15 @@ public class LLMAnalysisService {
     }
 
     /**
+     * 检测是否有JVM监控数据
+     */
+    private boolean hasJvmMetrics(PerformanceMetrics metrics) {
+        // 检查关键JVM指标是否有有效数据
+        return metrics.getAvgHeapUsed() > 0 || metrics.getMaxHeapUsed() > 0 || 
+               metrics.getAvgThreadCount() > 0 || metrics.getTotalGcCollections() > 0;
+    }
+
+    /**
      * 构建性能分析的 prompt (带时间范围)
      */
     private String buildAnalysisPrompt(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies, int timeRangeMinutes) {
@@ -185,26 +194,33 @@ public class LLMAnalysisService {
         prompt.append(String.format("- 错误率: %.2f%%\\n", metrics.getErrorRate() * 100));
         prompt.append(String.format("- 平均吞吐量: %.2f req/s\\n", metrics.getAvgThroughput()));
 
-        // JVM 指标
-        prompt.append("\\n## JVM 性能指标\\n");
-        prompt.append(String.format("- 平均堆内存使用: %.2f MB\\n", metrics.getAvgHeapUsed() / 1024 / 1024));
-        prompt.append(String.format("- 最大堆内存使用: %.2f MB\\n", metrics.getMaxHeapUsed() / 1024 / 1024));
-        prompt.append(String.format("- 最大堆内存使用率: %.2f%%\\n", metrics.getMaxHeapUsedRatio() * 100));
-        prompt.append(String.format("- 平均线程数: %d\\n", metrics.getAvgThreadCount()));
-        prompt.append(String.format("- 平均CPU使用率: %.2f%%\\n", metrics.getAvgCpuUsage() * 100));
-        
-        // GC 详细指标
-        prompt.append("\\n## GC 垃圾收集指标\\n");
-        prompt.append(String.format("- GC总时间: %d ms\\n", metrics.getTotalGcTime()));
-        prompt.append(String.format("- GC总次数: %d\\n", metrics.getTotalGcCollections()));
-        prompt.append(String.format("- G1新生代GC次数: %d\\n", metrics.getG1YoungGenerationCount()));
-        prompt.append(String.format("- G1新生代GC时间: %d ms\\n", metrics.getG1YoungGenerationTime()));
-        prompt.append(String.format("- G1老年代GC次数: %d\\n", metrics.getG1OldGenerationCount()));
-        prompt.append(String.format("- G1老年代GC时间: %d ms\\n", metrics.getG1OldGenerationTime()));
-        prompt.append(String.format("- 平均单次GC时间: %.2f ms\\n", metrics.getAvgGcTimePerCollection()));
-        prompt.append(String.format("- GC时间占比: %.2f%%\\n", metrics.getGcTimeRatio() * 100));
-        prompt.append(String.format("- 新生代GC频率: %.2f次/小时\\n", metrics.getYoungGenGcFrequency()));
-        prompt.append(String.format("- 老年代GC频率: %.2f次/小时\\n", metrics.getOldGenGcFrequency()));
+        // JVM 指标 - 只对有JVM数据的应用（Java）显示
+        boolean hasJvmData = hasJvmMetrics(metrics);
+        if (hasJvmData) {
+            prompt.append("\\n## JVM 性能指标\\n");
+            prompt.append(String.format("- 平均堆内存使用: %.2f MB\\n", metrics.getAvgHeapUsed() / 1024 / 1024));
+            prompt.append(String.format("- 最大堆内存使用: %.2f MB\\n", metrics.getMaxHeapUsed() / 1024 / 1024));
+            prompt.append(String.format("- 最大堆内存使用率: %.2f%%\\n", metrics.getMaxHeapUsedRatio() * 100));
+            prompt.append(String.format("- 平均线程数: %d\\n", metrics.getAvgThreadCount()));
+            prompt.append(String.format("- 平均CPU使用率: %.2f%%\\n", metrics.getAvgCpuUsage() * 100));
+            
+            // GC 详细指标
+            prompt.append("\\n## GC 垃圾收集指标\\n");
+            prompt.append(String.format("- GC总时间: %d ms\\n", metrics.getTotalGcTime()));
+            prompt.append(String.format("- GC总次数: %d\\n", metrics.getTotalGcCollections()));
+            prompt.append(String.format("- G1新生代GC次数: %d\\n", metrics.getG1YoungGenerationCount()));
+            prompt.append(String.format("- G1新生代GC时间: %d ms\\n", metrics.getG1YoungGenerationTime()));
+            prompt.append(String.format("- G1老年代GC次数: %d\\n", metrics.getG1OldGenerationCount()));
+            prompt.append(String.format("- G1老年代GC时间: %d ms\\n", metrics.getG1OldGenerationTime()));
+            prompt.append(String.format("- 平均单次GC时间: %.2f ms\\n", metrics.getAvgGcTimePerCollection()));
+            prompt.append(String.format("- GC时间占比: %.2f%%\\n", metrics.getGcTimeRatio() * 100));
+            prompt.append(String.format("- 新生代GC频率: %.2f次/小时\\n", metrics.getYoungGenGcFrequency()));
+            prompt.append(String.format("- 老年代GC频率: %.2f次/小时\\n", metrics.getOldGenGcFrequency()));
+        } else {
+            prompt.append("\\n## 应用性能指标\\n");
+            prompt.append("- 应用类型: 非JVM应用（如Python、Node.js等）\\n");
+            prompt.append("- JVM指标: 不适用\\n");
+        }
 
         // 数据库指标
         prompt.append("\\n## 数据库性能指标\\n");
@@ -227,16 +243,29 @@ public class LLMAnalysisService {
         prompt.append("\\n请基于以上数据提供专业分析:\\n");
         prompt.append("1. **系统性能总体评估** - 整体健康状况、性能水平评分\\n");
         prompt.append("2. **主要瓶颈和问题分析** - 识别性能瓶颈点和根本原因\\n");
-        prompt.append("3. **GC性能专项分析** - G1垃圾收集器效率评估和优化空间\\n");
+        
+        if (hasJvmData) {
+            prompt.append("3. **JVM性能专项分析** - 堆内存、GC效率评估和优化空间\\n");
+        } else {
+            prompt.append("3. **应用性能专项分析** - 响应时间、吞吐量和错误率分析\\n");
+        }
+        
         prompt.append("4. **性能趋势判断** - 基于当前指标预测系统发展趋势\\n");
         prompt.append("5. **关键风险点识别** - 潜在故障风险和容量规划建议\\n");
         prompt.append("6. **优化建议排序** - 按优先级列出具体改进措施\\n");
         prompt.append("\\n**分析要求：**\\n");
-        prompt.append("- 请结合G1 GC特性进行专业分析\\n");
-        prompt.append(String.format("- 重点关注内存使用率情况（当前%.2f%%）\\n", metrics.getMaxHeapUsedRatio() * 100));
-        prompt.append(String.format("- 评估CPU使用率（%.2f%%）是否合理\\n", metrics.getAvgCpuUsage() * 100));
-        prompt.append(String.format("- 分析线程数（%d）与请求量的匹配度\\n", metrics.getAvgThreadCount()));
-        prompt.append("- 评估GC频率和暂停时间对应用的影响\\n");
+        
+        if (hasJvmData) {
+            prompt.append("- 请结合JVM和GC特性进行专业分析\\n");
+            prompt.append(String.format("- 重点关注内存使用率情况（当前%.2f%%）\\n", metrics.getMaxHeapUsedRatio() * 100));
+            prompt.append(String.format("- 分析线程数（%d）与请求量的匹配度\\n", metrics.getAvgThreadCount()));
+            prompt.append("- 评估GC频率和暂停时间对应用的影响\\n");
+        } else {
+            prompt.append("- 请针对非JVM应用（如Python、Node.js等）进行专业分析\\n");
+            prompt.append("- 重点关注应用层面的性能指标\\n");
+            prompt.append("- 分析HTTP请求处理效率和资源利用率\\n");
+        }
+        
         prompt.append("- 使用中文回答，术语准确，建议具体可行");
 
         return prompt.toString();

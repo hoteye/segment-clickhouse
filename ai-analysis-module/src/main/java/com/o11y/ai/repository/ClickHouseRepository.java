@@ -421,18 +421,18 @@ public class ClickHouseRepository {
             "sumIf((end_time - start_time) * 1000 > 1000, start_time >= ? AND start_time <= ? AND span_layer = 'Database') as slow_queries, " +
 
             // Current JVM Heap Metrics
-            "avgIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ?) as avg_heap_used, " +
-            "maxIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ?) as max_heap_used, " +
-            "avgIf(tag_jvm_heap_max_type_Int64, start_time >= ? AND start_time <= ?) as avg_heap_max, " +
-            "avgIf(tag_jvm_heap_committed_type_Int64, start_time >= ? AND start_time <= ?) as heap_committed, " +
-            "avgIf(tag_jvm_heap_init_type_Int64, start_time >= ? AND start_time <= ?) as heap_init, " +
+            "avgIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_used_type_Int64 IS NOT NULL) as avg_heap_used, " +
+            "maxIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_used_type_Int64 IS NOT NULL) as max_heap_used, " +
+            "avgIf(tag_jvm_heap_max_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_max_type_Int64 IS NOT NULL) as avg_heap_max, " +
+            "avgIf(tag_jvm_heap_committed_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_committed_type_Int64 IS NOT NULL) as heap_committed, " +
+            "avgIf(tag_jvm_heap_init_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_init_type_Int64 IS NOT NULL) as heap_init, " +
 
             // Current JVM Non-Heap Metrics
-            "avgIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ?) as avg_nonheap_used, " +
-            "maxIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ?) as max_nonheap_used, " +
-            "avgIf(tag_jvm_nonheap_committed_type_Int64, start_time >= ? AND start_time <= ?) as nonheap_committed, " +
-            "avgIf(tag_jvm_nonheap_init_type_Int64, start_time >= ? AND start_time <= ?) as nonheap_init, " +
-            "avgIf(tag_jvm_nonheap_max_type_Int64, start_time >= ? AND start_time <= ?) as nonheap_max, " +
+            "avgIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_used_type_Int64 IS NOT NULL) as avg_nonheap_used, " +
+            "maxIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_used_type_Int64 IS NOT NULL) as max_nonheap_used, " +
+            "avgIf(tag_jvm_nonheap_committed_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_committed_type_Int64 IS NOT NULL) as nonheap_committed, " +
+            "avgIf(tag_jvm_nonheap_init_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_init_type_Int64 IS NOT NULL) as nonheap_init, " +
+            "avgIf(tag_jvm_nonheap_max_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_max_type_Int64 IS NOT NULL) as nonheap_max, " +
 
             // Current Thread Metrics
             "avgIf(tag_thread_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_count_type_Int64 IS NOT NULL) as avg_thread_count, " +
@@ -445,8 +445,8 @@ public class ClickHouseRepository {
             "avgIf(tag_thread_current_user_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_current_user_time_type_Int64 IS NOT NULL) as avg_user_time_ns, " +
 
             // Current System Memory Metrics
-            "avgIf(tag_Total_Memory_type_Int64, start_time >= ? AND start_time <= ?) as avg_total_memory, " +
-            "avgIf(tag_Available_Memory_type_Int64, start_time >= ? AND start_time <= ?) as avg_available_memory, " +
+            "avgIf(tag_Total_Memory_type_Int64, start_time >= ? AND start_time <= ? AND tag_Total_Memory_type_Int64 IS NOT NULL) as avg_total_memory, " +
+            "avgIf(tag_Available_Memory_type_Int64, start_time >= ? AND start_time <= ? AND tag_Available_Memory_type_Int64 IS NOT NULL) as avg_available_memory, " +
             
             // Current GC Metrics (基于实际ClickHouse字段)
             "avgIf(tag_gc_total_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_time_type_Int64 IS NOT NULL) as avg_gc_total_time, " +
