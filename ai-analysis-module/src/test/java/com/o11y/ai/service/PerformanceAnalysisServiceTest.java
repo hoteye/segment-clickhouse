@@ -82,14 +82,14 @@ class PerformanceAnalysisServiceTest {
     @Test
     void testGenerateAnalysisReport_withDataAndBaseline() {
         // Given
-        int timeRangeHours = 1;
+        int timeRangeMinutes = 60;
         String service = "test-service";
         PerformanceMetrics mockMetrics = createMockMetrics(true, true);
         when(clickHouseRepository.getAggregatedPerformanceMetrics(any(), any(), eq(service))).thenReturn(mockMetrics);
-        when(llmService.analyzePerformanceData(any(), any(), any())).thenReturn("Mocked AI Analysis");
+        when(llmService.analyzePerformanceData(any(), any(), any(), anyInt())).thenReturn("Mocked AI Analysis");
 
         // When
-        CompletableFuture<PerformanceReport> futureReport = performanceAnalysisService.generateAnalysisReport(timeRangeHours, service);
+        CompletableFuture<PerformanceReport> futureReport = performanceAnalysisService.generateAnalysisReport(timeRangeMinutes, service);
         PerformanceReport report = futureReport.join();
 
         // Then
@@ -103,47 +103,49 @@ class PerformanceAnalysisServiceTest {
     @Test
     void testGenerateAnalysisReport_withNoData() {
         // Given
-        int timeRangeHours = 1;
+        int timeRangeMinutes = 60;
         String service = "test-service";
         PerformanceMetrics mockMetrics = createMockMetrics(false, false);
         when(clickHouseRepository.getAggregatedPerformanceMetrics(any(), any(), eq(service))).thenReturn(mockMetrics);
 
         // When
-        CompletableFuture<PerformanceReport> futureReport = performanceAnalysisService.generateAnalysisReport(timeRangeHours, service);
+        CompletableFuture<PerformanceReport> futureReport = performanceAnalysisService.generateAnalysisReport(timeRangeMinutes, service);
         PerformanceReport report = futureReport.join();
 
         // Then
-        assertNull(report, "Report should be null when there is no data");
+        assertNotNull(report, "Report should not be null");
+        assertEquals("数据不足，无法生成报告", report.getSummary(), "Should have data insufficient message");
         verify(clickHouseRepository, times(1)).getAggregatedPerformanceMetrics(any(), any(), eq(service));
-        verify(reportService, never()).saveReport(any());
+        verify(reportService, times(1)).saveReport(any()); // 即使数据不足也会保存报告
     }
 
     @Test
     void testGenerateAnalysisReport_withNullMetrics() {
         // Given
-        int timeRangeHours = 1;
+        int timeRangeMinutes = 60;
         String service = "test-service";
         when(clickHouseRepository.getAggregatedPerformanceMetrics(any(), any(), eq(service))).thenReturn(null);
 
         // When
-        CompletableFuture<PerformanceReport> futureReport = performanceAnalysisService.generateAnalysisReport(timeRangeHours, service);
+        CompletableFuture<PerformanceReport> futureReport = performanceAnalysisService.generateAnalysisReport(timeRangeMinutes, service);
         PerformanceReport report = futureReport.join();
 
         // Then
-        assertNull(report, "Report should be null when metrics are null");
+        assertNotNull(report, "Report should not be null");
+        assertEquals("数据不足，无法生成报告", report.getSummary(), "Should have data insufficient message");
     }
 
     @Test
     void testGenerateOptimizationSuggestions_usesNewMetricsCollection() throws Exception {
         // Given
-        int timeRangeHours = 1;
+        int timeRangeMinutes = 60;
         String service = "test-service";
         PerformanceMetrics mockMetrics = createMockMetrics(true, true);
         when(clickHouseRepository.getAggregatedPerformanceMetrics(any(), any(), eq(service))).thenReturn(mockMetrics);
         when(llmService.generateOptimizationSuggestions(any(), any())).thenReturn(Collections.singletonList(new OptimizationSuggestion()));
 
         // When
-        List<OptimizationSuggestion> suggestions = performanceAnalysisService.generateOptimizationSuggestions(timeRangeHours, service);
+        List<OptimizationSuggestion> suggestions = performanceAnalysisService.generateOptimizationSuggestions(timeRangeMinutes, service);
 
         // Then
         assertNotNull(suggestions);

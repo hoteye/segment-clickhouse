@@ -19,7 +19,7 @@ public class PerformanceReport {
 
     private String reportId;
     private LocalDateTime generatedAt;
-    private int timeRange;
+    private int timeRange; // 保持向后兼容，单位为分钟
     private String summary;
     private String intelligentAnalysis;
     private List<String> optimizationSuggestions;

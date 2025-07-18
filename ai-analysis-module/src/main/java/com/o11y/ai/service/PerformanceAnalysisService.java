@@ -68,9 +68,10 @@ public class PerformanceAnalysisService {
         try {
             LOG.info("开始执行定时性能分析");
             int timeRangeHours = properties.getAnalysis().getWindow().getHours();
+            int timeRangeMinutes = timeRangeHours * 60; // 转换为分钟
 
             // 获取所有服务列表
-            List<String> services = getAllServices(timeRangeHours);
+            List<String> services = getAllServices(timeRangeMinutes);
             if (services.isEmpty()) {
                 LOG.info("未找到服务，跳过生成报告");
                 return;
@@ -79,7 +80,7 @@ public class PerformanceAnalysisService {
             for (String service : services) {
                 LOG.info("开始为服务 {} 生成性能报告", service);
                 // 异步调用，但由于是定时任务，我们不关心其返回结果，只确保它被执行
-                generateAnalysisReport(timeRangeHours, service);
+                generateAnalysisReport(timeRangeMinutes, service);
             }
             LOG.info("所有服务性能报告生成完成");
 
@@ -91,9 +92,9 @@ public class PerformanceAnalysisService {
     /**
      * 获取所有服务名称列表
      */
-    private List<String> getAllServices(int timeRangeHours) {
+    private List<String> getAllServices(int timeRangeMinutes) {
         LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = endTime.minusHours(timeRangeHours);
+        LocalDateTime startTime = endTime.minusMinutes(timeRangeMinutes);
         String sql = "SELECT DISTINCT service FROM events WHERE start_time >= toDateTime(?) AND start_time <= toDateTime(?) AND service IS NOT NULL";
 
         List<String> services = new ArrayList<>();
@@ -122,10 +123,10 @@ public class PerformanceAnalysisService {
     /**
      * 检查是否有足够的数据生成报告
      */
-    public boolean hasEnoughData(int timeRangeHours, String service) {
+    public boolean hasEnoughData(int timeRangeMinutes, String service) {
         try {
             LocalDateTime endTime = LocalDateTime.now();
-            LocalDateTime startTime = endTime.minusHours(timeRangeHours);
+            LocalDateTime startTime = endTime.minusMinutes(timeRangeMinutes);
             PerformanceMetrics metrics = clickHouseRepository.getAggregatedPerformanceMetrics(startTime, endTime, service);
             return metrics != null && metrics.getTotalRequests() > 0;
         } catch (Exception e) {
@@ -138,21 +139,21 @@ public class PerformanceAnalysisService {
      * 生成性能分析报告
      */
     @Async
-    public CompletableFuture<PerformanceReport> generateAnalysisReport(int timeRangeHours, String service) {
+    public CompletableFuture<PerformanceReport> generateAnalysisReport(int timeRangeMinutes, String service) {
         long processStartTime = System.currentTimeMillis();
         LOG.info("=== 开始生成性能分析报告 ===");
         LOG.info("开始时间: {}", java.time.LocalDateTime.now());
-        LOG.info("参数: 时间范围={}小时, 服务={}", timeRangeHours, service);
+        LOG.info("参数: 时间范围={}分钟, 服务={}", timeRangeMinutes, service);
 
         PerformanceReport report = PerformanceReport.builder()
                 .reportId(UUID.randomUUID().toString())
                 .generatedAt(LocalDateTime.now())
-                .timeRange(timeRangeHours)
+                .timeRange(timeRangeMinutes)
                 .build();
 
         try {
             LocalDateTime endTime = LocalDateTime.now();
-            LocalDateTime startTime = endTime.minusHours(timeRangeHours);
+            LocalDateTime startTime = endTime.minusMinutes(timeRangeMinutes);
 
             // 1. 收集性能数据 (统一查询)
             LOG.info("步骤1: 开始收集性能数据...");
@@ -168,7 +169,7 @@ public class PerformanceAnalysisService {
                     metrics.getTotalRequests(), metrics.getAvgResponseTime());
 
             // 1.1 收集错误堆栈
-            List<String> errorStacks = collectErrorStacks(timeRangeHours, service);
+            List<String> errorStacks = collectErrorStacks(timeRangeMinutes, service);
             LOG.info("步骤1.1: 收集到 {} 条错误堆栈", errorStacks.size());
 
             // 2. 异常检测
@@ -181,7 +182,7 @@ public class PerformanceAnalysisService {
             if (properties.getLlm().isEnabled()) {
                 try {
                     LOG.info("步骤4a: 调用LLM分析性能数据和错误堆栈...");
-                    String intelligentAnalysis = llmService.analyzePerformanceData(metrics, anomalies, errorStacks);
+                    String intelligentAnalysis = llmService.analyzePerformanceData(metrics, anomalies, errorStacks, timeRangeMinutes);
                     report.setIntelligentAnalysis(intelligentAnalysis);
                     report.setErrorStacks(errorStacks);
 
@@ -208,7 +209,7 @@ public class PerformanceAnalysisService {
             LOG.info("步骤5: 设置报告其他内容...");
             report.setMetrics(convertToReportMetrics(metrics));
             report.setAnomalies(anomalies);
-            report.setSummary(generateSummary(metrics, anomalies));
+            report.setSummary(generateSummary(metrics, anomalies, timeRangeMinutes));
             LOG.info("步骤5完成: 报告内容设置完成");
 
             // 6. 保存报告
@@ -483,10 +484,10 @@ public class PerformanceAnalysisService {
     /**
      * 生成报告摘要
      */
-    private String generateSummary(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies) {
+    private String generateSummary(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies, int timeRangeMinutes) {
         StringBuilder summary = new StringBuilder();
 
-        summary.append("系统在过去").append(metrics.getTimeRangeHours()).append("小时内");
+        summary.append("系统在过去").append(timeRangeMinutes).append("分钟内");
         summary.append("处理了").append(metrics.getTotalRequests()).append("个请求，");
         summary.append("平均响应时间").append(String.format("%.2f", metrics.getAvgResponseTime())).append("ms，");
         summary.append("错误率").append(String.format("%.2f%%", metrics.getErrorRate() * 100)).append("。");
@@ -515,10 +516,10 @@ public class PerformanceAnalysisService {
     /**
      * 收集错误堆栈信息
      */
-    private List<String> collectErrorStacks(int timeRangeHours, String service) {
+    private List<String> collectErrorStacks(int timeRangeMinutes, String service) {
         List<String> errorStacks = new ArrayList<>();
         LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = endTime.minusHours(timeRangeHours);
+        LocalDateTime startTime = endTime.minusMinutes(timeRangeMinutes);
 
         // 按log_stack分组，统计每种堆栈的出现次数
         String sql = "SELECT substr(log_stack, 1, 1500) as stack_prefix, COUNT(*) as error_count " +

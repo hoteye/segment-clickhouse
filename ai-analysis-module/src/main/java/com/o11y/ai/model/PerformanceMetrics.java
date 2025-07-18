@@ -19,7 +19,8 @@ public class PerformanceMetrics {
 
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private int timeRangeHours;
+    private int timeRangeHours; // 保持向后兼容
+    private int timeRangeMinutes; // 新的分钟字段
 
     /**
      * 服务名称（用于分组统计和多服务分析）
@@ -42,7 +43,20 @@ public class PerformanceMetrics {
     private long nonHeapInit; // 非堆内存初始大小
     private long nonHeapMax; // 非堆内存最大大小
     private double avgCpuUsage; // 平均 CPU 使用率
-    private long totalGcTime; // 总 GC 时间
+    
+    // GC 指标 (基于ClickHouse events表的实际字段)
+    private long totalGcTime; // 总 GC 时间 (tag_gc_total_time_type_Int64)
+    private long totalGcCollections; // 总 GC 次数 (tag_gc_total_collections_type_Int64)
+    private long g1OldGenerationCount; // G1老年代GC次数 (tag_gc_g1_old_generation_count_type_Int64)
+    private long g1OldGenerationTime; // G1老年代GC时间 (tag_gc_g1_old_generation_time_type_Int64)
+    private long g1YoungGenerationCount; // G1新生代GC次数 (tag_gc_g1_young_generation_count_type_Int64)
+    private long g1YoungGenerationTime; // G1新生代GC时间 (tag_gc_g1_young_generation_time_type_Int64)
+    
+    // GC 衍生指标
+    private double avgGcTimePerCollection; // 平均每次GC时间
+    private double gcTimeRatio; // GC时间占总时间比例
+    private double youngGenGcFrequency; // 新生代GC频率 (次/小时)
+    private double oldGenGcFrequency; // 老年代GC频率 (次/小时)
 
     // 应用指标
     private long totalRequests;

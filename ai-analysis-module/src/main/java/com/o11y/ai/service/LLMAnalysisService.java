@@ -70,13 +70,13 @@ public class LLMAnalysisService {
      * 分析性能数据并结合错误堆栈生成智能分析报告
      */
     public String analyzePerformanceData(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies,
-            List<String> errorStacks) {
+            List<String> errorStacks, int timeRangeMinutes) {
         try {
-            String prompt = buildAnalysisPrompt(metrics, anomalies);
+            String prompt = buildAnalysisPrompt(metrics, anomalies, timeRangeMinutes);
             // 智能处理错误堆栈信息
             if (errorStacks != null && !errorStacks.isEmpty()) {
                 StringBuilder sb = new StringBuilder(prompt);
-                sb.append("\n\n【以下为近1小时内典型错误堆栈信息，请结合分析根因，仅关注最相关部分】\n");
+                sb.append(String.format("\n\n【以下为近%d分钟内典型错误堆栈信息，请结合分析根因，仅关注最相关部分】\n", timeRangeMinutes));
                 int idx = 1;
                 for (String stack : errorStacks) {
                     sb.append("# 错误堆栈").append(idx++).append(":\n");
@@ -166,12 +166,14 @@ public class LLMAnalysisService {
     }
 
     /**
-     * 构建性能分析的 prompt
+     * 构建性能分析的 prompt (带时间范围)
      */
-    private String buildAnalysisPrompt(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies) {
+    private String buildAnalysisPrompt(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies, int timeRangeMinutes) {
         StringBuilder prompt = new StringBuilder();
 
         prompt.append("你是一个专业的应用性能分析专家。请分析以下性能数据并提供洞察:\\n\\n");
+        // 数据时间范围说明
+        prompt.append(String.format("### 数据时间范围：性能数据采集时间为最近 %d 分钟\\n\\n", timeRangeMinutes));
         // 增加报告对象 service
         prompt.append(String.format("### 报告对象: %s\\n", metrics.getService()));
 
@@ -190,7 +192,19 @@ public class LLMAnalysisService {
         prompt.append(String.format("- 最大堆内存使用率: %.2f%%\\n", metrics.getMaxHeapUsedRatio() * 100));
         prompt.append(String.format("- 平均线程数: %d\\n", metrics.getAvgThreadCount()));
         prompt.append(String.format("- 平均CPU使用率: %.2f%%\\n", metrics.getAvgCpuUsage() * 100));
+        
+        // GC 详细指标
+        prompt.append("\\n## GC 垃圾收集指标\\n");
         prompt.append(String.format("- GC总时间: %d ms\\n", metrics.getTotalGcTime()));
+        prompt.append(String.format("- GC总次数: %d\\n", metrics.getTotalGcCollections()));
+        prompt.append(String.format("- G1新生代GC次数: %d\\n", metrics.getG1YoungGenerationCount()));
+        prompt.append(String.format("- G1新生代GC时间: %d ms\\n", metrics.getG1YoungGenerationTime()));
+        prompt.append(String.format("- G1老年代GC次数: %d\\n", metrics.getG1OldGenerationCount()));
+        prompt.append(String.format("- G1老年代GC时间: %d ms\\n", metrics.getG1OldGenerationTime()));
+        prompt.append(String.format("- 平均单次GC时间: %.2f ms\\n", metrics.getAvgGcTimePerCollection()));
+        prompt.append(String.format("- GC时间占比: %.2f%%\\n", metrics.getGcTimeRatio() * 100));
+        prompt.append(String.format("- 新生代GC频率: %.2f次/小时\\n", metrics.getYoungGenGcFrequency()));
+        prompt.append(String.format("- 老年代GC频率: %.2f次/小时\\n", metrics.getOldGenGcFrequency()));
 
         // 数据库指标
         prompt.append("\\n## 数据库性能指标\\n");
@@ -210,15 +224,31 @@ public class LLMAnalysisService {
             }
         }
 
-        prompt.append("\\n请基于以上数据提供:\\n");
-        prompt.append("1. 系统性能总体评估\\n");
-        prompt.append("2. 主要瓶颈和问题分析\\n");
-        prompt.append("3. 性能趋势判断\\n");
-        prompt.append("4. 关键风险点识别\\n");
-        prompt.append("5. 重点关注指标和建议\\n");
-        prompt.append("请用中文回答，语言专业且易懂。");
+        prompt.append("\\n请基于以上数据提供专业分析:\\n");
+        prompt.append("1. **系统性能总体评估** - 整体健康状况、性能水平评分\\n");
+        prompt.append("2. **主要瓶颈和问题分析** - 识别性能瓶颈点和根本原因\\n");
+        prompt.append("3. **GC性能专项分析** - G1垃圾收集器效率评估和优化空间\\n");
+        prompt.append("4. **性能趋势判断** - 基于当前指标预测系统发展趋势\\n");
+        prompt.append("5. **关键风险点识别** - 潜在故障风险和容量规划建议\\n");
+        prompt.append("6. **优化建议排序** - 按优先级列出具体改进措施\\n");
+        prompt.append("\\n**分析要求：**\\n");
+        prompt.append("- 请结合G1 GC特性进行专业分析\\n");
+        prompt.append(String.format("- 重点关注内存使用率情况（当前%.2f%%）\\n", metrics.getMaxHeapUsedRatio() * 100));
+        prompt.append(String.format("- 评估CPU使用率（%.2f%%）是否合理\\n", metrics.getAvgCpuUsage() * 100));
+        prompt.append(String.format("- 分析线程数（%d）与请求量的匹配度\\n", metrics.getAvgThreadCount()));
+        prompt.append("- 评估GC频率和暂停时间对应用的影响\\n");
+        prompt.append("- 使用中文回答，术语准确，建议具体可行");
 
         return prompt.toString();
+    }
+
+    /**
+     * 构建性能分析的 prompt (向后兼容，默认时间范围)
+     */
+    private String buildAnalysisPrompt(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies) {
+        // 从metrics中获取时间范围，如果没有则默认为60分钟
+        int timeRange = metrics.getTimeRangeMinutes() > 0 ? metrics.getTimeRangeMinutes() : 60;
+        return buildAnalysisPrompt(metrics, anomalies, timeRange);
     }
 
     /**

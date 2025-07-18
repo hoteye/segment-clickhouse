@@ -29,8 +29,8 @@
                         <select id="serviceSelect" class="form-select"></select>
                     </div>
                     <div class="col-md-4">
-                        <label for="timeRangeInput" class="form-label">时间范围 (小时)</label>
-                        <input type="number" id="timeRangeInput" class="form-control" value="1">
+                        <label for="timeRangeInput" class="form-label">时间范围 (分钟)</label>
+                        <input type="number" id="timeRangeInput" class="form-control" value="60" min="1" max="1440">
                     </div>
                     <div class="col-md-2">
                         <button id="generateBtn" class="btn btn-primary w-100">
@@ -82,7 +82,7 @@
         // 2. 生成报告按钮点击事件
         generateBtn.addEventListener('click', async () => {
             const service = serviceSelect.value;
-            const hours = timeRangeInput.value;
+            const minutes = timeRangeInput.value;
             let reportId = null;
 
             if (!service) {
@@ -95,11 +95,11 @@
             btnSpinner.classList.remove('d-none');
             statusCard.classList.remove('d-none');
             statusMessage.className = 'alert alert-info';
-            statusMessage.textContent = `正在为服务 [${service}] 生成报告，请稍候...`;
+            statusMessage.textContent = `正在为服务 [${service}] 生成报告（最近${minutes}分钟），请稍候...`;
             reportContainer.innerHTML = '';
 
             try {
-                const response = await fetch(`/ai-analysis/api/reports/generate?timeRangeHours=${hours}&service=${service}`, { method: 'POST' });
+                const response = await fetch(`/ai-analysis/api/reports/generate?timeRangeMinutes=${minutes}&service=${service}`, { method: 'POST' });
                 const data = await response.json();
 
                 if (!response.ok) throw new Error(data.error || `服务器错误: ${response.statusText}`);
@@ -187,6 +187,35 @@
                         </table>
                     </div>
                 </div>
+
+                ${data.anomalies && data.anomalies.length > 0 ? `
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>🚨 性能异常详情 <span class="badge bg-danger">${data.anomalies.length}个</span></h5>
+                    </div>
+                    <div class="card-body">
+                        ${data.anomalies.map(anomaly => `
+                            <div class="alert alert-warning mb-3">
+                                <h6 class="alert-heading">
+                                    <span class="badge bg-${anomaly.severity === 'HIGH' ? 'danger' : anomaly.severity === 'MEDIUM' ? 'warning' : 'info'}">${anomaly.severity}</span>
+                                    ${anomaly.name}
+                                </h6>
+                                <p class="mb-2"><strong>描述：</strong>${anomaly.description}</p>
+                                <div class="row">
+                                    <div class="col-md-4"><strong>实际值：</strong> ${anomaly.actualValue?.toFixed(2) || 'N/A'}</div>
+                                    <div class="col-md-4"><strong>期望值：</strong> ${anomaly.expectedValue?.toFixed(2) || 'N/A'}</div>
+                                    <div class="col-md-4"><strong>偏差：</strong> ${anomaly.deviationPercentage?.toFixed(1) || 'N/A'}%</div>
+                                </div>
+                                <hr>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> 检测时间: ${anomaly.detectedAt || '未知'}
+                                    ${anomaly.affectedComponent ? ` | <i class="bi bi-gear"></i> 影响组件: ${anomaly.affectedComponent}` : ''}
+                                </small>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
                 
                 <div class="card mt-4">
                     <div class="card-header"><h5>优化建议</h5></div>

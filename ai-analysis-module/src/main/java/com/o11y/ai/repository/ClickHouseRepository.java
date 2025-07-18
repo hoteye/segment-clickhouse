@@ -398,8 +398,8 @@ public class ClickHouseRepository {
      * 通过单次聚合查询获取所有性能指标
      */
     public PerformanceMetrics getAggregatedPerformanceMetrics(LocalDateTime startTime, LocalDateTime endTime, String service) {
-        // 计算时间范围（小时）
-        int timeRangeHours = (int) Duration.between(startTime, endTime).toHours();
+        // 计算时间范围（分钟）
+        int timeRangeMinutes = (int) Duration.between(startTime, endTime).toMinutes();
         // Also fetch baseline metrics from 24 hours ago
         LocalDateTime baselineStartTime = startTime.minusDays(1);
         LocalDateTime baselineEndTime = endTime.minusDays(1);
@@ -448,9 +448,13 @@ public class ClickHouseRepository {
             "avgIf(tag_Total_Memory_type_Int64, start_time >= ? AND start_time <= ?) as avg_total_memory, " +
             "avgIf(tag_Available_Memory_type_Int64, start_time >= ? AND start_time <= ?) as avg_available_memory, " +
             
-            // Current GC Metrics
-            "sumIf(tag_gc_total_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_time_type_Int64 IS NOT NULL) as total_gc_time, " +
-            "sumIf(tag_gc_total_collections_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_collections_type_Int64 IS NOT NULL) as total_gc_collections " +
+            // Current GC Metrics (基于实际ClickHouse字段)
+            "avgIf(tag_gc_total_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_time_type_Int64 IS NOT NULL) as avg_gc_total_time, " +
+            "avgIf(tag_gc_total_collections_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_collections_type_Int64 IS NOT NULL) as avg_gc_total_collections, " +
+            "avgIf(tag_gc_g1_old_generation_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_old_generation_count_type_Int64 IS NOT NULL) as avg_g1_old_gen_count, " +
+            "avgIf(tag_gc_g1_old_generation_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_old_generation_time_type_Int64 IS NOT NULL) as avg_g1_old_gen_time, " +
+            "avgIf(tag_gc_g1_young_generation_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_young_generation_count_type_Int64 IS NOT NULL) as avg_g1_young_gen_count, " +
+            "avgIf(tag_gc_g1_young_generation_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_young_generation_time_type_Int64 IS NOT NULL) as avg_g1_young_gen_time " +
 
             "FROM events " +
             "WHERE service = ? AND ((start_time >= ? AND start_time <= ?) OR (start_time >= ? AND start_time <= ?))";
@@ -472,8 +476,8 @@ public class ClickHouseRepository {
             startTime, endTime, startTime, endTime,
             // Current time range for system memory metrics
             startTime, endTime, startTime, endTime,
-            // Current time range for GC metrics
-            startTime, endTime, startTime, endTime,
+            // Current time range for GC metrics (6个字段 x 2参数 = 12个参数)
+            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
             // Service and WHERE clause time ranges
             service, startTime, endTime, baselineStartTime, baselineEndTime
         }, (rs, rowNum) -> {
@@ -481,7 +485,7 @@ public class ClickHouseRepository {
             metrics.setStartTime(startTime);
             metrics.setEndTime(endTime);
             metrics.setService(service);
-            metrics.setTimeRangeHours(timeRangeHours);
+            metrics.setTimeRangeHours(timeRangeMinutes / 60); // 转换为小时用于向后兼容
 
             // App Metrics
             metrics.setTotalRequests(rs.getLong("total_requests"));
@@ -491,7 +495,7 @@ public class ClickHouseRepository {
             if (metrics.getTotalRequests() > 0) {
                 metrics.setErrorRate(metrics.getFailedRequests() / (double) metrics.getTotalRequests());
                 // 计算平均吞吐量: 总请求数 / 时间范围（秒）
-                double timeRangeSeconds = timeRangeHours * 3600.0;
+                double timeRangeSeconds = timeRangeMinutes * 60.0;
                 metrics.setAvgThroughput(metrics.getTotalRequests() / timeRangeSeconds);
             }
 
@@ -534,7 +538,7 @@ public class ClickHouseRepository {
             if (!rs.wasNull() && avgCpuTimeNs > 0) {
                 // 简化计算：将CPU时间转换为秒并计算相对使用率
                 // 这里使用启发式方法，实际CPU使用率需要时间间隔计算
-                double timeRangeSeconds = timeRangeHours * 3600.0;
+                double timeRangeSeconds = timeRangeMinutes * 60.0;
                 double cpuTimeSeconds = avgCpuTimeNs / 1_000_000_000.0;
                 // 估算CPU使用率（这是累积时间，实际使用率会更低）
                 metrics.setAvgCpuUsage(Math.min(100.0, (cpuTimeSeconds / timeRangeSeconds) * 100));
@@ -545,18 +549,48 @@ public class ClickHouseRepository {
             // System Memory Metrics
             double totalMemory = rs.getDouble("avg_total_memory");
             double availableMemory = rs.getDouble("avg_available_memory");
-            
-            // GC Metrics
-            long totalGcTime = rs.getLong("total_gc_time");
-            metrics.setTotalGcTime(rs.wasNull() ? 0 : totalGcTime);
             if (totalMemory > 0 && availableMemory > 0) {
                 double usedMemory = totalMemory - availableMemory;
                 metrics.setAvgMemoryUsage((usedMemory / totalMemory) * 100);
                 metrics.setAvgSystemCpuUsage(metrics.getAvgCpuUsage()); // 系统CPU使用率暂时使用线程CPU时间
             }
-
-            // 注意：GC时间在SkyWalking events表中没有直接字段，设置为0
-            metrics.setTotalGcTime(0L);
+            
+            // GC Metrics (基于实际ClickHouse字段)
+            double avgGcTotalTime = rs.getDouble("avg_gc_total_time");
+            metrics.setTotalGcTime(rs.wasNull() ? 0L : (long) avgGcTotalTime);
+            
+            double avgGcTotalCollections = rs.getDouble("avg_gc_total_collections");
+            metrics.setTotalGcCollections(rs.wasNull() ? 0L : (long) avgGcTotalCollections);
+            
+            double avgG1OldGenCount = rs.getDouble("avg_g1_old_gen_count");
+            metrics.setG1OldGenerationCount(rs.wasNull() ? 0L : (long) avgG1OldGenCount);
+            
+            double avgG1OldGenTime = rs.getDouble("avg_g1_old_gen_time");
+            metrics.setG1OldGenerationTime(rs.wasNull() ? 0L : (long) avgG1OldGenTime);
+            
+            double avgG1YoungGenCount = rs.getDouble("avg_g1_young_gen_count");
+            metrics.setG1YoungGenerationCount(rs.wasNull() ? 0L : (long) avgG1YoungGenCount);
+            
+            double avgG1YoungGenTime = rs.getDouble("avg_g1_young_gen_time");
+            metrics.setG1YoungGenerationTime(rs.wasNull() ? 0L : (long) avgG1YoungGenTime);
+            
+            // 计算GC衍生指标
+            if (metrics.getTotalGcCollections() > 0) {
+                metrics.setAvgGcTimePerCollection((double) metrics.getTotalGcTime() / metrics.getTotalGcCollections());
+            }
+            
+            // GC时间占总时间比例
+            double timeRangeMillis = timeRangeMinutes * 60.0 * 1000.0;
+            if (timeRangeMillis > 0) {
+                metrics.setGcTimeRatio((metrics.getTotalGcTime() / timeRangeMillis) * 100);
+            }
+            
+            // GC频率 (次/小时) - 转换分钟为小时
+            double timeRangeHours = timeRangeMinutes / 60.0;
+            if (timeRangeHours > 0) {
+                metrics.setYoungGenGcFrequency((double) metrics.getG1YoungGenerationCount() / timeRangeHours);
+                metrics.setOldGenGcFrequency((double) metrics.getG1OldGenerationCount() / timeRangeHours);
+            }
 
             // Baseline Metrics
             PerformanceMetrics baselineMetrics = new PerformanceMetrics();

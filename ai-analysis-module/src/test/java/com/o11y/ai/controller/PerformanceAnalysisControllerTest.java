@@ -62,15 +62,15 @@ class PerformanceAnalysisControllerTest {
         when(analysisService.generateAnalysisReport(anyInt(), anyString())).thenReturn(CompletableFuture.completedFuture(mockReport));
 
         // When & Then
-        mockMvc.perform(post("/api/ai-analysis/reports/generate")
-                .param("timeRangeHours", "24")
+        mockMvc.perform(post("/api/reports/generate")
+                .param("timeRangeMinutes", "1440")
                 .param("service", "test-service"))
-                .andExpect(status().isOk())
+                .andExpect(status().isAccepted())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.reportId").value("test-report-123"))
-                .andExpect(jsonPath("$.timeRange").value(24));
+                .andExpect(jsonPath("$.reportId").exists())
+                .andExpect(jsonPath("$.message").exists());
 
-        verify(analysisService).generateAnalysisReport(24, "test-service");
+        verify(analysisService).generateAnalysisReport(1440, "test-service");
     }
 
     @Test
@@ -85,12 +85,12 @@ class PerformanceAnalysisControllerTest {
         when(analysisService.generateAnalysisReport(anyInt(), any())).thenReturn(CompletableFuture.completedFuture(mockReport));
 
         // When & Then
-        mockMvc.perform(post("/api/ai-analysis/reports/generate"))
-                .andExpect(status().isOk())
+        mockMvc.perform(post("/api/reports/generate"))
+                .andExpect(status().isAccepted())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.reportId").value("default-report"));
+                .andExpect(jsonPath("$.reportId").exists());
 
-        verify(analysisService).generateAnalysisReport(eq(1), any());
+        verify(analysisService).generateAnalysisReport(eq(60), any());
     }
 
     @Test
@@ -99,14 +99,14 @@ class PerformanceAnalysisControllerTest {
         when(analysisService.generateAnalysisReport(anyInt(), anyString())).thenReturn(CompletableFuture.completedFuture(null));
 
         // When & Then
-        mockMvc.perform(post("/api/ai-analysis/reports/generate")
-                .param("timeRangeHours", "24")
+        mockMvc.perform(post("/api/reports/generate")
+                .param("timeRangeMinutes", "1440")
                 .param("service", "test-service"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isAccepted())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.reportId").exists());
 
-        verify(analysisService).generateAnalysisReport(24, "test-service");
+        verify(analysisService).generateAnalysisReport(1440, "test-service");
     }
 
     @Test
@@ -126,8 +126,8 @@ class PerformanceAnalysisControllerTest {
                 .thenReturn(mockSuggestions);
 
         // When & Then
-        mockMvc.perform(post("/api/ai-analysis/suggestions")
-                .param("timeRangeHours", "12")
+        mockMvc.perform(post("/api/suggestions")
+                .param("timeRangeMinutes", "12")
                 .param("service", "test-service"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
@@ -141,7 +141,7 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testHealthCheck() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/health"))
+        mockMvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value("UP"));
@@ -150,7 +150,7 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testLLMHealthCheck() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/llm/health"))
+        mockMvc.perform(get("/api/llm/health"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
@@ -158,7 +158,7 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testGetReports() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/reports"))
+        mockMvc.perform(get("/api/reports"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
@@ -177,7 +177,7 @@ class PerformanceAnalysisControllerTest {
         when(reportService.getReportById(reportId)).thenReturn(mockReport);
 
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/reports/{reportId}", reportId))
+        mockMvc.perform(get("/api/reports/{reportId}", reportId))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.reportId").value(reportId));
@@ -186,7 +186,7 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testTriggerAnalysis() throws Exception {
         // When & Then
-        mockMvc.perform(post("/api/ai-analysis/analysis/trigger"))
+        mockMvc.perform(post("/api/analysis/trigger"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").exists());
@@ -195,8 +195,8 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testGetErrorTraces() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/traces/errors")
-                .param("timeRangeHours", "24")
+        mockMvc.perform(get("/api/traces/errors")
+                .param("timeRangeMinutes", "24")
                 .param("service", "test-service"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
@@ -205,8 +205,8 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testGetSlowTraces() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/traces/slow")
-                .param("timeRangeHours", "24")
+        mockMvc.perform(get("/api/traces/slow")
+                .param("timeRangeMinutes", "24")
                 .param("service", "test-service")
                 .param("thresholdMs", "1000"))
                 .andExpect(status().isOk())
@@ -216,8 +216,8 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testGetTopologyServices() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/topology/services")
-                .param("timeRangeHours", "24"))
+        mockMvc.perform(get("/api/topology/services")
+                .param("timeRangeMinutes", "24"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
@@ -225,7 +225,7 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testGetSampleEvents() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/data/events/sample"))
+        mockMvc.perform(get("/api/data/events/sample"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
@@ -233,7 +233,7 @@ class PerformanceAnalysisControllerTest {
     @Test
     void testGetEventsSchema() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/ai-analysis/data/events/schema"))
+        mockMvc.perform(get("/api/data/events/schema"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }

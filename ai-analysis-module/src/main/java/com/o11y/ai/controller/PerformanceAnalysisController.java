@@ -42,13 +42,13 @@ public class PerformanceAnalysisController {
      * 生成性能分析报告
      */
     @PostMapping("/reports/generate")
-    public ResponseEntity<?> generateReport(@RequestParam(defaultValue = "1") int timeRangeHours,
+    public ResponseEntity<?> generateReport(@RequestParam(defaultValue = "60") int timeRangeMinutes,
             @RequestParam(required = false) String service) {
         try {
-            LOG.info("收到生成报告请求，时间范围: {}小时, service={}", timeRangeHours, service);
+            LOG.info("收到生成报告请求，时间范围: {}分钟, service={}", timeRangeMinutes, service);
 
             // 异步调用服务层方法
-            CompletableFuture<PerformanceReport> futureReport = analysisService.generateAnalysisReport(timeRangeHours, service);
+            CompletableFuture<PerformanceReport> futureReport = analysisService.generateAnalysisReport(timeRangeMinutes, service);
 
             // 从future中获取报告ID（这里会阻塞，但因为ID几乎是立刻生成的，所以很快）
             String reportId = futureReport.handle((report, ex) -> {
@@ -73,13 +73,13 @@ public class PerformanceAnalysisController {
     }
 
     /**
-     * 获取最近指定小时内出现过的服务列表
+     * 获取最近指定分钟内出现过的服务列表
      */
     @GetMapping("/services")
-    public ResponseEntity<?> getServiceList(@RequestParam(defaultValue = "24") int hours) {
+    public ResponseEntity<?> getServiceList(@RequestParam(defaultValue = "1440") int minutes) {
         try {
             LocalDateTime endTime = LocalDateTime.now();
-            LocalDateTime startTime = endTime.minusHours(hours);
+            LocalDateTime startTime = endTime.minusMinutes(minutes);
             List<String> services = clickHouseRepository.getDistinctServices(startTime, endTime);
             return ResponseEntity.ok(services);
         } catch (Exception e) {
