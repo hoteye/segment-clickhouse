@@ -60,7 +60,8 @@ public class ClickHouseRepository {
                 ? new Object[] { startTime, endTime, serviceName }
                 : new Object[] { startTime, endTime };
 
-        return clickHouseJdbcTemplate.query(sqlBuilder.toString(), new PerformanceMetricsRowMapper(timeRangeHours), params);
+        return clickHouseJdbcTemplate.query(sqlBuilder.toString(), new PerformanceMetricsRowMapper(timeRangeHours),
+                params);
     }
 
     /**
@@ -315,11 +316,11 @@ public class ClickHouseRepository {
      */
     private static class PerformanceMetricsRowMapper implements RowMapper<PerformanceMetrics> {
         private final int timeRangeHours;
-        
+
         public PerformanceMetricsRowMapper(int timeRangeHours) {
             this.timeRangeHours = timeRangeHours;
         }
-        
+
         @Override
         public PerformanceMetrics mapRow(@NonNull ResultSet rs, int rowNum) throws SQLException {
             return PerformanceMetrics.builder()
@@ -397,7 +398,8 @@ public class ClickHouseRepository {
     /**
      * 通过单次聚合查询获取所有性能指标
      */
-    public PerformanceMetrics getAggregatedPerformanceMetrics(LocalDateTime startTime, LocalDateTime endTime, String service) {
+    public PerformanceMetrics getAggregatedPerformanceMetrics(LocalDateTime startTime, LocalDateTime endTime,
+            String service) {
         // 计算时间范围（分钟）
         int timeRangeMinutes = (int) Duration.between(startTime, endTime).toMinutes();
         // Also fetch baseline metrics from 24 hours ago
@@ -405,81 +407,109 @@ public class ClickHouseRepository {
         LocalDateTime baselineEndTime = endTime.minusDays(1);
 
         String sql = "SELECT " +
-            // Current App Metrics - 按TraceSegment统计真实请求数
-            "uniqIf(trace_segment_id, start_time >= ? AND start_time <= ?) as total_requests, " +
-            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as avg_response_time, " +
-            "maxIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as max_response_time, " +
-            "sumIf(is_error, start_time >= ? AND start_time <= ?) as failed_requests, " +
+        // Current App Metrics - 按TraceSegment统计真实请求数
+                "uniqIf(trace_segment_id, start_time >= ? AND start_time <= ?) as total_requests, " +
+                "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as avg_response_time, " +
+                "maxIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as max_response_time, " +
+                "sumIf(is_error, start_time >= ? AND start_time <= ?) as failed_requests, " +
 
-            // Baseline App Metrics - 按TraceSegment统计基线请求数
-            "uniqIf(trace_segment_id, start_time >= ? AND start_time <= ?) as baseline_total_requests, " +
-            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as baseline_avg_response_time, " +
+                // Baseline App Metrics - 按TraceSegment统计基线请求数
+                "uniqIf(trace_segment_id, start_time >= ? AND start_time <= ?) as baseline_total_requests, " +
+                "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ?) as baseline_avg_response_time, "
+                +
 
-            // Current DB Metrics
-            "countIf(start_time >= ? AND start_time <= ? AND span_layer = 'Database') as total_queries, " +
-            "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer = 'Database') as avg_query_duration, " +
-            "sumIf((end_time - start_time) * 1000 > 1000, start_time >= ? AND start_time <= ? AND span_layer = 'Database') as slow_queries, " +
+                // Current DB Metrics
+                "countIf(start_time >= ? AND start_time <= ? AND span_layer = 'Database') as total_queries, " +
+                "avgIf((end_time - start_time) * 1000, start_time >= ? AND start_time <= ? AND span_layer = 'Database') as avg_query_duration, "
+                +
+                "sumIf((end_time - start_time) * 1000 > 1000, start_time >= ? AND start_time <= ? AND span_layer = 'Database') as slow_queries, "
+                +
 
-            // Current JVM Heap Metrics
-            "avgIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_used_type_Int64 IS NOT NULL) as avg_heap_used, " +
-            "maxIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_used_type_Int64 IS NOT NULL) as max_heap_used, " +
-            "avgIf(tag_jvm_heap_max_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_max_type_Int64 IS NOT NULL) as avg_heap_max, " +
-            "avgIf(tag_jvm_heap_committed_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_committed_type_Int64 IS NOT NULL) as heap_committed, " +
-            "avgIf(tag_jvm_heap_init_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_init_type_Int64 IS NOT NULL) as heap_init, " +
+                // Current JVM Heap Metrics
+                "avgIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_used_type_Int64 IS NOT NULL) as avg_heap_used, "
+                +
+                "maxIf(tag_jvm_heap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_used_type_Int64 IS NOT NULL) as max_heap_used, "
+                +
+                "avgIf(tag_jvm_heap_max_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_max_type_Int64 IS NOT NULL) as avg_heap_max, "
+                +
+                "avgIf(tag_jvm_heap_committed_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_committed_type_Int64 IS NOT NULL) as heap_committed, "
+                +
+                "avgIf(tag_jvm_heap_init_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_heap_init_type_Int64 IS NOT NULL) as heap_init, "
+                +
 
-            // Current JVM Non-Heap Metrics
-            "avgIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_used_type_Int64 IS NOT NULL) as avg_nonheap_used, " +
-            "maxIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_used_type_Int64 IS NOT NULL) as max_nonheap_used, " +
-            "avgIf(tag_jvm_nonheap_committed_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_committed_type_Int64 IS NOT NULL) as nonheap_committed, " +
-            "avgIf(tag_jvm_nonheap_init_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_init_type_Int64 IS NOT NULL) as nonheap_init, " +
-            "avgIf(tag_jvm_nonheap_max_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_max_type_Int64 IS NOT NULL) as nonheap_max, " +
+                // Current JVM Non-Heap Metrics
+                "avgIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_used_type_Int64 IS NOT NULL) as avg_nonheap_used, "
+                +
+                "maxIf(tag_jvm_nonheap_used_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_used_type_Int64 IS NOT NULL) as max_nonheap_used, "
+                +
+                "avgIf(tag_jvm_nonheap_committed_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_committed_type_Int64 IS NOT NULL) as nonheap_committed, "
+                +
+                "avgIf(tag_jvm_nonheap_init_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_init_type_Int64 IS NOT NULL) as nonheap_init, "
+                +
+                "avgIf(tag_jvm_nonheap_max_type_Int64, start_time >= ? AND start_time <= ? AND tag_jvm_nonheap_max_type_Int64 IS NOT NULL) as nonheap_max, "
+                +
 
-            // Current Thread Metrics
-            "avgIf(tag_thread_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_count_type_Int64 IS NOT NULL) as avg_thread_count, " +
-            "maxIf(tag_thread_peak_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_peak_count_type_Int64 IS NOT NULL) as max_thread_peak_count, " +
-            "avgIf(tag_thread_daemon_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_daemon_count_type_Int64 IS NOT NULL) as thread_daemon_count, " +
-            "avgIf(tag_thread_total_started_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_total_started_count_type_Int64 IS NOT NULL) as thread_total_started_count, " +
+                // Current Thread Metrics
+                "avgIf(tag_thread_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_count_type_Int64 IS NOT NULL) as avg_thread_count, "
+                +
+                "maxIf(tag_thread_peak_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_peak_count_type_Int64 IS NOT NULL) as max_thread_peak_count, "
+                +
+                "avgIf(tag_thread_daemon_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_daemon_count_type_Int64 IS NOT NULL) as thread_daemon_count, "
+                +
+                "avgIf(tag_thread_total_started_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_total_started_count_type_Int64 IS NOT NULL) as thread_total_started_count, "
+                +
 
-            // Current CPU Metrics (CPU时间是纳秒单位，需要计算CPU使用率)
-            "avgIf(tag_thread_current_cpu_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_current_cpu_time_type_Int64 IS NOT NULL) as avg_cpu_time_ns, " +
-            "avgIf(tag_thread_current_user_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_current_user_time_type_Int64 IS NOT NULL) as avg_user_time_ns, " +
+                // Current CPU Metrics (CPU时间是纳秒单位，需要计算CPU使用率)
+                "avgIf(tag_thread_current_cpu_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_current_cpu_time_type_Int64 IS NOT NULL) as avg_cpu_time_ns, "
+                +
+                "avgIf(tag_thread_current_user_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_thread_current_user_time_type_Int64 IS NOT NULL) as avg_user_time_ns, "
+                +
 
-            // Current System Memory Metrics
-            "avgIf(tag_Total_Memory_type_Int64, start_time >= ? AND start_time <= ? AND tag_Total_Memory_type_Int64 IS NOT NULL) as avg_total_memory, " +
-            "avgIf(tag_Available_Memory_type_Int64, start_time >= ? AND start_time <= ? AND tag_Available_Memory_type_Int64 IS NOT NULL) as avg_available_memory, " +
-            
-            // Current GC Metrics (基于实际ClickHouse字段)
-            "avgIf(tag_gc_total_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_time_type_Int64 IS NOT NULL) as avg_gc_total_time, " +
-            "avgIf(tag_gc_total_collections_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_collections_type_Int64 IS NOT NULL) as avg_gc_total_collections, " +
-            "avgIf(tag_gc_g1_old_generation_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_old_generation_count_type_Int64 IS NOT NULL) as avg_g1_old_gen_count, " +
-            "avgIf(tag_gc_g1_old_generation_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_old_generation_time_type_Int64 IS NOT NULL) as avg_g1_old_gen_time, " +
-            "avgIf(tag_gc_g1_young_generation_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_young_generation_count_type_Int64 IS NOT NULL) as avg_g1_young_gen_count, " +
-            "avgIf(tag_gc_g1_young_generation_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_young_generation_time_type_Int64 IS NOT NULL) as avg_g1_young_gen_time " +
+                // Current System Memory Metrics
+                "avgIf(tag_Total_Memory_type_Int64, start_time >= ? AND start_time <= ? AND tag_Total_Memory_type_Int64 IS NOT NULL) as avg_total_memory, "
+                +
+                "avgIf(tag_Available_Memory_type_Int64, start_time >= ? AND start_time <= ? AND tag_Available_Memory_type_Int64 IS NOT NULL) as avg_available_memory, "
+                +
 
-            "FROM events " +
-            "WHERE service = ? AND ((start_time >= ? AND start_time <= ?) OR (start_time >= ? AND start_time <= ?))";
+                // Current GC Metrics (基于实际ClickHouse字段)
+                "avgIf(tag_gc_total_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_time_type_Int64 IS NOT NULL) as avg_gc_total_time, "
+                +
+                "avgIf(tag_gc_total_collections_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_total_collections_type_Int64 IS NOT NULL) as avg_gc_total_collections, "
+                +
+                "avgIf(tag_gc_g1_old_generation_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_old_generation_count_type_Int64 IS NOT NULL) as avg_g1_old_gen_count, "
+                +
+                "avgIf(tag_gc_g1_old_generation_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_old_generation_time_type_Int64 IS NOT NULL) as avg_g1_old_gen_time, "
+                +
+                "avgIf(tag_gc_g1_young_generation_count_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_young_generation_count_type_Int64 IS NOT NULL) as avg_g1_young_gen_count, "
+                +
+                "avgIf(tag_gc_g1_young_generation_time_type_Int64, start_time >= ? AND start_time <= ? AND tag_gc_g1_young_generation_time_type_Int64 IS NOT NULL) as avg_g1_young_gen_time "
+                +
 
-        return clickHouseJdbcTemplate.queryForObject(sql, new Object[]{
-            // Current time range for app metrics
-            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
-            // Baseline time range for app metrics
-            baselineStartTime, baselineEndTime, baselineStartTime, baselineEndTime,
-            // Current time range for DB metrics
-            startTime, endTime, startTime, endTime, startTime, endTime,
-            // Current time range for JVM heap metrics
-            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
-            // Current time range for JVM non-heap metrics
-            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
-            // Current time range for thread metrics
-            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
-            // Current time range for CPU metrics
-            startTime, endTime, startTime, endTime,
-            // Current time range for system memory metrics
-            startTime, endTime, startTime, endTime,
-            // Current time range for GC metrics (6个字段 x 2参数 = 12个参数)
-            startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
-            // Service and WHERE clause time ranges
-            service, startTime, endTime, baselineStartTime, baselineEndTime
+                "FROM events " +
+                "WHERE service = ? AND ((start_time >= ? AND start_time <= ?) OR (start_time >= ? AND start_time <= ?))";
+
+        return clickHouseJdbcTemplate.queryForObject(sql, new Object[] {
+                // Current time range for app metrics
+                startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+                // Baseline time range for app metrics
+                baselineStartTime, baselineEndTime, baselineStartTime, baselineEndTime,
+                // Current time range for DB metrics
+                startTime, endTime, startTime, endTime, startTime, endTime,
+                // Current time range for JVM heap metrics
+                startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+                // Current time range for JVM non-heap metrics
+                startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+                // Current time range for thread metrics
+                startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+                // Current time range for CPU metrics
+                startTime, endTime, startTime, endTime,
+                // Current time range for system memory metrics
+                startTime, endTime, startTime, endTime,
+                // Current time range for GC metrics (6个字段 x 2参数 = 12个参数)
+                startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime, startTime, endTime,
+                startTime, endTime,
+                // Service and WHERE clause time ranges
+                service, startTime, endTime, baselineStartTime, baselineEndTime
         }, (rs, rowNum) -> {
             PerformanceMetrics metrics = new PerformanceMetrics();
             metrics.setStartTime(startTime);
@@ -554,37 +584,37 @@ public class ClickHouseRepository {
                 metrics.setAvgMemoryUsage((usedMemory / totalMemory) * 100);
                 metrics.setAvgSystemCpuUsage(metrics.getAvgCpuUsage()); // 系统CPU使用率暂时使用线程CPU时间
             }
-            
+
             // GC Metrics (基于实际ClickHouse字段)
             double avgGcTotalTime = rs.getDouble("avg_gc_total_time");
             metrics.setTotalGcTime(rs.wasNull() ? 0L : (long) avgGcTotalTime);
-            
+
             double avgGcTotalCollections = rs.getDouble("avg_gc_total_collections");
             metrics.setTotalGcCollections(rs.wasNull() ? 0L : (long) avgGcTotalCollections);
-            
+
             double avgG1OldGenCount = rs.getDouble("avg_g1_old_gen_count");
             metrics.setG1OldGenerationCount(rs.wasNull() ? 0L : (long) avgG1OldGenCount);
-            
+
             double avgG1OldGenTime = rs.getDouble("avg_g1_old_gen_time");
             metrics.setG1OldGenerationTime(rs.wasNull() ? 0L : (long) avgG1OldGenTime);
-            
+
             double avgG1YoungGenCount = rs.getDouble("avg_g1_young_gen_count");
             metrics.setG1YoungGenerationCount(rs.wasNull() ? 0L : (long) avgG1YoungGenCount);
-            
+
             double avgG1YoungGenTime = rs.getDouble("avg_g1_young_gen_time");
             metrics.setG1YoungGenerationTime(rs.wasNull() ? 0L : (long) avgG1YoungGenTime);
-            
+
             // 计算GC衍生指标
             if (metrics.getTotalGcCollections() > 0) {
                 metrics.setAvgGcTimePerCollection((double) metrics.getTotalGcTime() / metrics.getTotalGcCollections());
             }
-            
+
             // GC时间占总时间比例
             double timeRangeMillis = timeRangeMinutes * 60.0 * 1000.0;
             if (timeRangeMillis > 0) {
                 metrics.setGcTimeRatio((metrics.getTotalGcTime() / timeRangeMillis) * 100);
             }
-            
+
             // GC频率 (次/小时) - 转换分钟为小时
             double timeRangeHours = timeRangeMinutes / 60.0;
             if (timeRangeHours > 0) {
@@ -608,5 +638,173 @@ public class ClickHouseRepository {
     public List<String> getDistinctServices(LocalDateTime startTime, LocalDateTime endTime) {
         String sql = "SELECT DISTINCT service FROM events WHERE start_time >= ? AND start_time <= ? AND service IS NOT NULL AND service != '' ORDER BY service";
         return clickHouseJdbcTemplate.queryForList(sql, String.class, startTime, endTime);
+    }
+
+    /**
+     * 获取应用中耗时最长的交易详情，包含具体的trace ID
+     * 专门用于性能分析报告中的慢交易分析
+     */
+    public List<Map<String, Object>> getSlowTransactionsWithTraceIds(
+            LocalDateTime startTime, LocalDateTime endTime,
+            String serviceName, int limit) {
+
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT ")
+                .append("trace_id, ")
+                .append("trace_segment_id, ")
+                .append("service, ")
+                .append("service_instance, ")
+                .append("operation_name, ")
+                .append("start_time, ")
+                .append("end_time, ")
+                .append("(end_time - start_time) * 1000 as duration_ms, ")
+                .append("is_error, ")
+                .append("tag_http_method, ")
+                .append("tag_url, ")
+                .append("tag_db_statement, ")
+                .append("tag_rpc_method_name, ")
+                .append("tag_http_status_code, ")
+                .append("log_message ")
+                .append("FROM events ")
+                .append("WHERE start_time >= ? AND start_time <= ? ");
+
+        if (serviceName != null && !serviceName.trim().isEmpty()) {
+            sqlBuilder.append("AND service = ? ");
+        }
+
+        sqlBuilder.append("AND (end_time - start_time) * 1000 > 0 ") // 确保有有效耗时
+                .append("ORDER BY duration_ms DESC ")
+                .append("LIMIT ?");
+
+        Object[] params;
+        if (serviceName != null && !serviceName.trim().isEmpty()) {
+            params = new Object[] { startTime, endTime, serviceName, limit };
+        } else {
+            params = new Object[] { startTime, endTime, limit };
+        }
+
+        return clickHouseJdbcTemplate.queryForList(sqlBuilder.toString(), params);
+    }
+
+    /**
+     * 获取特定操作的性能统计信息，用于慢交易分析
+     */
+    public List<Map<String, Object>> getOperationPerformanceStats(
+            LocalDateTime startTime, LocalDateTime endTime, String serviceName) {
+
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT ")
+                .append("operation_name, ")
+                .append("count(*) as total_calls, ")
+                .append("avg((end_time - start_time) * 1000) as avg_duration_ms, ")
+                .append("max((end_time - start_time) * 1000) as max_duration_ms, ")
+                .append("min((end_time - start_time) * 1000) as min_duration_ms, ")
+                .append("quantile(0.50)((end_time - start_time) * 1000) as p50_duration_ms, ")
+                .append("quantile(0.90)((end_time - start_time) * 1000) as p90_duration_ms, ")
+                .append("quantile(0.95)((end_time - start_time) * 1000) as p95_duration_ms, ")
+                .append("quantile(0.99)((end_time - start_time) * 1000) as p99_duration_ms, ")
+                .append("sum(is_error) as error_count, ")
+                .append("(sum(is_error) * 100.0 / count(*)) as error_rate ")
+                .append("FROM events ")
+                .append("WHERE start_time >= ? AND start_time <= ? ");
+
+        if (serviceName != null && !serviceName.trim().isEmpty()) {
+            sqlBuilder.append("AND service = ? ");
+        }
+
+        sqlBuilder.append("GROUP BY operation_name ")
+                .append("HAVING total_calls >= 5 ") // 至少5次调用才有统计意义
+                .append("ORDER BY p95_duration_ms DESC ")
+                .append("LIMIT 20");
+
+        Object[] params;
+        if (serviceName != null && !serviceName.trim().isEmpty()) {
+            params = new Object[] { startTime, endTime, serviceName };
+        } else {
+            params = new Object[] { startTime, endTime };
+        }
+
+        return clickHouseJdbcTemplate.queryForList(sqlBuilder.toString(), params);
+    }
+
+    /**
+     * 获取性能异常的trace ID列表，按严重程度排序
+     */
+    public List<Map<String, Object>> getPerformanceAnomalyTraces(
+            LocalDateTime startTime, LocalDateTime endTime, String serviceName) {
+
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT ")
+                .append("trace_id, ")
+                .append("service, ")
+                .append("operation_name, ")
+                .append("(end_time - start_time) * 1000 as duration_ms, ")
+                .append("is_error, ")
+                .append("start_time, ")
+                .append("tag_http_status_code, ")
+                .append("log_error_kind, ")
+                .append("log_message ")
+                .append("FROM events ")
+                .append("WHERE start_time >= ? AND start_time <= ? ");
+
+        if (serviceName != null && !serviceName.trim().isEmpty()) {
+            sqlBuilder.append("AND service = ? ");
+        }
+
+        // 性能异常条件：耗时超过5秒 OR 有错误 OR HTTP状态码>=400
+        sqlBuilder.append("AND (")
+                .append("((end_time - start_time) * 1000 > 5000) OR ") // 超过5秒
+                .append("(is_error = 1) OR ") // 有错误
+                .append("(tag_http_status_code >= 400) ") // HTTP错误状态码
+                .append(") ")
+                .append("ORDER BY duration_ms DESC, is_error DESC ")
+                .append("LIMIT 50");
+
+        Object[] params;
+        if (serviceName != null && !serviceName.trim().isEmpty()) {
+            params = new Object[] { startTime, endTime, serviceName };
+        } else {
+            params = new Object[] { startTime, endTime };
+        }
+
+        return clickHouseJdbcTemplate.queryForList(sqlBuilder.toString(), params);
+    }
+
+    /**
+     * 获取数据库操作的性能分析
+     */
+    public List<Map<String, Object>> getDatabaseOperationAnalysis(
+            LocalDateTime startTime, LocalDateTime endTime, String serviceName) {
+
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT ")
+                .append("tag_db_statement, ")
+                .append("count(*) as execution_count, ")
+                .append("avg((end_time - start_time) * 1000) as avg_duration_ms, ")
+                .append("max((end_time - start_time) * 1000) as max_duration_ms, ")
+                .append("sum(is_error) as error_count, ")
+                .append("groupArray(trace_id) as sample_trace_ids ")
+                .append("FROM events ")
+                .append("WHERE start_time >= ? AND start_time <= ? ");
+
+        if (serviceName != null && !serviceName.trim().isEmpty()) {
+            sqlBuilder.append("AND service = ? ");
+        }
+
+        sqlBuilder.append("AND tag_db_statement IS NOT NULL ")
+                .append("AND tag_db_statement != '' ")
+                .append("GROUP BY tag_db_statement ")
+                .append("HAVING execution_count >= 3 ") // 至少执行3次
+                .append("ORDER BY avg_duration_ms DESC ")
+                .append("LIMIT 15");
+
+        Object[] params;
+        if (serviceName != null && !serviceName.trim().isEmpty()) {
+            params = new Object[] { startTime, endTime, serviceName };
+        } else {
+            params = new Object[] { startTime, endTime };
+        }
+
+        return clickHouseJdbcTemplate.queryForList(sqlBuilder.toString(), params);
     }
 }

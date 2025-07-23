@@ -375,7 +375,7 @@
 
 
 
-    <script src="https://unpkg.com/mxgraph@4.2.2/javascript/mxClient.min.js"></script>
+    <script src="mxgraph/mxClient.min.js"></script>
     <script>
         const API_BASE = '/ai-analysis/api/trace-visualization';
         
@@ -570,7 +570,7 @@
 
                     // 设置iframe src
                     const encoded = encodeURIComponent(data.drawioXml);
-                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_tree#R${encoded}`;
+                    const viewerUrl = `http://localhost:8083/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_tree#R${encoded}`;
                     document.getElementById('tree-drawio-iframe').src = viewerUrl;
                 } else {
                     throw new Error(data.message || '生成失败');
@@ -631,7 +631,7 @@
             if (!window.currentDrawioXml) return;
             
             const encoded = encodeURIComponent(window.currentDrawioXml);
-            const url = `https://app.diagrams.net/?src=about#R${encoded}`;
+            const url = `http://localhost:8083/?src=about#R${encoded}`;
             window.open(url, '_blank');
         }
 
@@ -668,7 +668,7 @@
                     `;
 
                     const encoded = encodeURIComponent(data.drawioXml);
-                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_dag#R${encoded}`;
+                    const viewerUrl = `http://localhost:8083/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_dag#R${encoded}`;
                     document.getElementById('dag-drawio-iframe').src = viewerUrl;
                 } else {
                     throw new Error(data.message || '生成失败');
@@ -720,7 +720,7 @@
                     `;
 
                     const encoded = encodeURIComponent(data.drawioXml);
-                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_waterfall#R${encoded}`;
+                    const viewerUrl = `http://localhost:8083/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_waterfall#R${encoded}`;
                     document.getElementById('waterfall-drawio-iframe').src = viewerUrl;
                 } else {
                     throw new Error(data.message || '生成失败');
@@ -772,7 +772,7 @@
                     `;
 
                     const encoded = encodeURIComponent(data.drawioXml);
-                    const viewerUrl = `https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_flame#R${encoded}`;
+                    const viewerUrl = `http://localhost:8083/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=${data.traceId}_flame#R${encoded}`;
                     document.getElementById('flame-drawio-iframe').src = viewerUrl;
                 } else {
                     throw new Error(data.message || '生成失败');

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 性能分析报告</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body { background-color: #f0f2f5; }
         .container { max-width: 1200px; }
@@ -51,6 +52,45 @@
             </div>
         </div>
 
+        <!-- 历史报告查询区域 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>📊 历史报告查询</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end mb-3">
+                    <div class="col-md-4">
+                        <label for="historyServiceSelect" class="form-label">筛选服务</label>
+                        <select id="historyServiceSelect" class="form-select">
+                            <option value="">所有服务</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="reportIdInput" class="form-label">报告ID (精确查询)</label>
+                        <input type="text" id="reportIdInput" class="form-control" placeholder="输入报告ID">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="limitInput" class="form-label">显示数量</label>
+                        <select id="limitInput" class="form-select">
+                            <option value="10">10条</option>
+                            <option value="20" selected>20条</option>
+                            <option value="50">50条</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button id="queryHistoryBtn" class="btn btn-success w-100">
+                            <i class="bi bi-search"></i> 查询
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 历史报告列表 -->
+                <div id="historyReportsContainer" class="mt-3">
+                    <div class="alert alert-info">点击"查询"按钮获取历史报告列表</div>
+                </div>
+            </div>
+        </div>
+
         <div id="reportContainer"></div>
 
     </div>
@@ -64,7 +104,47 @@
         const reportContainer = document.getElementById('reportContainer');
         const statusCard = document.getElementById('statusCard');
 
+        // 历史报告查询相关元素
+        const historyServiceSelect = document.getElementById('historyServiceSelect');
+        const reportIdInput = document.getElementById('reportIdInput');
+        const limitInput = document.getElementById('limitInput');
+        const queryHistoryBtn = document.getElementById('queryHistoryBtn');
+        const historyReportsContainer = document.getElementById('historyReportsContainer');
+
         let pollingInterval;
+
+        // 时间格式化工具函数
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return '未知时间';
+            try {
+                // 处理多种时间格式
+                let date;
+                if (timestamp.includes('T')) {
+                    // ISO格式：2025-07-23T19:58:54
+                    date = new Date(timestamp);
+                } else {
+                    // 其他格式
+                    date = new Date(timestamp);
+                }
+                
+                // 检查日期是否有效
+                if (isNaN(date.getTime())) {
+                    return '时间格式错误';
+                }
+                
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            } catch (error) {
+                console.error('时间格式化失败:', error, timestamp);
+                return '时间解析失败';
+            }
+        }
 
         // 1. 动态加载服务列表
         async function loadServices() {
@@ -72,7 +152,14 @@
                 const response = await fetch('/ai-analysis/api/services');
                 if (!response.ok) throw new Error('获取服务列表失败');
                 const services = await response.json();
+                
+                // 填充报告生成的服务下拉框
                 serviceSelect.innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
+                
+                // 填充历史报告查询的服务下拉框
+                historyServiceSelect.innerHTML = '<option value="">所有服务</option>' + 
+                    services.map(s => `<option value="${s}">${s}</option>`).join('');
+                    
             } catch (error) {
                 statusMessage.className = 'alert alert-danger';
                 statusMessage.textContent = `错误: ${error.message}`;
@@ -217,6 +304,165 @@
                 </div>
                 ` : ''}
                 
+                ${data.slowTransactionAnalysis ? `
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>🐌 慢交易分析 <span class="badge bg-warning">${data.slowTransactionAnalysis.totalAnalyzedTransactions || 0}个</span></h5>
+                    </div>
+                    <div class="card-body">
+                        ${data.slowTransactionAnalysis.analysis ? `
+                            <div class="alert alert-info mb-3">
+                                <h6><i class="bi bi-lightbulb"></i> AI 分析结果</h6>
+                                <p class="mb-0">${data.slowTransactionAnalysis.analysis}</p>
+                            </div>
+                        ` : ''}
+                        
+                        ${data.slowTransactionAnalysis.topSlowTransactions && data.slowTransactionAnalysis.topSlowTransactions.length > 0 ? `
+                            <h6 class="mt-3 mb-3"><i class="bi bi-speedometer2"></i> TOP 慢交易</h6>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Trace ID</th>
+                                            <th>服务</th>
+                                            <th>操作</th>
+                                            <th>耗时</th>
+                                            <th>状态</th>
+                                            <th>时间</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.slowTransactionAnalysis.topSlowTransactions.slice(0, 10).map(tx => `
+                                            <tr class="${tx.error ? 'table-danger' : ''}">
+                                                <td>
+                                                    <code class="small">${tx.traceId.substring(0, 12)}...</code>
+                                                    <button class="btn btn-outline-secondary btn-xs ms-1" onclick="copyToClipboard('${tx.traceId}')" title="复制完整Trace ID">
+                                                        <i class="bi bi-clipboard"></i>
+                                                    </button>
+                                                </td>
+                                                <td><span class="badge bg-primary">${tx.service}</span></td>
+                                                <td><small>${tx.operationName}</small></td>
+                                                <td>
+                                                    <span class="badge ${tx.durationMs > 2000 ? 'bg-danger' : tx.durationMs > 1000 ? 'bg-warning' : 'bg-success'}">
+                                                        ${tx.durationMs.toFixed(0)}ms
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    ${tx.error ? 
+                                                        '<span class="badge bg-danger">错误</span>' : 
+                                                        '<span class="badge bg-success">正常</span>'
+                                                    }
+                                                </td>
+                                                <td><small>${formatTimestamp(tx.startTime)}</small></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+                        
+                        ${data.slowTransactionAnalysis.operationStats && data.slowTransactionAnalysis.operationStats.length > 0 ? `
+                            <h6 class="mt-4 mb-3"><i class="bi bi-bar-chart"></i> 操作性能统计</h6>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>操作名称</th>
+                                            <th>调用次数</th>
+                                            <th>平均耗时</th>
+                                            <th>P95耗时</th>
+                                            <th>P99耗时</th>
+                                            <th>错误率</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.slowTransactionAnalysis.operationStats.slice(0, 10).map(op => `
+                                            <tr>
+                                                <td><small>${op.operationName}</small></td>
+                                                <td><span class="badge bg-info">${op.totalCalls}</span></td>
+                                                <td>${op.avgDurationMs.toFixed(1)}ms</td>
+                                                <td>${op.p95DurationMs.toFixed(1)}ms</td>
+                                                <td>${op.p99DurationMs.toFixed(1)}ms</td>
+                                                <td>
+                                                    <span class="badge ${op.errorRate > 10 ? 'bg-danger' : op.errorRate > 0 ? 'bg-warning' : 'bg-success'}">
+                                                        ${op.errorRate.toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+                        
+                        ${data.slowTransactionAnalysis.anomalyTraces && data.slowTransactionAnalysis.anomalyTraces.length > 0 ? `
+                            <h6 class="mt-4 mb-3"><i class="bi bi-exclamation-triangle"></i> 异常交易</h6>
+                            <div class="row">
+                                ${data.slowTransactionAnalysis.anomalyTraces.slice(0, 6).map(trace => `
+                                    <div class="col-md-6 mb-2">
+                                        <div class="card border-warning">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <h6 class="card-title mb-1">
+                                                            <code class="small">${trace.traceId.substring(0, 12)}...</code>
+                                                        </h6>
+                                                        <p class="card-text small mb-1">
+                                                            <strong>${trace.service}</strong> - ${trace.operationName}
+                                                        </p>
+                                                        <p class="card-text small text-muted mb-0">
+                                                            耗时: ${trace.durationMs.toFixed(0)}ms | ${formatTimestamp(trace.startTime)}
+                                                        </p>
+                                                    </div>
+                                                    <span class="badge bg-danger">${trace.httpStatusCode || 'ERR'}</span>
+                                                </div>
+                                                ${trace.errorMessage ? `
+                                                    <div class="mt-2">
+                                                        <small class="text-danger">${trace.errorMessage.substring(0, 100)}...</small>
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${data.slowTransactionAnalysis.slowDatabaseOps && data.slowTransactionAnalysis.slowDatabaseOps.length > 0 ? `
+                            <h6 class="mt-4 mb-3"><i class="bi bi-database"></i> 慢数据库操作</h6>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>SQL语句</th>
+                                            <th>执行次数</th>
+                                            <th>平均耗时</th>
+                                            <th>最大耗时</th>
+                                            <th>错误次数</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.slowTransactionAnalysis.slowDatabaseOps.map(db => `
+                                            <tr>
+                                                <td><code class="small">${db.sqlStatement.substring(0, 80)}...</code></td>
+                                                <td><span class="badge bg-info">${db.executionCount}</span></td>
+                                                <td>${db.avgDurationMs.toFixed(1)}ms</td>
+                                                <td>${db.maxDurationMs.toFixed(1)}ms</td>
+                                                <td>
+                                                    <span class="badge ${db.errorCount > 0 ? 'bg-danger' : 'bg-success'}">
+                                                        ${db.errorCount}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+                
                 <div class="card mt-4">
                     <div class="card-header"><h5>优化建议</h5></div>
                     <ul class="list-group list-group-flush">
@@ -231,6 +477,311 @@
                     </div>
                 </div>
             `;
+        }
+
+        // 历史报告查询功能
+        queryHistoryBtn.addEventListener('click', async () => {
+            const selectedService = historyServiceSelect.value;
+            const reportId = reportIdInput.value.trim();
+            const limit = limitInput.value;
+
+            queryHistoryBtn.disabled = true;
+            queryHistoryBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> 查询中...';
+            
+            try {
+                let apiUrl;
+                if (reportId) {
+                    // 精确查询特定报告
+                    apiUrl = `/ai-analysis/api/reports/clickhouse/${reportId}`;
+                } else {
+                    // 查询报告列表
+                    apiUrl = `/ai-analysis/api/reports/clickhouse?limit=${limit}`;
+                }
+
+                const response = await fetch(apiUrl);
+                
+                if (reportId && response.status === 404) {
+                    historyReportsContainer.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> 未找到报告ID为 "${reportId}" 的报告
+                        </div>`;
+                    return;
+                }
+                
+                if (!response.ok) throw new Error(`查询失败: ${response.statusText}`);
+                
+                const data = await response.json();
+                
+                if (reportId) {
+                    // 显示单个报告
+                    displaySingleHistoryReport(data);
+                } else {
+                    // 显示报告列表
+                    displayHistoryReportsList(data, selectedService);
+                }
+                
+            } catch (error) {
+                historyReportsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-circle"></i> 查询失败: ${error.message}
+                    </div>`;
+            } finally {
+                queryHistoryBtn.disabled = false;
+                queryHistoryBtn.innerHTML = '<i class="bi bi-search"></i> 查询';
+            }
+        });
+
+        // 显示单个历史报告
+        function displaySingleHistoryReport(reportData) {
+            try {
+                const reportContent = JSON.parse(reportData.content);
+                const formattedTime = formatTimestamp(reportData.created_time);
+                
+                historyReportsContainer.innerHTML = `
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0">
+                                <i class="bi bi-file-text"></i> 报告详情 
+                                <span class="badge bg-light text-dark ms-2">${reportData.report_id}</span>
+                            </h6>
+                            <small>生成时间: ${formattedTime}</small>
+                        </div>
+                        <div class="card-body">
+                            <button class="btn btn-outline-primary btn-sm mb-3" onclick="displayFullReport(${JSON.stringify(reportContent).replace(/"/g, '&quot;')})">
+                                <i class="bi bi-eye"></i> 查看完整报告
+                            </button>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>基本信息</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>服务:</strong> ${reportContent.slowTransactionAnalysis?.topSlowTransactions?.[0]?.service || '未知'}</li>
+                                        <li><strong>时间范围:</strong> ${reportContent.timeRange}分钟</li>
+                                        <li><strong>总请求数:</strong> ${reportContent.metrics?.totalRequests || 0}</li>
+                                        <li><strong>错误率:</strong> ${((reportContent.metrics?.errorRate || 0) * 100).toFixed(2)}%</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>性能指标</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>平均响应时间:</strong> ${(reportContent.metrics?.avgResponseTime || 0).toFixed(2)}ms</li>
+                                        <li><strong>平均吞吐量:</strong> ${(reportContent.metrics?.avgThroughput || 0).toFixed(2)} req/s</li>
+                                        <li><strong>CPU使用率:</strong> ${((reportContent.metrics?.avgCpuUsage || 0) * 100).toFixed(2)}%</li>
+                                        <li><strong>内存使用率:</strong> ${(reportContent.metrics?.avgMemoryUsage || 0).toFixed(2)}%</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            ${reportContent.slowTransactionAnalysis ? `
+                            <div class="mt-3">
+                                <h6>慢交易分析摘要</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="h5 text-danger">${reportContent.slowTransactionAnalysis.totalAnalyzedTransactions}</div>
+                                            <small>慢交易数</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="h5 text-warning">${reportContent.slowTransactionAnalysis.anomalyTraces?.length || 0}</div>
+                                            <small>异常交易</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="h5 text-info">${reportContent.slowTransactionAnalysis.operationStats?.length || 0}</div>
+                                            <small>操作统计</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="h5 text-success">${reportContent.slowTransactionAnalysis.slowDatabaseOps?.length || 0}</div>
+                                            <small>慢数据库操作</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <div class="mt-3">
+                                <h6>报告摘要</h6>
+                                <div class="alert alert-light">${reportContent.summary || '无摘要信息'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                historyReportsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-circle"></i> 报告内容解析失败: ${error.message}
+                    </div>`;
+            }
+        }
+
+        // 显示历史报告列表
+        function displayHistoryReportsList(reports, filterService) {
+            if (!Array.isArray(reports) || reports.length === 0) {
+                historyReportsContainer.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 没有找到符合条件的历史报告
+                    </div>`;
+                return;
+            }
+
+            // 如果指定了服务过滤，进行过滤（基于报告内容）
+            let filteredReports = reports;
+            if (filterService) {
+                filteredReports = reports.filter(report => {
+                    try {
+                        const content = JSON.parse(report.content);
+                        const service = content.metrics?.service || '';
+                        return service.includes(filterService);
+                    } catch (e) {
+                        return false;
+                    }
+                });
+            }
+
+            const reportsHtml = filteredReports.map((report, index) => {
+                try {
+                    const content = JSON.parse(report.content);
+                    const formattedTime = formatTimestamp(report.created_time);
+                    // 从慢交易分析中获取服务名，或从报告ID推断
+                    let service = '未知服务';
+                    if (content.slowTransactionAnalysis?.topSlowTransactions?.length > 0) {
+                        service = content.slowTransactionAnalysis.topSlowTransactions[0].service;
+                    } else if (content.reportId && content.reportId.includes('-')) {
+                        // 从报告摘要中提取服务名
+                        const summaryMatch = content.summary?.match(/服务.*?(\w+)/);
+                        if (summaryMatch) {
+                            service = summaryMatch[1];
+                        }
+                    }
+                    const totalRequests = content.metrics?.totalRequests || 0;
+                    const errorRate = ((content.metrics?.errorRate || 0) * 100).toFixed(2);
+                    const avgResponseTime = (content.metrics?.avgResponseTime || 0).toFixed(2);
+                    const slowTransactions = content.slowTransactionAnalysis?.totalAnalyzedTransactions || 0;
+
+                    return `
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h6 class="mb-1">
+                                            <i class="bi bi-server"></i> ${service}
+                                            <span class="badge bg-secondary ms-2">${content.timeRange}分钟</span>
+                                            ${slowTransactions > 0 ? `<span class="badge bg-danger ms-1">${slowTransactions}个慢交易</span>` : ''}
+                                        </h6>
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar"></i> ${formattedTime} | 
+                                            <i class="bi bi-hash"></i> ${report.report_id.substring(0, 8)}...
+                                        </small>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="querySpecificReport('${report.report_id}')">
+                                            <i class="bi bi-eye"></i> 查看详情
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body py-2">
+                                <div class="row text-center">
+                                    <div class="col-3">
+                                        <div class="h6 text-primary">${totalRequests}</div>
+                                        <small class="text-muted">总请求</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="h6 ${parseFloat(errorRate) > 5 ? 'text-danger' : 'text-success'}">${errorRate}%</div>
+                                        <small class="text-muted">错误率</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="h6 ${parseFloat(avgResponseTime) > 1000 ? 'text-warning' : 'text-info'}">${avgResponseTime}ms</div>
+                                        <small class="text-muted">平均响应</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="h6 ${slowTransactions > 10 ? 'text-danger' : slowTransactions > 0 ? 'text-warning' : 'text-success'}">${slowTransactions}</div>
+                                        <small class="text-muted">慢交易</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (error) {
+                    return `
+                        <div class="card mb-3 border-danger">
+                            <div class="card-body">
+                                <div class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> 报告 ${report.report_id} 数据格式错误
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            historyReportsContainer.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">
+                        <i class="bi bi-list"></i> 历史报告列表 
+                        <span class="badge bg-primary">${filteredReports.length}条</span>
+                        ${filterService ? `<span class="badge bg-info">已筛选: ${filterService}</span>` : ''}
+                    </h6>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="loadHistoryReports()">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                </div>
+                ${reportsHtml}
+            `;
+        }
+
+        // 查询特定报告
+        function querySpecificReport(reportId) {
+            reportIdInput.value = reportId;
+            queryHistoryBtn.click();
+        }
+
+        // 显示完整报告（复用现有的renderReport函数）
+        function displayFullReport(reportContent) {
+            renderReport(reportContent);
+            // 滚动到报告区域
+            reportContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 便捷函数：加载历史报告
+        function loadHistoryReports() {
+            reportIdInput.value = '';
+            queryHistoryBtn.click();
+        }
+        
+        // 复制文本到剪贴板
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    // 简单提示
+                    const btn = event.target.closest('button');
+                    const originalIcon = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check"></i>';
+                    btn.classList.add('text-success');
+                    setTimeout(() => {
+                        btn.innerHTML = originalIcon;
+                        btn.classList.remove('text-success');
+                    }, 1000);
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                });
+            } else {
+                // 降级方案
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('复制失败:', err);
+                }
+                document.body.removeChild(textArea);
+            }
         }
 
         // 页面加载时初始化

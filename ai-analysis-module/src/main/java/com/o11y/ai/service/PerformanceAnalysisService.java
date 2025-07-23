@@ -127,7 +127,8 @@ public class PerformanceAnalysisService {
         try {
             LocalDateTime endTime = LocalDateTime.now();
             LocalDateTime startTime = endTime.minusMinutes(timeRangeMinutes);
-            PerformanceMetrics metrics = clickHouseRepository.getAggregatedPerformanceMetrics(startTime, endTime, service);
+            PerformanceMetrics metrics = clickHouseRepository.getAggregatedPerformanceMetrics(startTime, endTime,
+                    service);
             return metrics != null && metrics.getTotalRequests() > 0;
         } catch (Exception e) {
             LOG.error("检查数据时发生错误", e);
@@ -157,12 +158,14 @@ public class PerformanceAnalysisService {
 
             // 1. 收集性能数据 (统一查询)
             LOG.info("步骤1: 开始收集性能数据...");
-            PerformanceMetrics metrics = clickHouseRepository.getAggregatedPerformanceMetrics(startTime, endTime, service);
+            PerformanceMetrics metrics = clickHouseRepository.getAggregatedPerformanceMetrics(startTime, endTime,
+                    service);
             if (metrics == null || metrics.getTotalRequests() == 0) {
                 LOG.warn("未收集到足够的服务 {} 性能数据，无法生成报告", service);
                 report.setSummary("数据不足，无法生成报告");
                 reportService.saveReport(report);
-                clickHouseRepository.savePerformanceReport(report.getReportId(), convertReportToJson(report), report.getGeneratedAt());
+                clickHouseRepository.savePerformanceReport(report.getReportId(), convertReportToJson(report),
+                        report.getGeneratedAt());
                 return CompletableFuture.completedFuture(report);
             }
             LOG.info("步骤1完成: 成功收集性能数据，总请求数: {}, 平均响应时间: {}ms",
@@ -182,12 +185,14 @@ public class PerformanceAnalysisService {
             if (properties.getLlm().isEnabled()) {
                 try {
                     LOG.info("步骤4a: 调用LLM分析性能数据和错误堆栈...");
-                    String intelligentAnalysis = llmService.analyzePerformanceData(metrics, anomalies, errorStacks, timeRangeMinutes);
+                    String intelligentAnalysis = llmService.analyzePerformanceData(metrics, anomalies, errorStacks,
+                            timeRangeMinutes);
                     report.setIntelligentAnalysis(intelligentAnalysis);
                     report.setErrorStacks(errorStacks);
 
                     LOG.info("步骤4b: 调用LLM生成优化建议...");
-                    List<OptimizationSuggestion> suggestions = llmService.generateOptimizationSuggestions(metrics, anomalies);
+                    List<OptimizationSuggestion> suggestions = llmService.generateOptimizationSuggestions(metrics,
+                            anomalies);
                     report.setOptimizationSuggestions(suggestions.stream()
                             .map(s -> s.getTitle() + ": " + s.getDescription())
                             .collect(java.util.stream.Collectors.toList()));
@@ -205,6 +210,16 @@ public class PerformanceAnalysisService {
                 report.setErrorStacks(errorStacks);
             }
 
+            // 4.5. 慢交易分析
+            LOG.info("步骤4.5: 开始慢交易分析...");
+            PerformanceReport.SlowTransactionAnalysis slowTransactionAnalysis = generateSlowTransactionAnalysis(
+                    startTime, endTime, service, metrics, anomalies);
+            report.setSlowTransactionAnalysis(slowTransactionAnalysis);
+            LOG.info("步骤4.5完成: 慢交易分析完成，发现 {} 个慢交易",
+                    slowTransactionAnalysis.getTopSlowTransactions() != null
+                            ? slowTransactionAnalysis.getTopSlowTransactions().size()
+                            : 0);
+
             // 5. 设置其他报告内容
             LOG.info("步骤5: 设置报告其他内容...");
             report.setMetrics(convertToReportMetrics(metrics));
@@ -219,7 +234,8 @@ public class PerformanceAnalysisService {
 
             // 7. 保存到 ClickHouse
             LOG.info("步骤7: 保存报告到 ClickHouse...");
-            clickHouseRepository.savePerformanceReport(report.getReportId(), convertReportToJson(report), report.getGeneratedAt());
+            clickHouseRepository.savePerformanceReport(report.getReportId(), convertReportToJson(report),
+                    report.getGeneratedAt());
             LOG.info("步骤7完成: 性能分析报告已保存到 ClickHouse");
 
             long processEndTime = System.currentTimeMillis();
@@ -239,8 +255,9 @@ public class PerformanceAnalysisService {
             LOG.error("生成性能分析报告失败", e);
             report.setSummary("报告生成过程中发生内部错误: " + e.getMessage());
             try {
-                 reportService.saveReport(report);
-                 clickHouseRepository.savePerformanceReport(report.getReportId(), convertReportToJson(report), report.getGeneratedAt());
+                reportService.saveReport(report);
+                clickHouseRepository.savePerformanceReport(report.getReportId(), convertReportToJson(report),
+                        report.getGeneratedAt());
             } catch (Exception saveEx) {
                 LOG.error("保存失败报告时出错", saveEx);
             }
@@ -484,7 +501,8 @@ public class PerformanceAnalysisService {
     /**
      * 生成报告摘要
      */
-    private String generateSummary(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies, int timeRangeMinutes) {
+    private String generateSummary(PerformanceMetrics metrics, List<PerformanceAnomaly> anomalies,
+            int timeRangeMinutes) {
         StringBuilder summary = new StringBuilder();
 
         summary.append("系统在过去").append(timeRangeMinutes).append("分钟内");
@@ -555,5 +573,296 @@ public class PerformanceAnalysisService {
 
         LOG.info("收集到 {} 种不同的错误堆栈", errorStacks.size());
         return errorStacks;
+    }
+
+    /**
+     * 生成慢交易分析详情 
+     */
+    private PerformanceReport.SlowTransactionAnalysis generateSlowTransactionAnalysis(
+            LocalDateTime startTime, LocalDateTime endTime, 
+            String service, PerformanceMetrics metrics, 
+            List<PerformanceAnomaly> anomalies) {
+        
+        try {
+            // 1. 获取TOP慢交易
+            List<Map<String, Object>> slowTransactionsData = clickHouseRepository
+                .getSlowTransactionsWithTraceIds(startTime, endTime, service, 20);
+            
+            List<PerformanceReport.SlowTransaction> slowTransactions = slowTransactionsData.stream()
+                .map(this::convertToSlowTransaction)
+                .collect(java.util.stream.Collectors.toList());
+            
+            // 2. 获取操作性能统计
+            List<Map<String, Object>> operationStatsData = clickHouseRepository
+                .getOperationPerformanceStats(startTime, endTime, service);
+            
+            List<PerformanceReport.OperationPerformance> operationStats = operationStatsData.stream()
+                .map(this::convertToOperationPerformance)
+                .collect(java.util.stream.Collectors.toList());
+            
+            // 3. 获取异常traces
+            List<Map<String, Object>> anomalyTracesData = clickHouseRepository
+                .getPerformanceAnomalyTraces(startTime, endTime, service);
+            
+            List<PerformanceReport.AnomalyTrace> anomalyTraces = anomalyTracesData.stream()
+                .map(this::convertToAnomalyTrace)
+                .collect(java.util.stream.Collectors.toList());
+            
+            // 4. 获取慢数据库操作
+            List<Map<String, Object>> dbOpsData = clickHouseRepository
+                .getDatabaseOperationAnalysis(startTime, endTime, service);
+            
+            List<PerformanceReport.DatabaseOperation> slowDatabaseOps = dbOpsData.stream()
+                .map(this::convertToDatabaseOperation)
+                .collect(java.util.stream.Collectors.toList());
+            
+            // 5. 生成AI分析
+            String analysis = generateSlowTransactionAnalysisText(slowTransactions, operationStats, 
+                anomalyTraces, slowDatabaseOps, metrics);
+            
+            return PerformanceReport.SlowTransactionAnalysis.builder()
+                .topSlowTransactions(slowTransactions)
+                .operationStats(operationStats)
+                .anomalyTraces(anomalyTraces)
+                .slowDatabaseOps(slowDatabaseOps)
+                .analysis(analysis)
+                .totalAnalyzedTransactions(slowTransactions.size())
+                .build();
+                
+        } catch (Exception e) {
+            LOG.error("生成慢交易分析失败", e);
+            return PerformanceReport.SlowTransactionAnalysis.builder()
+                .topSlowTransactions(new ArrayList<>())
+                .operationStats(new ArrayList<>())
+                .anomalyTraces(new ArrayList<>())
+                .slowDatabaseOps(new ArrayList<>())
+                .analysis("慢交易分析生成失败: " + e.getMessage())
+                .totalAnalyzedTransactions(0)
+                .build();
+        }
+    }
+
+    /**
+     * 转换慢交易数据
+     */
+    private PerformanceReport.SlowTransaction convertToSlowTransaction(Map<String, Object> data) {
+        return PerformanceReport.SlowTransaction.builder()
+            .traceId((String) data.get("trace_id"))
+            .traceSegmentId((String) data.get("trace_segment_id"))
+            .service((String) data.get("service"))
+            .serviceInstance((String) data.get("service_instance"))
+            .operationName((String) data.get("operation_name"))
+            .durationMs(((Number) data.get("duration_ms")).doubleValue())
+            .isError(((Number) data.get("is_error")).intValue() == 1)
+            .httpMethod((String) data.get("tag_http_method"))
+            .url((String) data.get("tag_url"))
+            .dbStatement((String) data.get("tag_db_statement"))
+            .rpcMethodName((String) data.get("tag_rpc_method_name"))
+            .httpStatusCode(data.get("tag_http_status_code") != null ? 
+                ((Number) data.get("tag_http_status_code")).intValue() : null)
+            .errorMessage((String) data.get("log_message"))
+            .startTime((java.time.LocalDateTime) data.get("start_time"))
+            .build();
+    }
+
+    /**
+     * 转换操作性能数据
+     */
+    private PerformanceReport.OperationPerformance convertToOperationPerformance(Map<String, Object> data) {
+        return PerformanceReport.OperationPerformance.builder()
+            .operationName((String) data.get("operation_name"))
+            .totalCalls(((Number) data.get("total_calls")).longValue())
+            .avgDurationMs(((Number) data.get("avg_duration_ms")).doubleValue())
+            .maxDurationMs(((Number) data.get("max_duration_ms")).doubleValue())
+            .minDurationMs(((Number) data.get("min_duration_ms")).doubleValue())
+            .p50DurationMs(((Number) data.get("p50_duration_ms")).doubleValue())
+            .p90DurationMs(((Number) data.get("p90_duration_ms")).doubleValue())
+            .p95DurationMs(((Number) data.get("p95_duration_ms")).doubleValue())
+            .p99DurationMs(((Number) data.get("p99_duration_ms")).doubleValue())
+            .errorCount(((Number) data.get("error_count")).longValue())
+            .errorRate(((Number) data.get("error_rate")).doubleValue())
+            .build();
+    }
+
+    /**
+     * 转换异常trace数据
+     */
+    private PerformanceReport.AnomalyTrace convertToAnomalyTrace(Map<String, Object> data) {
+        return PerformanceReport.AnomalyTrace.builder()
+            .traceId((String) data.get("trace_id"))
+            .service((String) data.get("service"))
+            .operationName((String) data.get("operation_name"))
+            .durationMs(((Number) data.get("duration_ms")).doubleValue())
+            .isError(((Number) data.get("is_error")).intValue() == 1)
+            .startTime((java.time.LocalDateTime) data.get("start_time"))
+            .httpStatusCode(data.get("tag_http_status_code") != null ? 
+                ((Number) data.get("tag_http_status_code")).intValue() : null)
+            .errorKind((String) data.get("log_error_kind"))
+            .errorMessage((String) data.get("log_message"))
+            .build();
+    }
+
+    /**
+     * 转换数据库操作数据
+     */
+    private PerformanceReport.DatabaseOperation convertToDatabaseOperation(Map<String, Object> data) {
+        @SuppressWarnings("unchecked")
+        List<String> traceIds = (List<String>) data.get("sample_trace_ids");
+        
+        return PerformanceReport.DatabaseOperation.builder()
+            .sqlStatement((String) data.get("tag_db_statement"))
+            .executionCount(((Number) data.get("execution_count")).longValue())
+            .avgDurationMs(((Number) data.get("avg_duration_ms")).doubleValue())
+            .maxDurationMs(((Number) data.get("max_duration_ms")).doubleValue())
+            .errorCount(((Number) data.get("error_count")).longValue())
+            .sampleTraceIds(traceIds != null ? traceIds.subList(0, Math.min(traceIds.size(), 5)) : new ArrayList<>())
+            .build();
+    }
+
+    /**
+     * 生成慢交易分析文本
+     */
+    private String generateSlowTransactionAnalysisText(
+            List<PerformanceReport.SlowTransaction> slowTransactions,
+            List<PerformanceReport.OperationPerformance> operationStats,
+            List<PerformanceReport.AnomalyTrace> anomalyTraces,
+            List<PerformanceReport.DatabaseOperation> slowDatabaseOps,
+            PerformanceMetrics metrics) {
+        
+        StringBuilder analysis = new StringBuilder();
+        
+        analysis.append("## 慢交易性能分析报告\n\n");
+        
+        // 1. 总览
+        analysis.append("### 📊 慢交易总览\n");
+        analysis.append(String.format("- **分析的交易总数**: %d\n", slowTransactions.size()));
+        analysis.append(String.format("- **检测到的异常交易**: %d\n", anomalyTraces.size()));
+        analysis.append(String.format("- **慢数据库操作**: %d\n", slowDatabaseOps.size()));
+        
+        if (!slowTransactions.isEmpty()) {
+            double maxDuration = slowTransactions.get(0).getDurationMs();
+            double avgSlowDuration = slowTransactions.stream()
+                .mapToDouble(PerformanceReport.SlowTransaction::getDurationMs)
+                .average().orElse(0);
+            
+            analysis.append(String.format("- **最慢交易耗时**: %.2f ms\n", maxDuration));
+            analysis.append(String.format("- **慢交易平均耗时**: %.2f ms\n", avgSlowDuration));
+        }
+        analysis.append("\n");
+        
+        // 2. TOP慢交易分析
+        if (!slowTransactions.isEmpty()) {
+            analysis.append("### 🐌 TOP慢交易详情\n\n");
+            
+            for (int i = 0; i < Math.min(5, slowTransactions.size()); i++) {
+                PerformanceReport.SlowTransaction tx = slowTransactions.get(i);
+                analysis.append(String.format("**%d. %s** (%.2f ms)\n", 
+                    i + 1, tx.getOperationName(), tx.getDurationMs()));
+                analysis.append(String.format("   - Trace ID: `%s`\n", tx.getTraceId()));
+                analysis.append(String.format("   - 服务实例: %s\n", tx.getServiceInstance()));
+                
+                if (tx.isError()) {
+                    analysis.append("   - ⚠️ **包含错误**");
+                    if (tx.getErrorMessage() != null && !tx.getErrorMessage().isEmpty()) {
+                        analysis.append(String.format(": %s", tx.getErrorMessage()));
+                    }
+                    analysis.append("\n");
+                }
+                
+                if (tx.getDbStatement() != null && !tx.getDbStatement().isEmpty()) {
+                    String shortSql = tx.getDbStatement().length() > 100 ? 
+                        tx.getDbStatement().substring(0, 100) + "..." : tx.getDbStatement();
+                    analysis.append(String.format("   - 数据库操作: `%s`\n", shortSql));
+                }
+                analysis.append("\n");
+            }
+        }
+        
+        // 3. 操作性能统计分析
+        if (!operationStats.isEmpty()) {
+            analysis.append("### 📈 操作性能统计\n\n");
+            analysis.append("按P95响应时间排序的TOP操作:\n\n");
+            
+            for (int i = 0; i < Math.min(5, operationStats.size()); i++) {
+                PerformanceReport.OperationPerformance op = operationStats.get(i);
+                analysis.append(String.format("**%d. %s**\n", i + 1, op.getOperationName()));
+                analysis.append(String.format("   - 调用次数: %d, 错误率: %.2f%%\n", 
+                    op.getTotalCalls(), op.getErrorRate()));
+                analysis.append(String.format("   - 平均耗时: %.2f ms, P95: %.2f ms, 最大: %.2f ms\n", 
+                    op.getAvgDurationMs(), op.getP95DurationMs(), op.getMaxDurationMs()));
+                analysis.append("\n");
+            }
+        }
+        
+        // 4. 异常分析
+        if (!anomalyTraces.isEmpty()) {
+            analysis.append("### ⚠️ 异常交易分析\n\n");
+            long errorCount = anomalyTraces.stream().mapToLong(t -> t.isError() ? 1 : 0).sum();
+            long slowCount = anomalyTraces.stream().mapToLong(t -> t.getDurationMs() > 5000 ? 1 : 0).sum();
+            
+            analysis.append(String.format("- **错误交易数量**: %d\n", errorCount));
+            analysis.append(String.format("- **超时交易数量** (>5s): %d\n", slowCount));
+            
+            // 显示几个典型异常trace
+            analysis.append("\n**典型异常Trace:**\n");
+            for (int i = 0; i < Math.min(3, anomalyTraces.size()); i++) {
+                PerformanceReport.AnomalyTrace trace = anomalyTraces.get(i);
+                analysis.append(String.format("- `%s`: %s (%.2f ms)\n", 
+                    trace.getTraceId(), trace.getOperationName(), trace.getDurationMs()));
+            }
+            analysis.append("\n");
+        }
+        
+        // 5. 数据库性能分析
+        if (!slowDatabaseOps.isEmpty()) {
+            analysis.append("### 🗄️ 数据库性能分析\n\n");
+            analysis.append("最慢的数据库操作:\n\n");
+            
+            for (int i = 0; i < Math.min(3, slowDatabaseOps.size()); i++) {
+                PerformanceReport.DatabaseOperation dbOp = slowDatabaseOps.get(i);
+                analysis.append(String.format("**%d. 平均耗时: %.2f ms** (执行 %d 次)\n", 
+                    i + 1, dbOp.getAvgDurationMs(), dbOp.getExecutionCount()));
+                
+                String shortSql = dbOp.getSqlStatement().length() > 150 ? 
+                    dbOp.getSqlStatement().substring(0, 150) + "..." : dbOp.getSqlStatement();
+                analysis.append(String.format("   ```sql\n   %s\n   ```\n", shortSql));
+                
+                if (!dbOp.getSampleTraceIds().isEmpty()) {
+                    analysis.append("   - 示例Trace: ");
+                    analysis.append(dbOp.getSampleTraceIds().stream().limit(3)
+                        .map(id -> "`" + id + "`")
+                        .collect(java.util.stream.Collectors.joining(", ")));
+                    analysis.append("\n");
+                }
+                analysis.append("\n");
+            }
+        }
+        
+        // 6. 优化建议
+        analysis.append("### 💡 性能优化建议\n\n");
+        
+        if (!slowDatabaseOps.isEmpty()) {
+            analysis.append("**数据库优化:**\n");
+            analysis.append("- 检查慢SQL是否有合适的索引\n");
+            analysis.append("- 考虑优化复杂查询的执行计划\n");
+            analysis.append("- 评估是否需要分页或缓存机制\n\n");
+        }
+        
+        if (!operationStats.isEmpty()) {
+            PerformanceReport.OperationPerformance slowestOp = operationStats.get(0);
+            if (slowestOp.getErrorRate() > 5.0) {
+                analysis.append("**错误率优化:**\n");
+                analysis.append(String.format("- %s 错误率较高(%.2f%%)，需要重点关注\n", 
+                    slowestOp.getOperationName(), slowestOp.getErrorRate()));
+                analysis.append("- 检查相关日志和异常处理逻辑\n\n");
+            }
+        }
+        
+        analysis.append("**链路优化:**\n");
+        analysis.append("- 可通过链路可视化界面分析具体trace的调用链\n");
+        analysis.append("- 关注服务间调用的超时设置和重试机制\n");
+        analysis.append("- 监控JVM内存使用和GC情况\n");
+        
+        return analysis.toString();
     }
 }
