@@ -110,6 +110,27 @@ java -jar flink-data-transformer-module/target/flink-data-transformer-module-1.0
 - AI 健康检查: http://localhost:8082/ai-analysis/api/ai-analysis/health
 - ClickHouse: http://localhost:8123/play
 
+## ClickHouse 数据库查询
+
+### 容器内查询方法
+
+```bash
+# 查询 ClickHouse 容器内数据
+docker exec clickhouse-server clickhouse-client --query "YOUR_SQL_QUERY"
+
+# 常用查询示例
+# 查看最新数据时间
+docker exec clickhouse-server clickhouse-client --query "SELECT MAX(window_start) FROM default.flink_operator_agg_result"
+
+# 查看所有数据库
+docker exec clickhouse-server clickhouse-client --query "SHOW DATABASES"
+
+# 查看表结构
+docker exec clickhouse-server clickhouse-client --query "DESCRIBE default.flink_operator_agg_result"
+```
+
+**注意**: 实际数据库为 `default`，不是配置中的 `o11y`
+
 ## AI 助手指令
 
 ### 文件操作
