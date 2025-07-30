@@ -1,0 +1,58 @@
+{
+  "projects": [
+    {
+      "name": "segment-alarm-clickhouse",
+      "type": "git",
+      "path": "/home/dev/projects/segment-alarm-clickhouse",
+      "description": "主应用代码仓库"
+    },
+    {
+      "name": "segment-alarm-flink",
+      "type": "git", 
+      "path": "/home/dev/projects/segment-alarm-flink",
+      "description": "Flink 任务代码"
+    },
+    {
+      "name": "segment-alarm-ai",
+      "type": "git",
+      "path": "/home/dev/projects/segment-alarm-ai",
+      "description": "AI 分析模块"
+    },
+    {
+      "name": "segment-alarm-app",
+      "type": "docker",
+      "image": "segment-alarm-app:1.0.5",
+      "description": "主应用镜像"
+    },
+    {
+      "name": "segment-alarm-flink-job",
+      "type": "docker",
+      "image": "segment-alarm-flink:1.0.5",
+      "description": "Flink 任务镜像"
+    },
+    {
+      "name": "mysql",
+      "type": "docker",
+      "image": "mysql:8.0.30",
+      "description": "MySQL 数据库"
+    },
+    {
+      "name": "clickhouse",
+      "type": "docker",
+      "image": "clickhouse/clickhouse-server:21.8.14.5",
+      "description": "ClickHouse 数据库"
+    },
+    {
+      "name": "kafka",
+      "type": "docker",
+      "image": "confluentinc/cp-kafka:7.0.1",
+      "description": "Kafka 消息队列"
+    },
+    {
+      "name": "redis",
+      "type": "docker",
+      "image": "redis:6.2.7-alpine",
+      "description": "Redis 缓存"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+# 离线打包工具配置文件
+
+# 工作目录
+work_dir: /data/offline-bundle
+
+# 开发环境配置
+dev:
+  # Git 服务器
+  git_url: http://gitlab.dev.local
+  
+  # Docker 仓库
+  docker_registry: registry.dev.local:5000
+  
+  # Maven 配置
+  maven:
+    enabled: true
+    local_repo: ~/.m2/repository
+  
+  # NPM 配置  
+  npm:
+    enabled: true
+    registry: http://verdaccio.dev.local:4873
+
+# 测试环境配置
+test:
+  # Git 服务器（Gitea）
+  test_git_url: http://gitea.test.local:3000/team
+  
+  # Docker 仓库（Harbor）
+  test_docker_registry: harbor.test.local
+  
+  # Maven 仓库路径
+  test_maven_repo: /data/maven-repo
+  
+  # NPM 仓库
+  test_npm_registry: http://verdaccio.test.local:4873
+  
+  # CI/CD 配置
+  test_ci_url: http://jenkins.test.local:8080
+  ci_token: ${JENKINS_TOKEN}
+
+# 加密配置
+encryption_password: ${BUNDLE_PASSWORD}
+
+# 导出配置文件列表
+export_configs:
+  - ./config/application-test.yml
+  - ./config/docker-compose.yml
+  - ./scripts/deploy.sh
+
+# 项目列表示例
+# projects:
+#   - name: segment-alarm-clickhouse
+#     type: git
+#     path: /code/segment-alarm-clickhouse
+#   - name: segment-alarm-app
+#     type: docker
+#     image: segment-alarm:latest
